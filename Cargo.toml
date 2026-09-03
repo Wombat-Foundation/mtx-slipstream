@@ -10,11 +10,7 @@ categories = ["http", "optimization"]
 repository = "https://github.com/Wombat-Foundation/mtx-slipstream"
 
 [dependencies]
-bytes = { workspace = true }
-itoa = "1"
-ryu = "1"
 simd-json = { workspace = true, default-features = false }
-thiserror = { workspace = true }
 
 [lints.rust]
 unsafe_code = "deny"
