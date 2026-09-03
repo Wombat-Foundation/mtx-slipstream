@@ -98,6 +98,7 @@ pub fn to_bytes(value: &OwnedValue) -> Result<BytesMut, simd_json::Error> {
 }
 
 #[cfg(test)]
+#[coverage(off)]
 mod tests {
 	use simd_json::json;
 

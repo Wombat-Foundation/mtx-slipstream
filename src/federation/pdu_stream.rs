@@ -149,6 +149,7 @@ impl FederationResponseWriter {
 }
 
 #[cfg(test)]
+#[coverage(off)]
 mod tests {
 	use simd_json::{OwnedValue, json, prelude::*};
 

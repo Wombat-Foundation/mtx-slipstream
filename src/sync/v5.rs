@@ -99,6 +99,7 @@ impl SlidingSyncResponseBuilder {
 }
 
 #[cfg(test)]
+#[coverage(off)]
 mod tests {
 	use simd_json::json;
 

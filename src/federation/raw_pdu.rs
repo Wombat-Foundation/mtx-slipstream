@@ -101,6 +101,7 @@ impl io::Write for BufWriter<'_> {
 }
 
 #[cfg(test)]
+#[coverage(off)]
 mod tests {
 	use simd_json::json;
 

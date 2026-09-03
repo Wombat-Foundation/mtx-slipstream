@@ -153,6 +153,7 @@ impl SyncResponseBuilder {
 }
 
 #[cfg(test)]
+#[coverage(off)]
 mod tests {
 	use super::*;
 
