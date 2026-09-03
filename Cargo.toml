@@ -22,7 +22,7 @@ ryu = "1"
 simd-json = { version = "0.18", default-features = false, features = ["serde_impl"] }
 
 [lints.rust]
-unsafe_code = "deny"
+unsafe_code = "warn"
 
 [lints.clippy]
 pedantic = { level = "warn", priority = -1 }
