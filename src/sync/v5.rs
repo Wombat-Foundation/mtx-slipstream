@@ -22,21 +22,25 @@ pub struct SlidingSyncResponseBuilder {
 
 impl SlidingSyncResponseBuilder {
 	#[inline]
+	#[must_use]
 	pub fn new() -> Self { Self::default() }
 
 	#[inline]
+	#[must_use]
 	pub fn thread_subscriptions(mut self, data: OwnedValue) -> Self {
 		self.thread_subscriptions = Some(data);
 		self
 	}
 
 	#[inline]
+	#[must_use]
 	pub fn room_extra(mut self, room_id: String, extras: RoomExtras) -> Self {
 		self.room_extras.push((room_id, extras));
 		self
 	}
 
 	#[inline]
+	#[must_use]
 	pub fn room_extras(mut self, extras: Vec<(String, RoomExtras)>) -> Self {
 		self.room_extras = extras;
 		self
@@ -86,10 +90,10 @@ impl SlidingSyncResponseBuilder {
 			if let Some(timeline) = room.get("timeline").cloned() {
 				room.insert("timeline_events".to_owned(), timeline);
 			}
-			if let Ok(mut lists_vec) = simd_json::to_vec(&extra.lists) {
-				if let Ok(lists_val) = simd_json::to_owned_value(&mut lists_vec) {
-					room.insert("lists".to_owned(), lists_val);
-				}
+			if let Ok(mut lists_vec) = simd_json::to_vec(&extra.lists)
+				&& let Ok(lists_val) = simd_json::to_owned_value(&mut lists_vec)
+			{
+				room.insert("lists".to_owned(), lists_val);
 			}
 			if extra.expanded_timeline {
 				room.insert("expanded_timeline".to_owned(), OwnedValue::from(true));

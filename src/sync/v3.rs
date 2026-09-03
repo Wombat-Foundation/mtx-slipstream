@@ -27,33 +27,39 @@ pub struct SyncResponseBuilder {
 
 impl SyncResponseBuilder {
 	#[inline]
+	#[must_use]
 	pub fn new() -> Self { Self::default() }
 
 	#[inline]
+	#[must_use]
 	pub fn joined_state_after(mut self, data: Vec<(String, OwnedValue)>) -> Self {
 		self.joined_state_after = data;
 		self
 	}
 
 	#[inline]
+	#[must_use]
 	pub fn left_state_after(mut self, data: Vec<(String, OwnedValue)>) -> Self {
 		self.left_state_after = data;
 		self
 	}
 
 	#[inline]
+	#[must_use]
 	pub fn is_initial_sync(mut self, yes: bool) -> Self {
 		self.is_initial_sync = yes;
 		self
 	}
 
 	#[inline]
+	#[must_use]
 	pub fn knocked_rooms_json(mut self, data: OwnedValue) -> Self {
 		self.knocked_rooms_json = Some(data);
 		self
 	}
 
 	#[inline]
+	#[must_use]
 	pub fn device_lists_json(mut self, data: OwnedValue) -> Self {
 		self.device_lists_json = Some(data);
 		self

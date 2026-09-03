@@ -9,12 +9,15 @@ pub struct JsonWriter {
 
 impl JsonWriter {
 	#[inline]
+	#[must_use]
 	pub fn with_capacity(cap: usize) -> Self { Self { buf: BytesMut::with_capacity(cap) } }
 
 	#[inline]
+	#[must_use]
 	pub fn into_bytes(self) -> BytesMut { self.buf }
 
 	#[inline]
+	#[must_use]
 	pub fn as_bytes(&self) -> &[u8] { &self.buf }
 
 	/// Write an `OwnedValue` as JSON directly into the buffer.

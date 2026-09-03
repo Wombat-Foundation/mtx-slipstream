@@ -39,7 +39,7 @@ pub fn parse_jsonsimd_str(s: &mut str) -> Result<simd_json::OwnedValue, simd_jso
 /// Parse JSON bytes from the database using simd-json.
 ///
 /// This is optimized for the PDU reading path where we fetch JSON text from
-/// RocksDB and need to deserialize it into an `OwnedValue`.
+/// `RocksDB` and need to deserialize it into an `OwnedValue`.
 ///
 /// # Arguments
 /// * `buf` - The raw JSON bytes from the database. **Mutated in-place** by

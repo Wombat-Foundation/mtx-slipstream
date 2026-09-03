@@ -17,6 +17,7 @@ pub struct PduStreamWriter {
 
 impl PduStreamWriter {
 	#[inline]
+	#[must_use]
 	pub fn with_capacity(estimated_pdus: usize) -> Self {
 		let cap = estimated_pdus * 2048;
 		let mut buf = BytesMut::with_capacity(cap);
@@ -47,15 +48,18 @@ impl PduStreamWriter {
 	}
 
 	#[inline]
+	#[must_use]
 	pub fn finish(mut self) -> BytesMut {
 		self.buf.put_u8(b']');
 		self.buf
 	}
 
 	#[inline]
+	#[must_use]
 	pub fn len(&self) -> usize { self.count }
 
 	#[inline]
+	#[must_use]
 	pub fn is_empty(&self) -> bool { self.count == 0 }
 }
 
@@ -75,6 +79,7 @@ enum ResponsePhase {
 }
 
 impl FederationResponseWriter {
+	#[must_use]
 	pub fn with_capacity(estimated_state_pdus: usize, estimated_auth_chain_pdus: usize) -> Self {
 		let cap = (estimated_state_pdus + estimated_auth_chain_pdus) * 2048 + 128;
 		let mut buf = BytesMut::with_capacity(cap);
@@ -135,6 +140,7 @@ impl FederationResponseWriter {
 		Ok(())
 	}
 
+	#[must_use]
 	pub fn finish(mut self) -> BytesMut {
 		self.buf
 			.put_slice(b"],\"event\":null,\"members_omitted\":false}");
@@ -142,9 +148,11 @@ impl FederationResponseWriter {
 	}
 
 	#[inline]
+	#[must_use]
 	pub fn state_len(&self) -> usize { self.state_count }
 
 	#[inline]
+	#[must_use]
 	pub fn auth_chain_len(&self) -> usize { self.auth_chain_count }
 }
 
