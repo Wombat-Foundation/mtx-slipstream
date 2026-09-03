@@ -2,7 +2,7 @@
 //!
 //! The current pipeline for federation PDUs is:
 //! ```text
-//! DB (JSON text) → simd_json::from_slice → OwnedValue → patch → JsonWriter → bytes
+//! DB (JSON text) → simd_json::from_slice → OwnedValue → patch → simd-json → bytes
 //! ```
 //!
 //! This module provides:
@@ -12,10 +12,10 @@
 //! 2. **Direct serialization** — serialize `OwnedValue` directly to bytes,
 //!    skipping the `Box<RawValue>` intermediate allocation.
 
-use std::io;
-
-use bytes::BytesMut;
+use bytes::{BufMut, BytesMut};
 use simd_json::prelude::*;
+
+use crate::writer::BufWriter;
 
 /// Parse JSON bytes using simd-json (SIMD-accelerated).
 ///
@@ -36,16 +36,10 @@ pub fn parse_jsonsimd(buf: &mut [u8]) -> Result<simd_json::OwnedValue, simd_json
 /// # Errors
 ///
 /// Returns `simd_json::Error` if the input is not valid JSON.
-///
-/// # Safety
-///
-/// `simd_json::from_str` requires valid UTF-8 input, which `&str` guarantees.
 #[inline]
-#[allow(unsafe_code)]
 pub fn parse_jsonsimd_str(s: &mut str) -> Result<simd_json::OwnedValue, simd_json::Error> {
-	// SAFETY: simd_json::from_str requires the input to be valid UTF-8,
-	// which &str guarantees.
-	unsafe { simd_json::from_str(s) }
+	let mut buf = s.as_bytes().to_vec();
+	simd_json::from_slice(&mut buf)
 }
 
 /// Parse JSON bytes from the database using simd-json.
@@ -72,8 +66,7 @@ pub fn parse_pdu_json(buf: &mut [u8]) -> Result<simd_json::OwnedValue, simd_json
 /// Returns `simd_json::Error` if serialization fails.
 pub fn canonical_to_bytes(pdu: &simd_json::OwnedValue) -> Result<BytesMut, simd_json::Error> {
 	let mut buf = BytesMut::with_capacity(2048);
-	let mut writer = BufWriter(&mut buf);
-	simd_json::to_writer(&mut writer, pdu)?;
+	write_canonical_value(&mut buf, pdu)?;
 	Ok(buf)
 }
 
@@ -82,8 +75,13 @@ pub fn canonical_to_bytes(pdu: &simd_json::OwnedValue) -> Result<BytesMut, simd_
 /// # Errors
 ///
 /// Returns `simd_json::Error` if serialization fails.
+///
+/// # Panics
+///
+/// Panics if the serialized JSON is not valid UTF-8 (should never happen).
 pub fn canonical_to_string(pdu: &simd_json::OwnedValue) -> Result<String, simd_json::Error> {
-	simd_json::to_string(pdu)
+	let bytes = canonical_to_bytes(pdu)?;
+	Ok(String::from_utf8(bytes.to_vec()).expect("JSON serialization produces valid UTF-8"))
 }
 
 /// Serialize an `OwnedValue` directly, removing specified fields.
@@ -104,10 +102,41 @@ pub fn canonical_to_bytes_without(
 			obj.remove(*field);
 		}
 	}
-	let mut buf = BytesMut::with_capacity(2048);
-	let mut writer = BufWriter(&mut buf);
-	simd_json::to_writer(&mut writer, &val)?;
-	Ok(buf)
+	canonical_to_bytes(&val)
+}
+
+fn write_canonical_value(
+	buf: &mut BytesMut,
+	value: &simd_json::OwnedValue,
+) -> Result<(), simd_json::Error> {
+	if let Some(array) = value.as_array() {
+		buf.put_u8(b'[');
+		for (index, item) in array.iter().enumerate() {
+			if index > 0 {
+				buf.put_u8(b',');
+			}
+			write_canonical_value(buf, item)?;
+		}
+		buf.put_u8(b']');
+	} else if let Some(object) = value.as_object() {
+		let mut entries: Vec<_> = object.iter().collect();
+		entries.sort_unstable_by_key(|(left, _)| *left);
+
+		buf.put_u8(b'{');
+		for (index, (key, item)) in entries.iter().enumerate() {
+			if index > 0 {
+				buf.put_u8(b',');
+			}
+			simd_json::to_writer(&mut BufWriter(buf), key)?;
+			buf.put_u8(b':');
+			write_canonical_value(buf, item)?;
+		}
+		buf.put_u8(b'}');
+	} else {
+		simd_json::to_writer(&mut BufWriter(buf), value)?;
+	}
+
+	Ok(())
 }
 
 /// Remove fields from a JSON value in place.
@@ -121,18 +150,6 @@ pub fn remove_fields(pdu: &mut simd_json::OwnedValue, skip_fields: &[&str]) {
 		}
 	}
 }
-
-struct BufWriter<'a>(&'a mut BytesMut);
-
-impl io::Write for BufWriter<'_> {
-	fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-		self.0.extend_from_slice(buf);
-		Ok(buf.len())
-	}
-
-	fn flush(&mut self) -> io::Result<()> { Ok(()) }
-}
-
 #[cfg(test)]
 #[coverage(off)]
 mod tests {
@@ -195,6 +212,14 @@ mod tests {
 		let parsed: simd_json::OwnedValue = simd_json::from_slice(&mut input).unwrap();
 		assert_eq!(parsed["event_id"], "$abc");
 		assert!(parsed.get("unsigned").is_none());
+	}
+
+	#[test]
+	fn test_canonical_output_sorts_nested_keys() {
+		let value = json!({"z": {"b": 2, "a": 1}, "a": 0});
+
+		assert_eq!(canonical_to_bytes(&value).unwrap().as_ref(), br#"{"a":0,"z":{"a":1,"b":2}}"#,);
+		assert_eq!(canonical_to_string(&value).unwrap(), r#"{"a":0,"z":{"a":1,"b":2}}"#,);
 	}
 
 	#[test]

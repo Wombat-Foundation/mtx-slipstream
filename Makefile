@@ -12,11 +12,15 @@ _help:
 
 
 .PHONY: format
-format: ##H Format code
-	-prettier -w $$(git ls-files '*.md' '*.y*ml')
+format: check-cargo-sort ##H Format code
+	prettier -w $$(git ls-files '*.md' '*.y*ml')
 	pre-commit run --all-files
 	$(CARGO) fmt
 	$(CARGO) sort --workspace --grouped
+
+.PHONY: check-cargo-sort
+check-cargo-sort:
+	@command -v cargo-sort >/dev/null || { echo "cargo-sort is required; install it with: cargo install cargo-sort" >&2; exit 1; }
 
 
 

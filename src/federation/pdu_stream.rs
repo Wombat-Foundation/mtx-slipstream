@@ -7,7 +7,7 @@
 use bytes::{BufMut, BytesMut};
 use simd_json::OwnedValue;
 
-use crate::writer::JsonWriter;
+use crate::writer::BufWriter;
 
 /// A streaming writer for arrays of serialized PDUs.
 pub struct PduStreamWriter {
@@ -45,8 +45,8 @@ impl PduStreamWriter {
 
 	/// Serialize an `OwnedValue` PDU into the stream.
 	///
-	/// The value is serialized via [`JsonWriter`] and a comma separator is
-	/// inserted before the PDU if the stream is not empty.
+	/// The value is serialized via simd-json's native serializer and a comma
+	/// separator is inserted before the PDU if the stream is not empty.
 	///
 	/// # Errors
 	///
@@ -55,9 +55,8 @@ impl PduStreamWriter {
 		if self.count > 0 {
 			self.buf.put_u8(b',');
 		}
-		let mut writer = JsonWriter::with_capacity(2048);
-		writer.write_value(pdu)?;
-		self.buf.put_slice(writer.as_bytes());
+		let mut writer = BufWriter(&mut self.buf);
+		simd_json::to_writer(&mut writer, pdu)?;
 		self.count = self.count.saturating_add(1);
 		Ok(())
 	}
@@ -152,9 +151,8 @@ impl FederationResponseWriter {
 		if self.state_count > 0 {
 			self.buf.put_u8(b',');
 		}
-		let mut writer = JsonWriter::with_capacity(2048);
-		writer.write_value(pdu)?;
-		self.buf.put_slice(writer.as_bytes());
+		let mut writer = BufWriter(&mut self.buf);
+		simd_json::to_writer(&mut writer, pdu)?;
 		self.state_count = self.state_count.saturating_add(1);
 		Ok(())
 	}
@@ -199,9 +197,8 @@ impl FederationResponseWriter {
 		if self.auth_chain_count > 0 {
 			self.buf.put_u8(b',');
 		}
-		let mut writer = JsonWriter::with_capacity(2048);
-		writer.write_value(pdu)?;
-		self.buf.put_slice(writer.as_bytes());
+		let mut writer = BufWriter(&mut self.buf);
+		simd_json::to_writer(&mut writer, pdu)?;
 		self.auth_chain_count = self.auth_chain_count.saturating_add(1);
 		Ok(())
 	}

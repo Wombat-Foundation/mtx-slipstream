@@ -13,7 +13,7 @@
 use bytes::BytesMut;
 use simd_json::{OwnedValue, prelude::*};
 
-use crate::writer::JsonWriter;
+use crate::writer::BufWriter;
 
 /// Builder for constructing a patched sync v3 response.
 #[derive(Debug, Default)]
@@ -88,9 +88,10 @@ impl SyncResponseBuilder {
 	///
 	/// Returns `simd_json::Error` if serialization fails.
 	pub fn build_http_response(self, val: &OwnedValue) -> Result<BytesMut, simd_json::Error> {
-		let mut writer = JsonWriter::with_capacity(8192);
-		writer.write_value(val)?;
-		Ok(writer.into_bytes())
+		let mut buf = BytesMut::with_capacity(8192);
+		let mut writer = BufWriter(&mut buf);
+		simd_json::to_writer(&mut writer, val)?;
+		Ok(buf)
 	}
 
 	fn patch_state_after(&self, val: &mut OwnedValue) {

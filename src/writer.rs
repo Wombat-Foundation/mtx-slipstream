@@ -1,140 +1,39 @@
-//! Streaming JSON writer that serializes directly to a byte buffer.
+//! Thin adapter for writing simd-json values into a [`BytesMut`] buffer.
 
-use bytes::{BufMut, BytesMut};
-use simd_json::{OwnedValue, prelude::*};
+use std::io;
 
-/// A streaming JSON serializer that writes directly into a [`BytesMut`]
-/// buffer without intermediate allocations.
+use bytes::BytesMut;
+use simd_json::OwnedValue;
+
+/// Adapter that implements [`io::Write`] for a [`BytesMut`] buffer.
 ///
-/// Call [`write_value`](Self::write_value) to serialize an [`OwnedValue`],
-/// then [`into_bytes`](Self::into_bytes) to extract the finished buffer.
-pub struct JsonWriter {
-	buf: BytesMut,
-}
+/// Used with [`simd_json::to_writer`] to serialize values directly into
+/// a growable byte buffer without intermediate heap allocations.
+pub struct BufWriter<'a>(pub &'a mut BytesMut);
 
-impl JsonWriter {
-	/// Create a new writer with the given initial buffer capacity.
-	#[inline]
-	#[must_use]
-	pub fn with_capacity(cap: usize) -> Self { Self { buf: BytesMut::with_capacity(cap) } }
-
-	/// Consume the writer and return the accumulated bytes.
-	#[inline]
-	#[must_use]
-	pub fn into_bytes(self) -> BytesMut { self.buf }
-
-	/// Borrow the underlying buffer as a byte slice.
-	#[inline]
-	#[must_use]
-	pub fn as_bytes(&self) -> &[u8] { &self.buf }
-
-	/// Write an `OwnedValue` as JSON directly into the buffer.
-	///
-	/// Recursively serializes the value: strings are escaped, numbers are
-	/// formatted via `itoa`/`ryu`, and containers are written element by
-	/// element.
-	///
-	/// # Errors
-	///
-	/// This method currently always returns `Ok(())`. It returns
-	/// `Result` to maintain API consistency with future extensions (e.g.
-	/// depth-limiting).
-	pub fn write_value(&mut self, value: &OwnedValue) -> Result<(), simd_json::Error> {
-		if let Some(s) = value.as_str() {
-			self.write_escaped_string(s);
-		} else if value.is_null() {
-			self.write_raw("null")?;
-		} else if let Some(b) = value.as_bool() {
-			self.write_raw(if b { "true" } else { "false" })?;
-		} else if let Some(n) = value.as_u64() {
-			let mut buf = itoa::Buffer::new();
-			self.write_raw(buf.format(n))?;
-		} else if let Some(n) = value.as_i64() {
-			let mut buf = itoa::Buffer::new();
-			self.write_raw(buf.format(n))?;
-		} else if let Some(n) = value.as_f64() {
-			let mut buf = ryu::Buffer::new();
-			self.write_raw(buf.format(n))?;
-		} else if let Some(arr) = value.as_array() {
-			self.write_byte(b'[');
-			for (i, item) in arr.iter().enumerate() {
-				if i > 0 {
-					self.write_byte(b',');
-				}
-				self.write_value(item)?;
-			}
-			self.write_byte(b']');
-		} else if let Some(obj) = value.as_object() {
-			self.write_byte(b'{');
-			for (i, (key, val)) in obj.iter().enumerate() {
-				if i > 0 {
-					self.write_byte(b',');
-				}
-				self.write_escaped_string(key);
-				self.write_byte(b':');
-				self.write_value(val)?;
-			}
-			self.write_byte(b'}');
-		}
-		Ok(())
+impl io::Write for BufWriter<'_> {
+	fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+		self.0.extend_from_slice(buf);
+		Ok(buf.len())
 	}
 
-	/// Write raw JSON bytes into the buffer without escaping.
-	///
-	/// # Errors
-	///
-	/// This method currently always returns `Ok(())`. It returns
-	/// `Result` to maintain API consistency with future extensions.
-	#[inline]
-	pub fn write_raw(&mut self, raw: &str) -> Result<(), simd_json::Error> {
-		self.buf.put_slice(raw.as_bytes());
-		Ok(())
-	}
-
-	/// Write a single byte into the buffer.
-	#[inline]
-	pub fn write_byte(&mut self, b: u8) { self.buf.put_u8(b); }
-
-	/// Write a JSON-escaped string (including surrounding quotes) into the
-	/// buffer.
-	///
-	/// Control characters, backslashes, and double quotes are escaped per
-	/// the JSON specification (RFC 8259 §7).
-	pub fn write_escaped_string(&mut self, s: &str) {
-		self.write_byte(b'"');
-		for c in s.chars() {
-			match c {
-				| '"' => self.buf.put_slice(b"\\\""),
-				| '\\' => self.buf.put_slice(b"\\\\"),
-				| '\n' => self.buf.put_slice(b"\\n"),
-				| '\r' => self.buf.put_slice(b"\\r"),
-				| '\t' => self.buf.put_slice(b"\\t"),
-				| '\u{08}' => self.buf.put_slice(b"\\b"),
-				| '\u{0c}' => self.buf.put_slice(b"\\f"),
-				| c if c.is_control() => {
-					self.buf
-						.put_slice(format!("\\u{:04x}", c as u32).as_bytes());
-				},
-				| c => self.buf.put_slice(c.encode_utf8(&mut [0u8; 4]).as_bytes()),
-			}
-		}
-		self.write_byte(b'"');
-	}
+	fn flush(&mut self) -> io::Result<()> { Ok(()) }
 }
 
 /// Serialize an `OwnedValue` directly to a `BytesMut` buffer.
 ///
-/// Allocates an 8 KiB buffer, serializes the value via [`JsonWriter`], and
-/// returns the result.
+/// Allocates an 8 KiB buffer, serializes the value via simd-json's native
+/// serializer, and returns the result.
 ///
 /// # Errors
 ///
 /// Returns `simd_json::Error` if serialization fails.
 #[inline]
 pub fn to_bytes(value: &OwnedValue) -> Result<BytesMut, simd_json::Error> {
-	let mut writer = JsonWriter::with_capacity(8192);
-	writer.write_value(value)?;
-	Ok(writer.into_bytes())
+	let mut buf = BytesMut::with_capacity(8192);
+	let mut writer = BufWriter(&mut buf);
+	simd_json::to_writer(&mut writer, value)?;
+	Ok(buf)
 }
 
 #[cfg(test)]
@@ -145,34 +44,34 @@ mod tests {
 	use super::*;
 
 	#[test]
-	fn test_write_primitives() {
-		let mut w = JsonWriter::with_capacity(64);
-		w.write_value(&json!(true)).unwrap();
-		assert_eq!(w.as_bytes(), b"true");
+	fn test_to_bytes_primitives() {
+		let bytes = to_bytes(&json!(true)).unwrap();
+		let mut input = bytes.to_vec();
+		let parsed: OwnedValue = simd_json::from_slice(&mut input).unwrap();
+		assert_eq!(parsed, json!(true));
 
-		let mut w = JsonWriter::with_capacity(64);
-		w.write_value(&json!(42)).unwrap();
-		assert_eq!(w.as_bytes(), b"42");
+		let bytes = to_bytes(&json!(42)).unwrap();
+		let mut input = bytes.to_vec();
+		let parsed: OwnedValue = simd_json::from_slice(&mut input).unwrap();
+		assert_eq!(parsed, json!(42));
 
-		let mut w = JsonWriter::with_capacity(64);
-		w.write_value(&json!("hello")).unwrap();
-		assert_eq!(w.as_bytes(), b"\"hello\"");
+		let bytes = to_bytes(&json!("hello")).unwrap();
+		let mut input = bytes.to_vec();
+		let parsed: OwnedValue = simd_json::from_slice(&mut input).unwrap();
+		assert_eq!(parsed, json!("hello"));
 	}
 
 	#[test]
-	fn test_write_map() {
-		let mut w = JsonWriter::with_capacity(64);
-		w.write_value(&json!({"a": 1, "b": "two"})).unwrap();
-		let result = String::from_utf8(w.into_bytes().to_vec()).unwrap();
-		let mut parsed_input = result.into_bytes();
-		let parsed: simd_json::OwnedValue = simd_json::from_slice(&mut parsed_input).unwrap();
+	fn test_to_bytes_map() {
+		let bytes = to_bytes(&json!({"a": 1, "b": "two"})).unwrap();
+		let mut input = bytes.to_vec();
+		let parsed: OwnedValue = simd_json::from_slice(&mut input).unwrap();
 		assert_eq!(parsed, json!({"a": 1, "b": "two"}));
 	}
 
 	#[test]
-	fn test_write_nested() {
-		let mut w = JsonWriter::with_capacity(256);
-		w.write_value(&json!({
+	fn test_to_bytes_nested() {
+		let bytes = to_bytes(&json!({
 			"rooms": {
 				"join": {
 					"!room:example.com": {
@@ -182,52 +81,11 @@ mod tests {
 			}
 		}))
 		.unwrap();
-		let result = String::from_utf8(w.into_bytes().to_vec()).unwrap();
-		let mut parsed_input = result.into_bytes();
-		let parsed: simd_json::OwnedValue = simd_json::from_slice(&mut parsed_input).unwrap();
+		let mut input = bytes.to_vec();
+		let parsed: OwnedValue = simd_json::from_slice(&mut input).unwrap();
 		assert_eq!(
 			parsed["rooms"]["join"]["!room:example.com"]["timeline"]["events"][0]["type"],
 			"m.room.message"
 		);
-	}
-
-	#[test]
-	fn test_write_raw() {
-		let mut w = JsonWriter::with_capacity(64);
-		w.write_raw(r#"{"key":"value"}"#).unwrap();
-		assert_eq!(w.as_bytes(), r#"{"key":"value"}"#.as_bytes());
-	}
-
-	#[test]
-	fn test_to_bytes_matches_simd_json() {
-		let value = json!({
-			"next_batch": "s12345",
-			"rooms": {
-				"join": {
-					"!abc:example.com": {
-						"timeline": {
-							"events": [
-								{"type": "m.room.message", "content": {"body": "hello"}}
-							],
-							"limited": false,
-							"prev_batch": "t123"
-						},
-						"state": {"events": []},
-						"ephemeral": {"events": []},
-						"account_data": {"events": []}
-					}
-				}
-			}
-		});
-
-		let simd_bytes = simd_json::to_vec(&value).unwrap();
-		let custom_bytes = to_bytes(&value).unwrap();
-
-		let mut simd_input = simd_bytes.clone();
-		let simd_parsed: simd_json::OwnedValue = simd_json::from_slice(&mut simd_input).unwrap();
-		let mut custom_input = custom_bytes.to_vec();
-		let custom_parsed: simd_json::OwnedValue =
-			simd_json::from_slice(&mut custom_input).unwrap();
-		assert_eq!(simd_parsed, custom_parsed);
 	}
 }
