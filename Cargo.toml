@@ -3,14 +3,19 @@ name = "mtx-slipstream"
 version = "0.1.0"
 edition = "2024"
 license = "Apache-2.0"
-description = "High-performance serialization for Matrix Client-Server and Federation APIs. Eliminates redundant serialize/deserialize round-trips in sync and send_join responses."
+authors = ["Shane Jaroch <chown_tee@proton.me>"]
+description = "High-performance serialization for hottest Matrix federation and C2S endpoints."
+keywords = ["matrix", "federation", "C2S"]
+categories = ["http", "optimization"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/Wombat-Foundation/mtx-slipstream"
 
 [dependencies]
 bytes = { workspace = true }
 itoa = "1"
 ryu = "1"
 serde = { workspace = true }
-serde_json = { workspace = true, features = ["std"] }
+
 simd-json = { workspace = true }
 thiserror = { workspace = true }
 
