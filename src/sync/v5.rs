@@ -1,7 +1,7 @@
 //! High-performance sync v5 (sliding sync) response builder.
 
 use bytes::BytesMut;
-use serde_json::{Value, json};
+use serde_json::Value;
 
 use crate::writer::JsonWriter;
 
@@ -48,7 +48,7 @@ impl SlidingSyncResponseBuilder {
 	}
 
 	pub fn build_http_response(self, val: &Value) -> Result<BytesMut, serde_json::Error> {
-		let mut writer = JsonWriter::with_capacity(val.len() * 64);
+		let mut writer = JsonWriter::with_capacity(8192);
 		writer.serialize_value(val)?;
 		Ok(writer.into_bytes())
 	}
@@ -98,6 +98,8 @@ impl SlidingSyncResponseBuilder {
 
 #[cfg(test)]
 mod tests {
+	use serde_json::json;
+
 	use super::*;
 
 	#[test]

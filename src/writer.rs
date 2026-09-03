@@ -1,46 +1,35 @@
 //! Streaming JSON writer that serializes directly to a byte buffer.
-//!
-//! This avoids intermediate `serde_json::Value` allocations by writing JSON
-//! bytes directly during serialization.
-
-use std::fmt;
 
 use bytes::{BufMut, BytesMut};
 use serde::ser::{self, Serialize};
 
-/// A streaming JSON writer that builds a JSON byte buffer directly.
 pub struct JsonWriter {
 	buf: BytesMut,
 }
 
 impl JsonWriter {
-	/// Create a new writer with the given initial capacity.
 	#[inline]
 	pub fn with_capacity(cap: usize) -> Self { Self { buf: BytesMut::with_capacity(cap) } }
 
-	/// Consume the writer and return the accumulated bytes.
 	#[inline]
 	pub fn into_bytes(self) -> BytesMut { self.buf }
 
-	/// Get a reference to the underlying buffer.
 	#[inline]
 	pub fn as_bytes(&self) -> &[u8] { &self.buf }
 
-	/// Serialize a value directly into the buffer.
 	#[inline]
 	pub fn serialize_value<T: Serialize>(&mut self, value: &T) -> Result<(), serde_json::Error> {
-		let mut ser = Serializer { writer: self };
-		value.serialize(&mut ser)
+		let ser = Serializer { writer: self };
+		value.serialize(ser)
 	}
 
-	/// Write a raw JSON string directly (no escaping, no wrapping).
 	#[inline]
 	pub fn write_raw(&mut self, raw: &str) { self.buf.put_slice(raw.as_bytes()); }
 
 	#[inline]
-	fn write_byte(&mut self, b: u8) { self.buf.put_u8(b); }
+	pub fn write_byte(&mut self, b: u8) { self.buf.put_u8(b); }
 
-	fn write_escaped_string(&mut self, s: &str) {
+	pub fn write_escaped_string(&mut self, s: &str) {
 		self.write_byte(b'"');
 		for c in s.chars() {
 			match c {
@@ -52,9 +41,8 @@ impl JsonWriter {
 				| '\u{08}' => self.buf.put_slice(b"\\b"),
 				| '\u{0c}' => self.buf.put_slice(b"\\f"),
 				| c if c.is_control() => {
-					let mut buf = [0u8; 6];
-					write!(&mut buf[..], "\\u{:04x}", c as u32).unwrap();
-					self.buf.put_slice(&buf);
+					self.buf
+						.put_slice(format!("\\u{:04x}", c as u32).as_bytes());
 				},
 				| c => self.buf.put_slice(c.encode_utf8(&mut [0u8; 4]).as_bytes()),
 			}
@@ -68,7 +56,7 @@ struct Serializer<'a> {
 }
 
 impl<'a> ser::Serializer for Serializer<'a> {
-	type Error = WriterError;
+	type Error = serde_json::Error;
 	type Ok = ();
 	type SerializeMap = MapSerializer<'a>;
 	type SerializeSeq = SeqSerializer<'a>;
@@ -78,56 +66,70 @@ impl<'a> ser::Serializer for Serializer<'a> {
 	type SerializeTupleStruct = SeqSerializer<'a>;
 	type SerializeTupleVariant = SeqSerializer<'a>;
 
-	fn serialize_bool(self, v: bool) -> Result<(), WriterError> {
+	fn serialize_bool(self, v: bool) -> Result<(), serde_json::Error> {
 		self.writer.write_raw(if v { "true" } else { "false" });
 		Ok(())
 	}
 
-	fn serialize_i8(self, v: i8) -> Result<(), WriterError> { self.serialize_i64(i64::from(v)) }
+	fn serialize_i8(self, v: i8) -> Result<(), serde_json::Error> {
+		self.serialize_i64(i64::from(v))
+	}
 
-	fn serialize_i16(self, v: i16) -> Result<(), WriterError> { self.serialize_i64(i64::from(v)) }
+	fn serialize_i16(self, v: i16) -> Result<(), serde_json::Error> {
+		self.serialize_i64(i64::from(v))
+	}
 
-	fn serialize_i32(self, v: i32) -> Result<(), WriterError> { self.serialize_i64(i64::from(v)) }
+	fn serialize_i32(self, v: i32) -> Result<(), serde_json::Error> {
+		self.serialize_i64(i64::from(v))
+	}
 
-	fn serialize_i64(self, v: i64) -> Result<(), WriterError> {
+	fn serialize_i64(self, v: i64) -> Result<(), serde_json::Error> {
 		let mut buf = itoa::Buffer::new();
 		self.writer.write_raw(buf.format(v));
 		Ok(())
 	}
 
-	fn serialize_u8(self, v: u8) -> Result<(), WriterError> { self.serialize_u64(u64::from(v)) }
+	fn serialize_u8(self, v: u8) -> Result<(), serde_json::Error> {
+		self.serialize_u64(u64::from(v))
+	}
 
-	fn serialize_u16(self, v: u16) -> Result<(), WriterError> { self.serialize_u64(u64::from(v)) }
+	fn serialize_u16(self, v: u16) -> Result<(), serde_json::Error> {
+		self.serialize_u64(u64::from(v))
+	}
 
-	fn serialize_u32(self, v: u32) -> Result<(), WriterError> { self.serialize_u64(u64::from(v)) }
+	fn serialize_u32(self, v: u32) -> Result<(), serde_json::Error> {
+		self.serialize_u64(u64::from(v))
+	}
 
-	fn serialize_u64(self, v: u64) -> Result<(), WriterError> {
+	fn serialize_u64(self, v: u64) -> Result<(), serde_json::Error> {
 		let mut buf = itoa::Buffer::new();
 		self.writer.write_raw(buf.format(v));
 		Ok(())
 	}
 
-	fn serialize_f32(self, v: f32) -> Result<(), WriterError> { self.serialize_f64(f64::from(v)) }
+	fn serialize_f32(self, v: f32) -> Result<(), serde_json::Error> {
+		self.serialize_f64(f64::from(v))
+	}
 
-	fn serialize_f64(self, v: f64) -> Result<(), WriterError> {
+	fn serialize_f64(self, v: f64) -> Result<(), serde_json::Error> {
 		let mut buf = ryu::Buffer::new();
 		self.writer.write_raw(buf.format(v));
 		Ok(())
 	}
 
-	fn serialize_char(self, v: char) -> Result<(), WriterError> {
+	fn serialize_char(self, v: char) -> Result<(), serde_json::Error> {
 		let mut s = String::with_capacity(6);
 		s.push(v);
 		self.writer.write_escaped_string(&s);
 		Ok(())
 	}
 
-	fn serialize_str(self, v: &str) -> Result<(), WriterError> {
+	fn serialize_str(self, v: &str) -> Result<(), serde_json::Error> {
 		self.writer.write_escaped_string(v);
 		Ok(())
 	}
 
-	fn serialize_bytes(self, v: &[u8]) -> Result<(), WriterError> {
+	fn serialize_bytes(self, v: &[u8]) -> Result<(), serde_json::Error> {
 		use ser::SerializeSeq;
 		let mut seq = self.serialize_seq(Some(v.len()))?;
 		for byte in v {
@@ -136,21 +138,21 @@ impl<'a> ser::Serializer for Serializer<'a> {
 		seq.end()
 	}
 
-	fn serialize_none(self) -> Result<(), WriterError> {
+	fn serialize_none(self) -> Result<(), serde_json::Error> {
 		self.writer.write_raw("null");
 		Ok(())
 	}
 
-	fn serialize_some<T: ?Sized + Serialize>(self, value: &T) -> Result<(), WriterError> {
+	fn serialize_some<T: ?Sized + Serialize>(self, value: &T) -> Result<(), serde_json::Error> {
 		value.serialize(self)
 	}
 
-	fn serialize_unit(self) -> Result<(), WriterError> {
+	fn serialize_unit(self) -> Result<(), serde_json::Error> {
 		self.writer.write_raw("null");
 		Ok(())
 	}
 
-	fn serialize_unit_struct(self, _name: &'static str) -> Result<(), WriterError> {
+	fn serialize_unit_struct(self, _name: &'static str) -> Result<(), serde_json::Error> {
 		self.writer.write_raw("null");
 		Ok(())
 	}
@@ -160,7 +162,7 @@ impl<'a> ser::Serializer for Serializer<'a> {
 		_name: &'static str,
 		_variant_index: u32,
 		variant: &'static str,
-	) -> Result<(), WriterError> {
+	) -> Result<(), serde_json::Error> {
 		self.writer.write_escaped_string(variant);
 		Ok(())
 	}
@@ -169,7 +171,7 @@ impl<'a> ser::Serializer for Serializer<'a> {
 		self,
 		_name: &'static str,
 		value: &T,
-	) -> Result<(), WriterError> {
+	) -> Result<(), serde_json::Error> {
 		value.serialize(self)
 	}
 
@@ -179,7 +181,7 @@ impl<'a> ser::Serializer for Serializer<'a> {
 		_variant_index: u32,
 		variant: &'static str,
 		value: &T,
-	) -> Result<(), WriterError> {
+	) -> Result<(), serde_json::Error> {
 		self.writer.write_byte(b'{');
 		self.writer.write_escaped_string(variant);
 		self.writer.write_byte(b':');
@@ -188,12 +190,12 @@ impl<'a> ser::Serializer for Serializer<'a> {
 		Ok(())
 	}
 
-	fn serialize_seq(self, len: Option<usize>) -> Result<SeqSerializer<'a>, WriterError> {
+	fn serialize_seq(self, _len: Option<usize>) -> Result<SeqSerializer<'a>, serde_json::Error> {
 		self.writer.write_byte(b'[');
-		Ok(SeqSerializer { writer: self.writer, len, count: 0 })
+		Ok(SeqSerializer { writer: self.writer, count: 0 })
 	}
 
-	fn serialize_tuple(self, len: usize) -> Result<SeqSerializer<'a>, WriterError> {
+	fn serialize_tuple(self, len: usize) -> Result<SeqSerializer<'a>, serde_json::Error> {
 		self.serialize_seq(Some(len))
 	}
 
@@ -201,7 +203,7 @@ impl<'a> ser::Serializer for Serializer<'a> {
 		self,
 		_name: &'static str,
 		len: usize,
-	) -> Result<SeqSerializer<'a>, WriterError> {
+	) -> Result<SeqSerializer<'a>, serde_json::Error> {
 		self.serialize_seq(Some(len))
 	}
 
@@ -211,14 +213,14 @@ impl<'a> ser::Serializer for Serializer<'a> {
 		_variant_index: u32,
 		variant: &'static str,
 		len: usize,
-	) -> Result<SeqSerializer<'a>, WriterError> {
+	) -> Result<SeqSerializer<'a>, serde_json::Error> {
 		self.writer.write_byte(b'{');
 		self.writer.write_escaped_string(variant);
 		self.writer.write_byte(b':');
 		self.serialize_seq(Some(len))
 	}
 
-	fn serialize_map(self, _len: Option<usize>) -> Result<MapSerializer<'a>, WriterError> {
+	fn serialize_map(self, _len: Option<usize>) -> Result<MapSerializer<'a>, serde_json::Error> {
 		self.writer.write_byte(b'{');
 		Ok(MapSerializer { writer: self.writer, first: true })
 	}
@@ -227,7 +229,7 @@ impl<'a> ser::Serializer for Serializer<'a> {
 		self,
 		_name: &'static str,
 		_len: usize,
-	) -> Result<MapSerializer<'a>, WriterError> {
+	) -> Result<MapSerializer<'a>, serde_json::Error> {
 		self.serialize_map(None)
 	}
 
@@ -237,7 +239,7 @@ impl<'a> ser::Serializer for Serializer<'a> {
 		_variant_index: u32,
 		variant: &'static str,
 		_len: usize,
-	) -> Result<StructVariantSerializer<'a>, WriterError> {
+	) -> Result<StructVariantSerializer<'a>, serde_json::Error> {
 		self.writer.write_byte(b'{');
 		self.writer.write_escaped_string(variant);
 		self.writer.write_byte(b':');
@@ -248,15 +250,17 @@ impl<'a> ser::Serializer for Serializer<'a> {
 
 struct SeqSerializer<'a> {
 	writer: &'a mut JsonWriter,
-	len: Option<usize>,
 	count: usize,
 }
 
-impl<'a> ser::SerializeSeq for SeqSerializer<'a> {
-	type Error = WriterError;
+impl ser::SerializeSeq for SeqSerializer<'_> {
+	type Error = serde_json::Error;
 	type Ok = ();
 
-	fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), WriterError> {
+	fn serialize_element<T: ?Sized + Serialize>(
+		&mut self,
+		value: &T,
+	) -> Result<(), serde_json::Error> {
 		if self.count > 0 {
 			self.writer.write_byte(b',');
 		}
@@ -264,43 +268,52 @@ impl<'a> ser::SerializeSeq for SeqSerializer<'a> {
 		value.serialize(Serializer { writer: self.writer })
 	}
 
-	fn end(self) -> Result<(), WriterError> {
+	fn end(self) -> Result<(), serde_json::Error> {
 		self.writer.write_byte(b']');
 		Ok(())
 	}
 }
 
-impl<'a> ser::SerializeTuple for SeqSerializer<'a> {
-	type Error = WriterError;
+impl ser::SerializeTuple for SeqSerializer<'_> {
+	type Error = serde_json::Error;
 	type Ok = ();
 
-	fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), WriterError> {
+	fn serialize_element<T: ?Sized + Serialize>(
+		&mut self,
+		value: &T,
+	) -> Result<(), serde_json::Error> {
 		ser::SerializeSeq::serialize_element(self, value)
 	}
 
-	fn end(self) -> Result<(), WriterError> { ser::SerializeSeq::end(self) }
+	fn end(self) -> Result<(), serde_json::Error> { ser::SerializeSeq::end(self) }
 }
 
-impl<'a> ser::SerializeTupleStruct for SeqSerializer<'a> {
-	type Error = WriterError;
+impl ser::SerializeTupleStruct for SeqSerializer<'_> {
+	type Error = serde_json::Error;
 	type Ok = ();
 
-	fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), WriterError> {
+	fn serialize_field<T: ?Sized + Serialize>(
+		&mut self,
+		value: &T,
+	) -> Result<(), serde_json::Error> {
 		ser::SerializeSeq::serialize_element(self, value)
 	}
 
-	fn end(self) -> Result<(), WriterError> { ser::SerializeSeq::end(self) }
+	fn end(self) -> Result<(), serde_json::Error> { ser::SerializeSeq::end(self) }
 }
 
-impl<'a> ser::SerializeTupleVariant for SeqSerializer<'a> {
-	type Error = WriterError;
+impl ser::SerializeTupleVariant for SeqSerializer<'_> {
+	type Error = serde_json::Error;
 	type Ok = ();
 
-	fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), WriterError> {
+	fn serialize_field<T: ?Sized + Serialize>(
+		&mut self,
+		value: &T,
+	) -> Result<(), serde_json::Error> {
 		ser::SerializeSeq::serialize_element(self, value)
 	}
 
-	fn end(self) -> Result<(), WriterError> {
+	fn end(self) -> Result<(), serde_json::Error> {
 		self.writer.write_byte(b'}');
 		ser::SerializeSeq::end(self)
 	}
@@ -311,11 +324,11 @@ struct MapSerializer<'a> {
 	first: bool,
 }
 
-impl<'a> ser::SerializeMap for MapSerializer<'a> {
-	type Error = WriterError;
+impl ser::SerializeMap for MapSerializer<'_> {
+	type Error = serde_json::Error;
 	type Ok = ();
 
-	fn serialize_key<T: ?Sized + Serialize>(&mut self, key: &T) -> Result<(), WriterError> {
+	fn serialize_key<T: ?Sized + Serialize>(&mut self, key: &T) -> Result<(), serde_json::Error> {
 		if !self.first {
 			self.writer.write_byte(b',');
 		}
@@ -323,31 +336,34 @@ impl<'a> ser::SerializeMap for MapSerializer<'a> {
 		key.serialize(Serializer { writer: self.writer })
 	}
 
-	fn serialize_value<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), WriterError> {
+	fn serialize_value<T: ?Sized + Serialize>(
+		&mut self,
+		value: &T,
+	) -> Result<(), serde_json::Error> {
 		self.writer.write_byte(b':');
 		value.serialize(Serializer { writer: self.writer })
 	}
 
-	fn end(self) -> Result<(), WriterError> {
+	fn end(self) -> Result<(), serde_json::Error> {
 		self.writer.write_byte(b'}');
 		Ok(())
 	}
 }
 
-impl<'a> ser::SerializeStruct for MapSerializer<'a> {
-	type Error = WriterError;
+impl ser::SerializeStruct for MapSerializer<'_> {
+	type Error = serde_json::Error;
 	type Ok = ();
 
 	fn serialize_field<T: ?Sized + Serialize>(
 		&mut self,
 		key: &'static str,
 		value: &T,
-	) -> Result<(), WriterError> {
+	) -> Result<(), serde_json::Error> {
 		ser::SerializeMap::serialize_key(self, key)?;
 		ser::SerializeMap::serialize_value(self, value)
 	}
 
-	fn end(self) -> Result<(), WriterError> { ser::SerializeMap::end(self) }
+	fn end(self) -> Result<(), serde_json::Error> { ser::SerializeMap::end(self) }
 }
 
 struct StructVariantSerializer<'a> {
@@ -355,53 +371,37 @@ struct StructVariantSerializer<'a> {
 	first: bool,
 }
 
-impl<'a> ser::SerializeStructVariant for StructVariantSerializer<'a> {
-	type Error = WriterError;
+impl ser::SerializeStructVariant for StructVariantSerializer<'_> {
+	type Error = serde_json::Error;
 	type Ok = ();
 
 	fn serialize_field<T: ?Sized + Serialize>(
 		&mut self,
 		key: &'static str,
 		value: &T,
-	) -> Result<(), WriterError> {
-		ser::SerializeMap::serialize_key(self, key)?;
-		ser::SerializeMap::serialize_value(self, value)
+	) -> Result<(), serde_json::Error> {
+		if !self.first {
+			self.writer.write_byte(b',');
+		}
+		self.first = false;
+		self.writer.write_escaped_string(key);
+		self.writer.write_byte(b':');
+		value.serialize(Serializer { writer: self.writer })
 	}
 
-	fn end(self) -> Result<(), WriterError> {
+	fn end(self) -> Result<(), serde_json::Error> {
 		self.writer.write_byte(b'}');
-		ser::SerializeMap::end(self)
+		self.writer.write_byte(b'}');
+		Ok(())
 	}
-}
-
-/// Error type for the JSON writer.
-#[derive(Debug)]
-pub struct WriterError;
-
-impl fmt::Display for WriterError {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str("JSON writer error") }
-}
-
-impl std::error::Error for WriterError {}
-
-impl ser::Error for WriterError {
-	fn custom<T: fmt::Display>(_msg: T) -> Self { WriterError }
 }
 
 /// Serialize a value directly to a `BytesMut` buffer.
 #[inline]
-pub fn to_bytes<T: Serialize>(value: &T) -> Result<BytesMut, WriterError> {
+pub fn to_bytes<T: Serialize>(value: &T) -> Result<BytesMut, serde_json::Error> {
 	let mut writer = JsonWriter::with_capacity(8192);
 	writer.serialize_value(value)?;
 	Ok(writer.into_bytes())
-}
-
-/// Serialize a value to a `String`.
-#[inline]
-pub fn to_string_buf<T: Serialize>(value: &T) -> Result<String, WriterError> {
-	let bytes = to_bytes(value)?;
-	// SAFETY: we only wrote valid UTF-8 (JSON is UTF-8)
-	Ok(unsafe { String::from_utf8_unchecked(bytes.to_vec()) })
 }
 
 #[cfg(test)]
@@ -459,7 +459,7 @@ mod tests {
 	fn test_write_raw() {
 		let mut w = JsonWriter::with_capacity(64);
 		w.write_raw(r#"{"key":"value"}"#);
-		assert_eq!(w.as_bytes(), r#"{"key":"value"}"#);
+		assert_eq!(w.as_bytes(), r#"{"key":"value"}"#.as_bytes());
 	}
 
 	#[test]

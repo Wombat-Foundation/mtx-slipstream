@@ -11,7 +11,7 @@ itoa = "1"
 ryu = "1"
 serde = { workspace = true }
 serde_json = { workspace = true, features = ["std"] }
-simd-json = { workspace = true, features = ["std_impl"] }
+simd-json = { workspace = true }
 thiserror = { workspace = true }
 
 [lints]

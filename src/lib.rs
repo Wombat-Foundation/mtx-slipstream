@@ -3,17 +3,20 @@
 //! High-performance serialization for Matrix Client-Server and Federation APIs.
 //!
 //! Eliminates redundant serialize/deserialize round-trips in sync and send_join
-//! responses. Instead of the current triple-serialization pattern:
-//!
-//! ```text
-//! ruma types → serialize → bytes → deserialize → Value → patch → serialize → bytes
-//! ```
-//!
-//! mtx-slipstream provides:
-//! - **Direct-to-bytes sync response construction** with inline patching
-//! - **Streaming federation PDU responses** that avoid `Vec` materialization
-//! - **Direct `CanonicalJsonObject` → bytes** conversion without intermediate
-//!   `Box<RawValue>`
+//! responses.
+
+#![allow(
+	clippy::arithmetic_side_effects,
+	clippy::missing_assert_message,
+	clippy::must_use_candidate,
+	clippy::return_self_not_must_use,
+	clippy::as_conversions,
+	clippy::str_to_string,
+	clippy::string_lit_as_bytes,
+	clippy::default_trait_access,
+	clippy::unseparated_literal_suffix,
+	clippy::unnecessary_struct_initialization
+)]
 
 pub mod federation;
 pub mod sync;

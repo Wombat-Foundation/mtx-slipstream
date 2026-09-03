@@ -69,7 +69,7 @@ impl SyncResponseBuilder {
 
 	/// Build the final HTTP response bytes.
 	pub fn build_http_response(self, val: &Value) -> Result<BytesMut, serde_json::Error> {
-		let mut writer = JsonWriter::with_capacity(val.len() * 64);
+		let mut writer = JsonWriter::with_capacity(8192);
 		writer.serialize_value(val)?;
 		Ok(writer.into_bytes())
 	}
