@@ -10,9 +10,11 @@ categories = ["http", "optimization"]
 repository = "https://github.com/Wombat-Foundation/mtx-slipstream"
 
 [dependencies]
-simd-json = { version = "0.18", optional = true, default-features = false, features = [
-    "runtime-detection",
-] }
+bytes = { workspace = true }
+itoa = "1"
+ryu = "1"
+simd-json = { workspace = true }
+thiserror = { workspace = true }
 
 [lints.rust]
 unsafe_code = "deny"
@@ -56,3 +58,8 @@ debug = 0
 strip = "debuginfo"
 incremental = true
 codegen-units = 256
+
+# This repository is consumed as a Git submodule, but it owns its dependency
+# resolution and lockfile. Declaring an explicit workspace stops Cargo from
+# inheriting the enclosing superproject's workspace when invoked from here.
+[workspace]
