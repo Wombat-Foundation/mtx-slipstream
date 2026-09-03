@@ -9,12 +9,17 @@ keywords = ["matrix", "federation", "C2S"]
 categories = ["http", "optimization"]
 repository = "https://github.com/Wombat-Foundation/mtx-slipstream"
 
+# This repository is consumed as a Git submodule, but it owns its dependency
+# resolution and lockfile. Declaring an explicit workspace stops Cargo from
+# inheriting the enclosing superproject's workspace when invoked from here.
+[workspace]
+
 [dependencies]
-bytes = { workspace = true }
+bytes = "1.10.1"
 itoa = "1"
 ryu = "1"
-simd-json = { workspace = true }
-thiserror = { workspace = true }
+simd-json = { version = "0.18", default-features = false, features = ["serde_impl"] }
+thiserror = { version = "2.0.12", default-features = false }
 
 [lints.rust]
 unsafe_code = "deny"
@@ -58,8 +63,3 @@ debug = 0
 strip = "debuginfo"
 incremental = true
 codegen-units = 256
-
-# This repository is consumed as a Git submodule, but it owns its dependency
-# resolution and lockfile. Declaring an explicit workspace stops Cargo from
-# inheriting the enclosing superproject's workspace when invoked from here.
-[workspace]
