@@ -66,6 +66,12 @@ cov: ##H Run code coverage and generate HTML report
 
 
 
+.PHONY: build
+build: ##H Build the lib/binary
+	cargo build --release --timings
+
+
+
 .PHONY: clean
 clean: ##H Clean build artifacts
 	$(CARGO) clean
