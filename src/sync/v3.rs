@@ -26,10 +26,12 @@ pub struct SyncResponseBuilder {
 }
 
 impl SyncResponseBuilder {
+	/// Create a new empty builder.
 	#[inline]
 	#[must_use]
 	pub fn new() -> Self { Self::default() }
 
+	/// Set the joined rooms' `state_after` patches.
 	#[inline]
 	#[must_use]
 	pub fn joined_state_after(mut self, data: Vec<(String, OwnedValue)>) -> Self {
@@ -37,6 +39,7 @@ impl SyncResponseBuilder {
 		self
 	}
 
+	/// Set the left rooms' `state_after` patches.
 	#[inline]
 	#[must_use]
 	pub fn left_state_after(mut self, data: Vec<(String, OwnedValue)>) -> Self {
@@ -44,6 +47,7 @@ impl SyncResponseBuilder {
 		self
 	}
 
+	/// Mark this as an initial sync (enables `account_data` injection).
 	#[inline]
 	#[must_use]
 	pub fn is_initial_sync(mut self, yes: bool) -> Self {
@@ -51,6 +55,7 @@ impl SyncResponseBuilder {
 		self
 	}
 
+	/// Set the knock rooms JSON array.
 	#[inline]
 	#[must_use]
 	pub fn knocked_rooms_json(mut self, data: OwnedValue) -> Self {
@@ -58,6 +63,7 @@ impl SyncResponseBuilder {
 		self
 	}
 
+	/// Set the device lists JSON object.
 	#[inline]
 	#[must_use]
 	pub fn device_lists_json(mut self, data: OwnedValue) -> Self {
@@ -66,6 +72,9 @@ impl SyncResponseBuilder {
 	}
 
 	/// Patch a sync response value in place.
+	///
+	/// Applies all configured patches: `state_after`, `ephemeral`,
+	/// `account_data`, knock rooms, and device lists.
 	pub fn patch(&self, val: &mut OwnedValue) {
 		self.patch_state_after(val);
 		self.patch_ephemeral(val);
@@ -73,7 +82,11 @@ impl SyncResponseBuilder {
 		self.patch_device_lists(val);
 	}
 
-	/// Build the final HTTP response bytes.
+	/// Serialize the patched value into a complete HTTP response body.
+	///
+	/// # Errors
+	///
+	/// Returns `simd_json::Error` if serialization fails.
 	pub fn build_http_response(self, val: &OwnedValue) -> Result<BytesMut, simd_json::Error> {
 		let mut writer = JsonWriter::with_capacity(8192);
 		writer.write_value(val)?;

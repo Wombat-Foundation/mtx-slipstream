@@ -27,3 +27,4 @@ target
 /*.jsonl
 /*.log
 /*.txt
+.tmp/

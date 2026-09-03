@@ -22,12 +22,24 @@ use simd_json::prelude::*;
 /// The input buffer is mutated in-place during parsing (simd-json's
 /// `ScratchSpace` strategy), so the caller should not rely on the buffer
 /// contents after this call.
+///
+/// # Errors
+///
+/// Returns `simd_json::Error` if the input is not valid JSON.
 #[inline]
 pub fn parse_jsonsimd(buf: &mut [u8]) -> Result<simd_json::OwnedValue, simd_json::Error> {
 	simd_json::from_slice(buf)
 }
 
 /// Parse a JSON string using simd-json.
+///
+/// # Errors
+///
+/// Returns `simd_json::Error` if the input is not valid JSON.
+///
+/// # Safety
+///
+/// `simd_json::from_str` requires valid UTF-8 input, which `&str` guarantees.
 #[inline]
 #[allow(unsafe_code)]
 pub fn parse_jsonsimd_str(s: &mut str) -> Result<simd_json::OwnedValue, simd_json::Error> {
@@ -42,13 +54,22 @@ pub fn parse_jsonsimd_str(s: &mut str) -> Result<simd_json::OwnedValue, simd_jso
 /// `RocksDB` and need to deserialize it into an `OwnedValue`.
 ///
 /// # Arguments
+///
 /// * `buf` - The raw JSON bytes from the database. **Mutated in-place** by
 ///   simd-json's parsing strategy.
+///
+/// # Errors
+///
+/// Returns `simd_json::Error` if the input is not valid JSON.
 pub fn parse_pdu_json(buf: &mut [u8]) -> Result<simd_json::OwnedValue, simd_json::Error> {
 	simd_json::from_slice(buf)
 }
 
 /// Serialize an `OwnedValue` directly to a `BytesMut` buffer.
+///
+/// # Errors
+///
+/// Returns `simd_json::Error` if serialization fails.
 pub fn canonical_to_bytes(pdu: &simd_json::OwnedValue) -> Result<BytesMut, simd_json::Error> {
 	let mut buf = BytesMut::with_capacity(2048);
 	let mut writer = BufWriter(&mut buf);
@@ -57,13 +78,22 @@ pub fn canonical_to_bytes(pdu: &simd_json::OwnedValue) -> Result<BytesMut, simd_
 }
 
 /// Serialize an `OwnedValue` to a `String`.
+///
+/// # Errors
+///
+/// Returns `simd_json::Error` if serialization fails.
 pub fn canonical_to_string(pdu: &simd_json::OwnedValue) -> Result<String, simd_json::Error> {
 	simd_json::to_string(pdu)
 }
 
 /// Serialize an `OwnedValue` directly, removing specified fields.
 ///
-/// Removes fields, then serializes back.
+/// Clones the value, removes the listed fields from the top-level object,
+/// then serializes the result.
+///
+/// # Errors
+///
+/// Returns `simd_json::Error` if serialization fails.
 pub fn canonical_to_bytes_without(
 	pdu: &simd_json::OwnedValue,
 	skip_fields: &[&str],
@@ -81,6 +111,9 @@ pub fn canonical_to_bytes_without(
 }
 
 /// Remove fields from a JSON value in place.
+///
+/// If `pdu` is an object, each field name in `skip_fields` is removed.
+/// Non-object values are left unchanged.
 pub fn remove_fields(pdu: &mut simd_json::OwnedValue, skip_fields: &[&str]) {
 	if let Some(obj) = pdu.as_object_mut() {
 		for field in skip_fields {

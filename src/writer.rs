@@ -3,24 +3,42 @@
 use bytes::{BufMut, BytesMut};
 use simd_json::{OwnedValue, prelude::*};
 
+/// A streaming JSON serializer that writes directly into a [`BytesMut`]
+/// buffer without intermediate allocations.
+///
+/// Call [`write_value`](Self::write_value) to serialize an [`OwnedValue`],
+/// then [`into_bytes`](Self::into_bytes) to extract the finished buffer.
 pub struct JsonWriter {
 	buf: BytesMut,
 }
 
 impl JsonWriter {
+	/// Create a new writer with the given initial buffer capacity.
 	#[inline]
 	#[must_use]
 	pub fn with_capacity(cap: usize) -> Self { Self { buf: BytesMut::with_capacity(cap) } }
 
+	/// Consume the writer and return the accumulated bytes.
 	#[inline]
 	#[must_use]
 	pub fn into_bytes(self) -> BytesMut { self.buf }
 
+	/// Borrow the underlying buffer as a byte slice.
 	#[inline]
 	#[must_use]
 	pub fn as_bytes(&self) -> &[u8] { &self.buf }
 
 	/// Write an `OwnedValue` as JSON directly into the buffer.
+	///
+	/// Recursively serializes the value: strings are escaped, numbers are
+	/// formatted via `itoa`/`ryu`, and containers are written element by
+	/// element.
+	///
+	/// # Errors
+	///
+	/// This method currently always returns `Ok(())`. It returns
+	/// `Result` to maintain API consistency with future extensions (e.g.
+	/// depth-limiting).
 	pub fn write_value(&mut self, value: &OwnedValue) -> Result<(), simd_json::Error> {
 		if let Some(s) = value.as_str() {
 			self.write_escaped_string(s);
@@ -61,15 +79,27 @@ impl JsonWriter {
 		Ok(())
 	}
 
+	/// Write raw JSON bytes into the buffer without escaping.
+	///
+	/// # Errors
+	///
+	/// This method currently always returns `Ok(())`. It returns
+	/// `Result` to maintain API consistency with future extensions.
 	#[inline]
 	pub fn write_raw(&mut self, raw: &str) -> Result<(), simd_json::Error> {
 		self.buf.put_slice(raw.as_bytes());
 		Ok(())
 	}
 
+	/// Write a single byte into the buffer.
 	#[inline]
 	pub fn write_byte(&mut self, b: u8) { self.buf.put_u8(b); }
 
+	/// Write a JSON-escaped string (including surrounding quotes) into the
+	/// buffer.
+	///
+	/// Control characters, backslashes, and double quotes are escaped per
+	/// the JSON specification (RFC 8259 §7).
 	pub fn write_escaped_string(&mut self, s: &str) {
 		self.write_byte(b'"');
 		for c in s.chars() {
@@ -93,6 +123,13 @@ impl JsonWriter {
 }
 
 /// Serialize an `OwnedValue` directly to a `BytesMut` buffer.
+///
+/// Allocates an 8 KiB buffer, serializes the value via [`JsonWriter`], and
+/// returns the result.
+///
+/// # Errors
+///
+/// Returns `simd_json::Error` if serialization fails.
 #[inline]
 pub fn to_bytes(value: &OwnedValue) -> Result<BytesMut, simd_json::Error> {
 	let mut writer = JsonWriter::with_capacity(8192);

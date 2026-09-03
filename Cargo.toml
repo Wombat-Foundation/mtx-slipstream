@@ -8,6 +8,7 @@ description = "High-performance serialization for hottest Matrix federation and 
 keywords = ["matrix", "federation", "C2S"]
 categories = ["http", "optimization"]
 repository = "https://github.com/Wombat-Foundation/mtx-slipstream"
+readme = "README.md"
 
 # This repository is consumed as a Git submodule, but it owns its dependency
 # resolution and lockfile. Declaring an explicit workspace stops Cargo from

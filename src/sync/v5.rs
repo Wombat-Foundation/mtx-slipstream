@@ -8,8 +8,11 @@ use crate::writer::JsonWriter;
 /// Per-room extra data for v5 sliding sync responses.
 #[derive(Debug, Clone)]
 pub struct RoomExtras {
+	/// The membership state of the local user in this room.
 	pub membership: Option<String>,
+	/// List identifiers the room appears in.
 	pub lists: Vec<String>,
+	/// Whether to include the full expanded timeline.
 	pub expanded_timeline: bool,
 }
 
@@ -21,10 +24,12 @@ pub struct SlidingSyncResponseBuilder {
 }
 
 impl SlidingSyncResponseBuilder {
+	/// Create a new empty builder.
 	#[inline]
 	#[must_use]
 	pub fn new() -> Self { Self::default() }
 
+	/// Set the `io.element.msc4308.thread_subscriptions` extension value.
 	#[inline]
 	#[must_use]
 	pub fn thread_subscriptions(mut self, data: OwnedValue) -> Self {
@@ -32,6 +37,7 @@ impl SlidingSyncResponseBuilder {
 		self
 	}
 
+	/// Add a single room's extra data.
 	#[inline]
 	#[must_use]
 	pub fn room_extra(mut self, room_id: String, extras: RoomExtras) -> Self {
@@ -39,6 +45,7 @@ impl SlidingSyncResponseBuilder {
 		self
 	}
 
+	/// Replace all room extras at once.
 	#[inline]
 	#[must_use]
 	pub fn room_extras(mut self, extras: Vec<(String, RoomExtras)>) -> Self {
@@ -46,11 +53,20 @@ impl SlidingSyncResponseBuilder {
 		self
 	}
 
+	/// Patch a sync response value in place.
+	///
+	/// Applies thread subscriptions and per-room extra fields (membership,
+	/// lists, timeline, `stripped_state`).
 	pub fn patch(&self, val: &mut OwnedValue) {
 		self.patch_thread_subscriptions(val);
 		self.patch_rooms(val);
 	}
 
+	/// Serialize the patched value into a complete HTTP response body.
+	///
+	/// # Errors
+	///
+	/// Returns `simd_json::Error` if serialization fails.
 	pub fn build_http_response(self, val: &OwnedValue) -> Result<BytesMut, simd_json::Error> {
 		let mut writer = JsonWriter::with_capacity(8192);
 		writer.write_value(val)?;
