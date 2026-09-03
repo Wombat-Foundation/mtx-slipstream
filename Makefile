@@ -17,7 +17,6 @@ format: ##H Format code
 	pre-commit run --all-files
 	$(CARGO) fmt
 	$(CARGO) sort --workspace --grouped
-	$(CARGO) clippy --fix --allow-dirty --allow-staged --allow-no-vcs --all-targets --all-features
 
 
 
@@ -28,6 +27,10 @@ check: ##H Type-check without building
 .PHONY: lint
 lint: ##H Run clippy lints
 	$(CARGO) clippy --all-targets --all-features -- -D warnings
+
+.PHONY: fix
+fix: ##H Apply auto-fixes with clippy
+	$(CARGO) clippy --fix --allow-dirty --allow-staged --allow-no-vcs --all-targets --all-features
 
 
 
