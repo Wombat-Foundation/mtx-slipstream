@@ -5,7 +5,7 @@
 //! PDUs incrementally into a growing byte buffer.
 
 use bytes::{BufMut, BytesMut};
-use serde::Serialize;
+use simd_json::serde::Serialize;
 
 use crate::writer::JsonWriter;
 

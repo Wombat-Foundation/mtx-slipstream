@@ -15,8 +15,7 @@
 use std::io;
 
 use bytes::BytesMut;
-use serde::Serialize;
-use simd_json::prelude::*;
+use simd_json::{prelude::*, serde::Serialize};
 
 /// Parse JSON bytes using simd-json (SIMD-accelerated).
 ///
@@ -29,7 +28,7 @@ use simd_json::prelude::*;
 #[inline]
 pub fn parse_jsonsimd<'a, T>(buf: &'a mut [u8]) -> Result<T, simd_json::Error>
 where
-	T: serde::Deserialize<'a>,
+	T: simd_json::serde::Deserialize<'a>,
 {
 	simd_json::from_slice(buf)
 }
@@ -39,7 +38,7 @@ where
 #[allow(unsafe_code)]
 pub fn parse_jsonsimd_str<'a, T>(s: &'a mut str) -> Result<T, simd_json::Error>
 where
-	T: serde::Deserialize<'a>,
+	T: simd_json::serde::Deserialize<'a>,
 {
 	// SAFETY: simd_json::from_str requires the input to be valid UTF-8,
 	// which &str guarantees.

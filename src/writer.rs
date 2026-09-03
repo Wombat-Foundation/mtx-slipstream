@@ -1,7 +1,7 @@
 //! Streaming JSON writer that serializes directly to a byte buffer.
 
 use bytes::{BufMut, BytesMut};
-use serde::ser::{self, Serialize};
+use simd_json::serde::ser::{self, Serialize};
 
 pub struct JsonWriter {
 	buf: BytesMut,
