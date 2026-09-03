@@ -10,16 +10,13 @@ categories = ["http", "optimization"]
 repository = "https://github.com/Wombat-Foundation/mtx-slipstream"
 
 [dependencies]
-simd-json = { workspace = true, default-features = false }
+simd-json = { version = "0.18", optional = true, default-features = false, features = [
+    "swar-number-parsing",
+    "runtime-detection",
+] }
 
 [lints.rust]
 unsafe_code = "deny"
-unexpected_cfgs = { level = "warn", check-cfg = [
-    "cfg(coverage)",
-    "cfg(coverage_nightly)",
-    "cfg(tarpaulin)",
-    "cfg(has_res_submodule)",
-] }
 
 [lints.clippy]
 pedantic = { level = "warn", priority = -1 }
