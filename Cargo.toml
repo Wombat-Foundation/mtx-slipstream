@@ -13,8 +13,7 @@ repository = "https://github.com/Wombat-Foundation/mtx-slipstream"
 bytes = { workspace = true }
 itoa = "1"
 ryu = "1"
-serde = { workspace = true }
-simd-json = { workspace = true }
+simd-json = { workspace = true, default-features = false }
 thiserror = { workspace = true }
 
 [lints.rust]
@@ -46,3 +45,22 @@ arithmetic_side_effects = "warn"
 undocumented_unsafe_blocks = "warn"
 dbg_macro = "warn"
 get_unwrap = "warn"
+
+[profile.release]
+strip = "symbols"
+lto = "thin"
+
+# Optimize for quick edit/compile cycles. Full debug info makes artifacts much
+# larger and slows linking; use a debug build with symbols only when needed.
+[profile.dev]
+opt-level = 0
+debug = 0
+strip = "debuginfo"
+incremental = true
+codegen-units = 256
+
+[profile.test]
+debug = 0
+strip = "debuginfo"
+incremental = true
+codegen-units = 256
