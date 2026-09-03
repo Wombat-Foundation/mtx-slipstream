@@ -13,7 +13,7 @@ repository = "https://github.com/Wombat-Foundation/mtx-slipstream"
 bytes = { workspace = true }
 itoa = "1"
 ryu = "1"
-
+serde = { workspace = true }
 simd-json = { workspace = true }
 thiserror = { workspace = true }
 

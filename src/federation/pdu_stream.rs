@@ -35,7 +35,7 @@ impl PduStreamWriter {
 	}
 
 	/// Write a serializable PDU value.
-	pub fn write_pdu<T: Serialize>(&mut self, pdu: &T) -> Result<(), serde_json::Error> {
+	pub fn write_pdu<T: Serialize>(&mut self, pdu: &T) -> Result<(), simd_json::Error> {
 		if self.count > 0 {
 			self.buf.put_u8(b',');
 		}
@@ -96,7 +96,7 @@ impl FederationResponseWriter {
 		self.state_count += 1;
 	}
 
-	pub fn write_state_pdu<T: Serialize>(&mut self, pdu: &T) -> Result<(), serde_json::Error> {
+	pub fn write_state_pdu<T: Serialize>(&mut self, pdu: &T) -> Result<(), simd_json::Error> {
 		debug_assert_eq!(self.phase, ResponsePhase::State);
 		if self.state_count > 0 {
 			self.buf.put_u8(b',');
@@ -126,7 +126,7 @@ impl FederationResponseWriter {
 	pub fn write_auth_chain_pdu<T: Serialize>(
 		&mut self,
 		pdu: &T,
-	) -> Result<(), serde_json::Error> {
+	) -> Result<(), simd_json::Error> {
 		debug_assert_eq!(self.phase, ResponsePhase::AuthChain);
 		if self.auth_chain_count > 0 {
 			self.buf.put_u8(b',');
@@ -153,7 +153,7 @@ impl FederationResponseWriter {
 
 #[cfg(test)]
 mod tests {
-	use serde_json::{Value, json};
+	use simd_json::{OwnedValue, json, prelude::*};
 
 	use super::*;
 
@@ -164,7 +164,8 @@ mod tests {
 		stream.write_raw_pdu(r#"{"event_id":"$b","type":"m.room.member"}"#);
 		stream.write_raw_pdu(r#"{"event_id":"$c","type":"m.room.message"}"#);
 		let bytes = stream.finish();
-		let parsed: Value = serde_json::from_slice(&bytes).unwrap();
+		let mut input = bytes.to_vec();
+		let parsed: OwnedValue = simd_json::from_slice(&mut input).unwrap();
 		assert!(parsed.is_array());
 		assert_eq!(parsed.as_array().unwrap().len(), 3);
 	}
@@ -175,7 +176,8 @@ mod tests {
 		stream.write_pdu(&json!({"event_id": "$a"})).unwrap();
 		stream.write_pdu(&json!({"event_id": "$b"})).unwrap();
 		let bytes = stream.finish();
-		let parsed: Value = serde_json::from_slice(&bytes).unwrap();
+		let mut input = bytes.to_vec();
+		let parsed: OwnedValue = simd_json::from_slice(&mut input).unwrap();
 		assert_eq!(parsed[0]["event_id"], "$a");
 		assert_eq!(parsed[1]["event_id"], "$b");
 	}
@@ -188,7 +190,8 @@ mod tests {
 		writer.begin_auth_chain();
 		writer.write_raw_auth_chain_pdu(r#"{"event_id":"$a1"}"#);
 		let bytes = writer.finish();
-		let parsed: Value = serde_json::from_slice(&bytes).unwrap();
+		let mut input = bytes.to_vec();
+		let parsed: OwnedValue = simd_json::from_slice(&mut input).unwrap();
 		assert_eq!(parsed["state"][0]["event_id"], "$s1");
 		assert_eq!(parsed["state"][1]["event_id"], "$s2");
 		assert_eq!(parsed["auth_chain"][0]["event_id"], "$a1");
@@ -198,7 +201,8 @@ mod tests {
 	fn test_empty_stream() {
 		let stream = PduStreamWriter::with_capacity(0);
 		let bytes = stream.finish();
-		let parsed: Value = serde_json::from_slice(&bytes).unwrap();
+		let mut input = bytes.to_vec();
+		let parsed: OwnedValue = simd_json::from_slice(&mut input).unwrap();
 		assert_eq!(parsed, json!([]));
 	}
 }

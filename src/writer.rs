@@ -18,7 +18,7 @@ impl JsonWriter {
 	pub fn as_bytes(&self) -> &[u8] { &self.buf }
 
 	#[inline]
-	pub fn serialize_value<T: Serialize>(&mut self, value: &T) -> Result<(), serde_json::Error> {
+	pub fn serialize_value<T: Serialize>(&mut self, value: &T) -> Result<(), simd_json::Error> {
 		let ser = Serializer { writer: self };
 		value.serialize(ser)
 	}
@@ -56,7 +56,7 @@ struct Serializer<'a> {
 }
 
 impl<'a> ser::Serializer for Serializer<'a> {
-	type Error = serde_json::Error;
+	type Error = simd_json::Error;
 	type Ok = ();
 	type SerializeMap = MapSerializer<'a>;
 	type SerializeSeq = SeqSerializer<'a>;
@@ -66,70 +66,70 @@ impl<'a> ser::Serializer for Serializer<'a> {
 	type SerializeTupleStruct = SeqSerializer<'a>;
 	type SerializeTupleVariant = SeqSerializer<'a>;
 
-	fn serialize_bool(self, v: bool) -> Result<(), serde_json::Error> {
+	fn serialize_bool(self, v: bool) -> Result<(), simd_json::Error> {
 		self.writer.write_raw(if v { "true" } else { "false" });
 		Ok(())
 	}
 
-	fn serialize_i8(self, v: i8) -> Result<(), serde_json::Error> {
+	fn serialize_i8(self, v: i8) -> Result<(), simd_json::Error> {
 		self.serialize_i64(i64::from(v))
 	}
 
-	fn serialize_i16(self, v: i16) -> Result<(), serde_json::Error> {
+	fn serialize_i16(self, v: i16) -> Result<(), simd_json::Error> {
 		self.serialize_i64(i64::from(v))
 	}
 
-	fn serialize_i32(self, v: i32) -> Result<(), serde_json::Error> {
+	fn serialize_i32(self, v: i32) -> Result<(), simd_json::Error> {
 		self.serialize_i64(i64::from(v))
 	}
 
-	fn serialize_i64(self, v: i64) -> Result<(), serde_json::Error> {
+	fn serialize_i64(self, v: i64) -> Result<(), simd_json::Error> {
 		let mut buf = itoa::Buffer::new();
 		self.writer.write_raw(buf.format(v));
 		Ok(())
 	}
 
-	fn serialize_u8(self, v: u8) -> Result<(), serde_json::Error> {
+	fn serialize_u8(self, v: u8) -> Result<(), simd_json::Error> {
 		self.serialize_u64(u64::from(v))
 	}
 
-	fn serialize_u16(self, v: u16) -> Result<(), serde_json::Error> {
+	fn serialize_u16(self, v: u16) -> Result<(), simd_json::Error> {
 		self.serialize_u64(u64::from(v))
 	}
 
-	fn serialize_u32(self, v: u32) -> Result<(), serde_json::Error> {
+	fn serialize_u32(self, v: u32) -> Result<(), simd_json::Error> {
 		self.serialize_u64(u64::from(v))
 	}
 
-	fn serialize_u64(self, v: u64) -> Result<(), serde_json::Error> {
+	fn serialize_u64(self, v: u64) -> Result<(), simd_json::Error> {
 		let mut buf = itoa::Buffer::new();
 		self.writer.write_raw(buf.format(v));
 		Ok(())
 	}
 
-	fn serialize_f32(self, v: f32) -> Result<(), serde_json::Error> {
+	fn serialize_f32(self, v: f32) -> Result<(), simd_json::Error> {
 		self.serialize_f64(f64::from(v))
 	}
 
-	fn serialize_f64(self, v: f64) -> Result<(), serde_json::Error> {
+	fn serialize_f64(self, v: f64) -> Result<(), simd_json::Error> {
 		let mut buf = ryu::Buffer::new();
 		self.writer.write_raw(buf.format(v));
 		Ok(())
 	}
 
-	fn serialize_char(self, v: char) -> Result<(), serde_json::Error> {
+	fn serialize_char(self, v: char) -> Result<(), simd_json::Error> {
 		let mut s = String::with_capacity(6);
 		s.push(v);
 		self.writer.write_escaped_string(&s);
 		Ok(())
 	}
 
-	fn serialize_str(self, v: &str) -> Result<(), serde_json::Error> {
+	fn serialize_str(self, v: &str) -> Result<(), simd_json::Error> {
 		self.writer.write_escaped_string(v);
 		Ok(())
 	}
 
-	fn serialize_bytes(self, v: &[u8]) -> Result<(), serde_json::Error> {
+	fn serialize_bytes(self, v: &[u8]) -> Result<(), simd_json::Error> {
 		use ser::SerializeSeq;
 		let mut seq = self.serialize_seq(Some(v.len()))?;
 		for byte in v {
@@ -138,21 +138,21 @@ impl<'a> ser::Serializer for Serializer<'a> {
 		seq.end()
 	}
 
-	fn serialize_none(self) -> Result<(), serde_json::Error> {
+	fn serialize_none(self) -> Result<(), simd_json::Error> {
 		self.writer.write_raw("null");
 		Ok(())
 	}
 
-	fn serialize_some<T: ?Sized + Serialize>(self, value: &T) -> Result<(), serde_json::Error> {
+	fn serialize_some<T: ?Sized + Serialize>(self, value: &T) -> Result<(), simd_json::Error> {
 		value.serialize(self)
 	}
 
-	fn serialize_unit(self) -> Result<(), serde_json::Error> {
+	fn serialize_unit(self) -> Result<(), simd_json::Error> {
 		self.writer.write_raw("null");
 		Ok(())
 	}
 
-	fn serialize_unit_struct(self, _name: &'static str) -> Result<(), serde_json::Error> {
+	fn serialize_unit_struct(self, _name: &'static str) -> Result<(), simd_json::Error> {
 		self.writer.write_raw("null");
 		Ok(())
 	}
@@ -162,7 +162,7 @@ impl<'a> ser::Serializer for Serializer<'a> {
 		_name: &'static str,
 		_variant_index: u32,
 		variant: &'static str,
-	) -> Result<(), serde_json::Error> {
+	) -> Result<(), simd_json::Error> {
 		self.writer.write_escaped_string(variant);
 		Ok(())
 	}
@@ -171,7 +171,7 @@ impl<'a> ser::Serializer for Serializer<'a> {
 		self,
 		_name: &'static str,
 		value: &T,
-	) -> Result<(), serde_json::Error> {
+	) -> Result<(), simd_json::Error> {
 		value.serialize(self)
 	}
 
@@ -181,7 +181,7 @@ impl<'a> ser::Serializer for Serializer<'a> {
 		_variant_index: u32,
 		variant: &'static str,
 		value: &T,
-	) -> Result<(), serde_json::Error> {
+	) -> Result<(), simd_json::Error> {
 		self.writer.write_byte(b'{');
 		self.writer.write_escaped_string(variant);
 		self.writer.write_byte(b':');
@@ -190,12 +190,12 @@ impl<'a> ser::Serializer for Serializer<'a> {
 		Ok(())
 	}
 
-	fn serialize_seq(self, _len: Option<usize>) -> Result<SeqSerializer<'a>, serde_json::Error> {
+	fn serialize_seq(self, _len: Option<usize>) -> Result<SeqSerializer<'a>, simd_json::Error> {
 		self.writer.write_byte(b'[');
 		Ok(SeqSerializer { writer: self.writer, count: 0 })
 	}
 
-	fn serialize_tuple(self, len: usize) -> Result<SeqSerializer<'a>, serde_json::Error> {
+	fn serialize_tuple(self, len: usize) -> Result<SeqSerializer<'a>, simd_json::Error> {
 		self.serialize_seq(Some(len))
 	}
 
@@ -203,7 +203,7 @@ impl<'a> ser::Serializer for Serializer<'a> {
 		self,
 		_name: &'static str,
 		len: usize,
-	) -> Result<SeqSerializer<'a>, serde_json::Error> {
+	) -> Result<SeqSerializer<'a>, simd_json::Error> {
 		self.serialize_seq(Some(len))
 	}
 
@@ -213,14 +213,14 @@ impl<'a> ser::Serializer for Serializer<'a> {
 		_variant_index: u32,
 		variant: &'static str,
 		len: usize,
-	) -> Result<SeqSerializer<'a>, serde_json::Error> {
+	) -> Result<SeqSerializer<'a>, simd_json::Error> {
 		self.writer.write_byte(b'{');
 		self.writer.write_escaped_string(variant);
 		self.writer.write_byte(b':');
 		self.serialize_seq(Some(len))
 	}
 
-	fn serialize_map(self, _len: Option<usize>) -> Result<MapSerializer<'a>, serde_json::Error> {
+	fn serialize_map(self, _len: Option<usize>) -> Result<MapSerializer<'a>, simd_json::Error> {
 		self.writer.write_byte(b'{');
 		Ok(MapSerializer { writer: self.writer, first: true })
 	}
@@ -229,7 +229,7 @@ impl<'a> ser::Serializer for Serializer<'a> {
 		self,
 		_name: &'static str,
 		_len: usize,
-	) -> Result<MapSerializer<'a>, serde_json::Error> {
+	) -> Result<MapSerializer<'a>, simd_json::Error> {
 		self.serialize_map(None)
 	}
 
@@ -239,7 +239,7 @@ impl<'a> ser::Serializer for Serializer<'a> {
 		_variant_index: u32,
 		variant: &'static str,
 		_len: usize,
-	) -> Result<StructVariantSerializer<'a>, serde_json::Error> {
+	) -> Result<StructVariantSerializer<'a>, simd_json::Error> {
 		self.writer.write_byte(b'{');
 		self.writer.write_escaped_string(variant);
 		self.writer.write_byte(b':');
@@ -254,13 +254,13 @@ struct SeqSerializer<'a> {
 }
 
 impl ser::SerializeSeq for SeqSerializer<'_> {
-	type Error = serde_json::Error;
+	type Error = simd_json::Error;
 	type Ok = ();
 
 	fn serialize_element<T: ?Sized + Serialize>(
 		&mut self,
 		value: &T,
-	) -> Result<(), serde_json::Error> {
+	) -> Result<(), simd_json::Error> {
 		if self.count > 0 {
 			self.writer.write_byte(b',');
 		}
@@ -268,52 +268,52 @@ impl ser::SerializeSeq for SeqSerializer<'_> {
 		value.serialize(Serializer { writer: self.writer })
 	}
 
-	fn end(self) -> Result<(), serde_json::Error> {
+	fn end(self) -> Result<(), simd_json::Error> {
 		self.writer.write_byte(b']');
 		Ok(())
 	}
 }
 
 impl ser::SerializeTuple for SeqSerializer<'_> {
-	type Error = serde_json::Error;
+	type Error = simd_json::Error;
 	type Ok = ();
 
 	fn serialize_element<T: ?Sized + Serialize>(
 		&mut self,
 		value: &T,
-	) -> Result<(), serde_json::Error> {
+	) -> Result<(), simd_json::Error> {
 		ser::SerializeSeq::serialize_element(self, value)
 	}
 
-	fn end(self) -> Result<(), serde_json::Error> { ser::SerializeSeq::end(self) }
+	fn end(self) -> Result<(), simd_json::Error> { ser::SerializeSeq::end(self) }
 }
 
 impl ser::SerializeTupleStruct for SeqSerializer<'_> {
-	type Error = serde_json::Error;
+	type Error = simd_json::Error;
 	type Ok = ();
 
 	fn serialize_field<T: ?Sized + Serialize>(
 		&mut self,
 		value: &T,
-	) -> Result<(), serde_json::Error> {
+	) -> Result<(), simd_json::Error> {
 		ser::SerializeSeq::serialize_element(self, value)
 	}
 
-	fn end(self) -> Result<(), serde_json::Error> { ser::SerializeSeq::end(self) }
+	fn end(self) -> Result<(), simd_json::Error> { ser::SerializeSeq::end(self) }
 }
 
 impl ser::SerializeTupleVariant for SeqSerializer<'_> {
-	type Error = serde_json::Error;
+	type Error = simd_json::Error;
 	type Ok = ();
 
 	fn serialize_field<T: ?Sized + Serialize>(
 		&mut self,
 		value: &T,
-	) -> Result<(), serde_json::Error> {
+	) -> Result<(), simd_json::Error> {
 		ser::SerializeSeq::serialize_element(self, value)
 	}
 
-	fn end(self) -> Result<(), serde_json::Error> {
+	fn end(self) -> Result<(), simd_json::Error> {
 		self.writer.write_byte(b'}');
 		ser::SerializeSeq::end(self)
 	}
@@ -325,10 +325,10 @@ struct MapSerializer<'a> {
 }
 
 impl ser::SerializeMap for MapSerializer<'_> {
-	type Error = serde_json::Error;
+	type Error = simd_json::Error;
 	type Ok = ();
 
-	fn serialize_key<T: ?Sized + Serialize>(&mut self, key: &T) -> Result<(), serde_json::Error> {
+	fn serialize_key<T: ?Sized + Serialize>(&mut self, key: &T) -> Result<(), simd_json::Error> {
 		if !self.first {
 			self.writer.write_byte(b',');
 		}
@@ -339,31 +339,31 @@ impl ser::SerializeMap for MapSerializer<'_> {
 	fn serialize_value<T: ?Sized + Serialize>(
 		&mut self,
 		value: &T,
-	) -> Result<(), serde_json::Error> {
+	) -> Result<(), simd_json::Error> {
 		self.writer.write_byte(b':');
 		value.serialize(Serializer { writer: self.writer })
 	}
 
-	fn end(self) -> Result<(), serde_json::Error> {
+	fn end(self) -> Result<(), simd_json::Error> {
 		self.writer.write_byte(b'}');
 		Ok(())
 	}
 }
 
 impl ser::SerializeStruct for MapSerializer<'_> {
-	type Error = serde_json::Error;
+	type Error = simd_json::Error;
 	type Ok = ();
 
 	fn serialize_field<T: ?Sized + Serialize>(
 		&mut self,
 		key: &'static str,
 		value: &T,
-	) -> Result<(), serde_json::Error> {
+	) -> Result<(), simd_json::Error> {
 		ser::SerializeMap::serialize_key(self, key)?;
 		ser::SerializeMap::serialize_value(self, value)
 	}
 
-	fn end(self) -> Result<(), serde_json::Error> { ser::SerializeMap::end(self) }
+	fn end(self) -> Result<(), simd_json::Error> { ser::SerializeMap::end(self) }
 }
 
 struct StructVariantSerializer<'a> {
@@ -372,14 +372,14 @@ struct StructVariantSerializer<'a> {
 }
 
 impl ser::SerializeStructVariant for StructVariantSerializer<'_> {
-	type Error = serde_json::Error;
+	type Error = simd_json::Error;
 	type Ok = ();
 
 	fn serialize_field<T: ?Sized + Serialize>(
 		&mut self,
 		key: &'static str,
 		value: &T,
-	) -> Result<(), serde_json::Error> {
+	) -> Result<(), simd_json::Error> {
 		if !self.first {
 			self.writer.write_byte(b',');
 		}
@@ -389,7 +389,7 @@ impl ser::SerializeStructVariant for StructVariantSerializer<'_> {
 		value.serialize(Serializer { writer: self.writer })
 	}
 
-	fn end(self) -> Result<(), serde_json::Error> {
+	fn end(self) -> Result<(), simd_json::Error> {
 		self.writer.write_byte(b'}');
 		self.writer.write_byte(b'}');
 		Ok(())
@@ -398,7 +398,7 @@ impl ser::SerializeStructVariant for StructVariantSerializer<'_> {
 
 /// Serialize a value directly to a `BytesMut` buffer.
 #[inline]
-pub fn to_bytes<T: Serialize>(value: &T) -> Result<BytesMut, serde_json::Error> {
+pub fn to_bytes<T: Serialize>(value: &T) -> Result<BytesMut, simd_json::Error> {
 	let mut writer = JsonWriter::with_capacity(8192);
 	writer.serialize_value(value)?;
 	Ok(writer.into_bytes())
@@ -406,7 +406,7 @@ pub fn to_bytes<T: Serialize>(value: &T) -> Result<BytesMut, serde_json::Error> 
 
 #[cfg(test)]
 mod tests {
-	use serde_json::json;
+	use simd_json::json;
 
 	use super::*;
 
@@ -430,7 +430,8 @@ mod tests {
 		let mut w = JsonWriter::with_capacity(64);
 		w.serialize_value(&json!({"a": 1, "b": "two"})).unwrap();
 		let result = String::from_utf8(w.into_bytes().to_vec()).unwrap();
-		let parsed: serde_json::Value = serde_json::from_str(&result).unwrap();
+		let mut parsed_input = result.into_bytes();
+		let parsed: simd_json::OwnedValue = simd_json::from_slice(&mut parsed_input).unwrap();
 		assert_eq!(parsed, json!({"a": 1, "b": "two"}));
 	}
 
@@ -448,7 +449,8 @@ mod tests {
 		}))
 		.unwrap();
 		let result = String::from_utf8(w.into_bytes().to_vec()).unwrap();
-		let parsed: serde_json::Value = serde_json::from_str(&result).unwrap();
+		let mut parsed_input = result.into_bytes();
+		let parsed: simd_json::OwnedValue = simd_json::from_slice(&mut parsed_input).unwrap();
 		assert_eq!(
 			parsed["rooms"]["join"]["!room:example.com"]["timeline"]["events"][0]["type"],
 			"m.room.message"
@@ -463,7 +465,7 @@ mod tests {
 	}
 
 	#[test]
-	fn test_to_bytes_matches_serde_json() {
+	fn test_to_bytes_matches_simd_json() {
 		let value = json!({
 			"next_batch": "s12345",
 			"rooms": {
@@ -484,11 +486,14 @@ mod tests {
 			}
 		});
 
-		let serde_bytes = serde_json::to_vec(&value).unwrap();
+		let simd_bytes = simd_json::to_vec(&value).unwrap();
 		let custom_bytes = to_bytes(&value).unwrap();
 
-		let serde_parsed: serde_json::Value = serde_json::from_slice(&serde_bytes).unwrap();
-		let custom_parsed: serde_json::Value = serde_json::from_slice(&custom_bytes).unwrap();
-		assert_eq!(serde_parsed, custom_parsed);
+		let mut simd_input = simd_bytes.clone();
+		let simd_parsed: simd_json::OwnedValue = simd_json::from_slice(&mut simd_input).unwrap();
+		let mut custom_input = custom_bytes.to_vec();
+		let custom_parsed: simd_json::OwnedValue =
+			simd_json::from_slice(&mut custom_input).unwrap();
+		assert_eq!(simd_parsed, custom_parsed);
 	}
 }

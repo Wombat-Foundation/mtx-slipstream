@@ -15,7 +15,11 @@
 	clippy::string_lit_as_bytes,
 	clippy::default_trait_access,
 	clippy::unseparated_literal_suffix,
-	clippy::unnecessary_struct_initialization
+	clippy::unnecessary_struct_initialization,
+	clippy::missing_errors_doc,
+	clippy::doc_markdown,
+	clippy::cargo_common_metadata,
+	clippy::collapsible_if
 )]
 
 pub mod federation;

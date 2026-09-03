@@ -2,20 +2,21 @@
 //!
 //! The current pipeline for federation PDUs is:
 //! ```text
-//! DB (JSON text) → serde_json::from_slice → CanonicalJsonObject → to_raw_value → Box<RawValue>
+//! DB (JSON text) → simd_json::from_slice → OwnedValue → to_raw_value → Box<RawValue>
 //! ```
 //!
 //! This module provides two optimizations:
 //! 1. **simd-json parsing** — use `simd_json::from_slice` instead of
 //!    `serde_json::from_slice` for SIMD-accelerated deserialization of PDUs
 //!    from the database.
-//! 2. **Direct serialization** — serialize `CanonicalJsonObject` directly to
-//!    bytes, skipping the `Box<RawValue>` intermediate allocation.
+//! 2. **Direct serialization** — serialize `OwnedValue` directly to bytes,
+//!    skipping the `Box<RawValue>` intermediate allocation.
 
 use std::io;
 
 use bytes::BytesMut;
 use serde::Serialize;
+use simd_json::prelude::*;
 
 /// Parse JSON bytes using simd-json (SIMD-accelerated).
 ///
@@ -35,6 +36,7 @@ where
 
 /// Parse a JSON string using simd-json.
 #[inline]
+#[allow(unsafe_code)]
 pub fn parse_jsonsimd_str<'a, T>(s: &'a mut str) -> Result<T, simd_json::Error>
 where
 	T: serde::Deserialize<'a>,
@@ -47,40 +49,39 @@ where
 /// Parse JSON bytes from the database using simd-json.
 ///
 /// This is optimized for the PDU reading path where we fetch JSON text from
-/// RocksDB and need to deserialize it into a `CanonicalJsonObject` or
-/// `serde_json::Value`.
+/// RocksDB and need to deserialize it into an `OwnedValue`.
 ///
 /// # Arguments
 /// * `buf` - The raw JSON bytes from the database. **Mutated in-place** by
 ///   simd-json's parsing strategy.
-pub fn parse_pdu_json(buf: &mut [u8]) -> Result<serde_json::Value, simd_json::Error> {
+pub fn parse_pdu_json(buf: &mut [u8]) -> Result<simd_json::OwnedValue, simd_json::Error> {
 	simd_json::from_slice(buf)
 }
 
 /// Serialize a value directly to a `BytesMut` buffer.
 ///
-/// Uses `serde_json::to_writer` internally (simd-json's serialization
-/// delegates to serde_json — the performance win is on the parse side).
-pub fn canonical_to_bytes<T: Serialize>(pdu: &T) -> Result<BytesMut, serde_json::Error> {
+/// Uses simd-json's serializer internally.
+pub fn canonical_to_bytes<T: Serialize>(pdu: &T) -> Result<BytesMut, simd_json::Error> {
 	let mut buf = BytesMut::with_capacity(2048);
 	let mut writer = BufWriter(&mut buf);
-	serde_json::to_writer(&mut writer, pdu)?;
+	simd_json::to_writer(&mut writer, pdu)?;
 	Ok(buf)
 }
 
 /// Serialize a value to a `String`.
-pub fn canonical_to_string<T: Serialize>(pdu: &T) -> Result<String, serde_json::Error> {
-	serde_json::to_string(pdu)
+pub fn canonical_to_string<T: Serialize>(pdu: &T) -> Result<String, simd_json::Error> {
+	simd_json::to_string(pdu)
 }
 
 /// Serialize a value directly, removing specified fields.
 ///
-/// Parses with simd-json, removes fields, then serializes with serde_json.
+/// Parses with simd-json, removes fields, then serializes back.
 pub fn canonical_to_bytes_without<T: Serialize>(
 	pdu: &T,
 	skip_fields: &[&str],
-) -> Result<BytesMut, serde_json::Error> {
-	let mut val: serde_json::Value = serde_json::to_value(pdu)?;
+) -> Result<BytesMut, simd_json::Error> {
+	let mut json_vec = simd_json::to_vec(pdu)?;
+	let mut val: simd_json::OwnedValue = simd_json::to_owned_value(&mut json_vec)?;
 	if let Some(obj) = val.as_object_mut() {
 		for field in skip_fields {
 			obj.remove(*field);
@@ -88,12 +89,12 @@ pub fn canonical_to_bytes_without<T: Serialize>(
 	}
 	let mut buf = BytesMut::with_capacity(2048);
 	let mut writer = BufWriter(&mut buf);
-	serde_json::to_writer(&mut writer, &val)?;
+	simd_json::to_writer(&mut writer, &val)?;
 	Ok(buf)
 }
 
 /// Remove fields from a JSON value in place.
-pub fn remove_fields(pdu: &mut serde_json::Value, skip_fields: &[&str]) {
+pub fn remove_fields(pdu: &mut simd_json::OwnedValue, skip_fields: &[&str]) {
 	if let Some(obj) = pdu.as_object_mut() {
 		for field in skip_fields {
 			obj.remove(*field);
@@ -114,21 +115,21 @@ impl io::Write for BufWriter<'_> {
 
 #[cfg(test)]
 mod tests {
-	use serde_json::json;
+	use simd_json::json;
 
 	use super::*;
 
 	#[test]
 	fn test_parse_jsonsimd() {
 		let mut input = br#"{"event_id":"$abc","type":"m.room.create"}"#.to_vec();
-		let val: serde_json::Value = parse_jsonsimd(&mut input).unwrap();
+		let val: simd_json::OwnedValue = parse_jsonsimd(&mut input).unwrap();
 		assert_eq!(val["event_id"], "$abc");
 	}
 
 	#[test]
 	fn test_parse_jsonsimd_str() {
 		let mut input = r#"{"key":"value"}"#.to_string();
-		let val: serde_json::Value = parse_jsonsimd_str(&mut input).unwrap();
+		let val: simd_json::OwnedValue = parse_jsonsimd_str(&mut input).unwrap();
 		assert_eq!(val["key"], "value");
 	}
 
@@ -147,7 +148,8 @@ mod tests {
 			"content": {"creator": "@user:example.com"}
 		});
 		let bytes = canonical_to_bytes(&obj).unwrap();
-		let parsed: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+		let mut input = bytes.to_vec();
+		let parsed: simd_json::OwnedValue = simd_json::from_slice(&mut input).unwrap();
 		assert_eq!(parsed["event_id"], "$abc");
 	}
 
@@ -155,7 +157,8 @@ mod tests {
 	fn test_canonical_to_string() {
 		let obj = json!({"key": "value"});
 		let s = canonical_to_string(&obj).unwrap();
-		let parsed: serde_json::Value = serde_json::from_str(&s).unwrap();
+		let mut input = s.into_bytes();
+		let parsed: simd_json::OwnedValue = simd_json::from_slice(&mut input).unwrap();
 		assert_eq!(parsed["key"], "value");
 	}
 
@@ -167,7 +170,8 @@ mod tests {
 			"type": "m.room.create"
 		});
 		let bytes = canonical_to_bytes_without(&obj, &["unsigned"]).unwrap();
-		let parsed: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+		let mut input = bytes.to_vec();
+		let parsed: simd_json::OwnedValue = simd_json::from_slice(&mut input).unwrap();
 		assert_eq!(parsed["event_id"], "$abc");
 		assert!(parsed.get("unsigned").is_none());
 	}
