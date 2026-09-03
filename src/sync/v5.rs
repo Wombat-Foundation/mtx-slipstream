@@ -8,142 +8,143 @@ use crate::writer::JsonWriter;
 /// Per-room extra data for v5 sliding sync responses.
 #[derive(Debug, Clone)]
 pub struct RoomExtras {
-    pub membership: Option<String>,
-    pub lists: Vec<String>,
-    pub expanded_timeline: bool,
+	pub membership: Option<String>,
+	pub lists: Vec<String>,
+	pub expanded_timeline: bool,
 }
 
 /// Builder for constructing a patched sync v5 response.
 #[derive(Debug, Default)]
 pub struct SlidingSyncResponseBuilder {
-    thread_subscriptions: Option<Value>,
-    room_extras: Vec<(String, RoomExtras)>,
+	thread_subscriptions: Option<Value>,
+	room_extras: Vec<(String, RoomExtras)>,
 }
 
 impl SlidingSyncResponseBuilder {
-    #[inline]
-    pub fn new() -> Self { Self::default() }
+	#[inline]
+	pub fn new() -> Self { Self::default() }
 
-    #[inline]
-    pub fn thread_subscriptions(mut self, data: Value) -> Self {
-        self.thread_subscriptions = Some(data);
-        self
-    }
+	#[inline]
+	pub fn thread_subscriptions(mut self, data: Value) -> Self {
+		self.thread_subscriptions = Some(data);
+		self
+	}
 
-    #[inline]
-    pub fn room_extra(mut self, room_id: String, extras: RoomExtras) -> Self {
-        self.room_extras.push((room_id, extras));
-        self
-    }
+	#[inline]
+	pub fn room_extra(mut self, room_id: String, extras: RoomExtras) -> Self {
+		self.room_extras.push((room_id, extras));
+		self
+	}
 
-    #[inline]
-    pub fn room_extras(mut self, extras: Vec<(String, RoomExtras)>) -> Self {
-        self.room_extras = extras;
-        self
-    }
+	#[inline]
+	pub fn room_extras(mut self, extras: Vec<(String, RoomExtras)>) -> Self {
+		self.room_extras = extras;
+		self
+	}
 
-    pub fn patch(&self, val: &mut Value) {
-        self.patch_thread_subscriptions(val);
-        self.patch_rooms(val);
-    }
+	pub fn patch(&self, val: &mut Value) {
+		self.patch_thread_subscriptions(val);
+		self.patch_rooms(val);
+	}
 
-    pub fn build_http_response(self, val: &Value) -> Result<BytesMut, serde_json::Error> {
-        let mut writer = JsonWriter::with_capacity(val.len() * 64);
-        writer.serialize_value(val)?;
-        Ok(writer.into_bytes())
-    }
+	pub fn build_http_response(self, val: &Value) -> Result<BytesMut, serde_json::Error> {
+		let mut writer = JsonWriter::with_capacity(val.len() * 64);
+		writer.serialize_value(val)?;
+		Ok(writer.into_bytes())
+	}
 
-    fn patch_thread_subscriptions(&self, val: &mut Value) {
-        let Some(ref subs) = self.thread_subscriptions else {
-            return;
-        };
-        val.as_object_mut()
-            .expect("sync response is a JSON object")
-            .entry("extensions")
-            .or_insert_with(|| Value::Object(Default::default()))
-            .as_object_mut()
-            .expect("sync response extensions is a JSON object")
-            .insert("io.element.msc4308.thread_subscriptions".to_owned(), subs.clone());
-    }
+	fn patch_thread_subscriptions(&self, val: &mut Value) {
+		let Some(ref subs) = self.thread_subscriptions else {
+			return;
+		};
+		val.as_object_mut()
+			.expect("sync response is a JSON object")
+			.entry("extensions")
+			.or_insert_with(|| Value::Object(Default::default()))
+			.as_object_mut()
+			.expect("sync response extensions is a JSON object")
+			.insert("io.element.msc4308.thread_subscriptions".to_owned(), subs.clone());
+	}
 
-    fn patch_rooms(&self, val: &mut Value) {
-        let Some(rooms) = val.get_mut("rooms").and_then(Value::as_object_mut) else {
-            return;
-        };
-        for (room_id, extra) in &self.room_extras {
-            let Some(room) =
-                rooms.get_mut(room_id.as_str()).and_then(Value::as_object_mut)
-            else {
-                continue;
-            };
-            if let Some(ref membership) = extra.membership {
-                room.insert("membership".to_owned(), Value::String(membership.clone()));
-            }
-            if let Some(invite_state) = room.get("invite_state").cloned() {
-                room.insert("stripped_state".to_owned(), invite_state);
-            }
-            if let Some(timeline) = room.get("timeline").cloned() {
-                room.insert("timeline_events".to_owned(), timeline);
-            }
-            if let Ok(lists_val) = serde_json::to_value(&extra.lists) {
-                room.insert("lists".to_owned(), lists_val);
-            }
-            if extra.expanded_timeline {
-                room.insert("expanded_timeline".to_owned(), Value::Bool(true));
-            }
-        }
-    }
+	fn patch_rooms(&self, val: &mut Value) {
+		let Some(rooms) = val.get_mut("rooms").and_then(Value::as_object_mut) else {
+			return;
+		};
+		for (room_id, extra) in &self.room_extras {
+			let Some(room) = rooms
+				.get_mut(room_id.as_str())
+				.and_then(Value::as_object_mut)
+			else {
+				continue;
+			};
+			if let Some(ref membership) = extra.membership {
+				room.insert("membership".to_owned(), Value::String(membership.clone()));
+			}
+			if let Some(invite_state) = room.get("invite_state").cloned() {
+				room.insert("stripped_state".to_owned(), invite_state);
+			}
+			if let Some(timeline) = room.get("timeline").cloned() {
+				room.insert("timeline_events".to_owned(), timeline);
+			}
+			if let Ok(lists_val) = serde_json::to_value(&extra.lists) {
+				room.insert("lists".to_owned(), lists_val);
+			}
+			if extra.expanded_timeline {
+				room.insert("expanded_timeline".to_owned(), Value::Bool(true));
+			}
+		}
+	}
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+	use super::*;
 
-    #[test]
-    fn test_patch_thread_subscriptions() {
-        let builder = SlidingSyncResponseBuilder::new()
-            .thread_subscriptions(json!({"!room:example.com": true}));
-        let mut val = json!({"rooms": {}});
-        builder.patch(&mut val);
-        assert_eq!(
-            val["extensions"]["io.element.msc4308.thread_subscriptions"]["!room:example.com"],
-            true
-        );
-    }
+	#[test]
+	fn test_patch_thread_subscriptions() {
+		let builder = SlidingSyncResponseBuilder::new()
+			.thread_subscriptions(json!({"!room:example.com": true}));
+		let mut val = json!({"rooms": {}});
+		builder.patch(&mut val);
+		assert_eq!(
+			val["extensions"]["io.element.msc4308.thread_subscriptions"]["!room:example.com"],
+			true
+		);
+	}
 
-    #[test]
-    fn test_patch_room_extras() {
-        let builder = SlidingSyncResponseBuilder::new().room_extra(
-            "!room:example.com".to_owned(),
-            RoomExtras {
-                membership: Some("join".to_owned()),
-                lists: vec!["list1".to_owned()],
-                expanded_timeline: true,
-            },
-        );
-        let mut val = json!({
-            "rooms": {
-                "!room:example.com": {
-                    "invite_state": {"events": []},
-                    "timeline": {"events": []}
-                }
-            }
-        });
-        builder.patch(&mut val);
-        let room = &val["rooms"]["!room:example.com"];
-        assert_eq!(room["membership"], "join");
-        assert_eq!(room["stripped_state"]["events"], json!([]));
-        assert_eq!(room["timeline_events"]["events"], json!([]));
-        assert_eq!(room["lists"][0], "list1");
-        assert_eq!(room["expanded_timeline"], true);
-    }
+	#[test]
+	fn test_patch_room_extras() {
+		let builder = SlidingSyncResponseBuilder::new().room_extra(
+			"!room:example.com".to_owned(),
+			RoomExtras {
+				membership: Some("join".to_owned()),
+				lists: vec!["list1".to_owned()],
+				expanded_timeline: true,
+			},
+		);
+		let mut val = json!({
+			"rooms": {
+				"!room:example.com": {
+					"invite_state": {"events": []},
+					"timeline": {"events": []}
+				}
+			}
+		});
+		builder.patch(&mut val);
+		let room = &val["rooms"]["!room:example.com"];
+		assert_eq!(room["membership"], "join");
+		assert_eq!(room["stripped_state"]["events"], json!([]));
+		assert_eq!(room["timeline_events"]["events"], json!([]));
+		assert_eq!(room["lists"][0], "list1");
+		assert_eq!(room["expanded_timeline"], true);
+	}
 
-    #[test]
-    fn test_build_http_response() {
-        let builder = SlidingSyncResponseBuilder::new();
-        let val = json!({"rooms": {}});
-        let bytes = builder.build_http_response(&val).unwrap();
-        let parsed: Value = serde_json::from_slice(&bytes).unwrap();
-        assert_eq!(parsed, val);
-    }
+	#[test]
+	fn test_build_http_response() {
+		let builder = SlidingSyncResponseBuilder::new();
+		let val = json!({"rooms": {}});
+		let bytes = builder.build_http_response(&val).unwrap();
+		let parsed: Value = serde_json::from_slice(&bytes).unwrap();
+		assert_eq!(parsed, val);
+	}
 }

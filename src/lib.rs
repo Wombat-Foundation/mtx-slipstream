@@ -12,8 +12,9 @@
 //! mtx-slipstream provides:
 //! - **Direct-to-bytes sync response construction** with inline patching
 //! - **Streaming federation PDU responses** that avoid `Vec` materialization
-//! - **Direct `CanonicalJsonObject` → bytes** conversion without intermediate `Box<RawValue>`
+//! - **Direct `CanonicalJsonObject` → bytes** conversion without intermediate
+//!   `Box<RawValue>`
 
-pub mod writer;
-pub mod sync;
 pub mod federation;
+pub mod sync;
+pub mod writer;
