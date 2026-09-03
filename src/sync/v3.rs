@@ -98,7 +98,9 @@ impl SyncResponseBuilder {
 		if let Some(join) = val.get_mut("rooms").and_then(|r| r.get_mut("join")) {
 			for (room_id, state_after) in &self.joined_state_after {
 				if let Some(room) = join.get_mut(room_id.as_str()) {
-					let state_after_obj = simd_json::json!({ "events": state_after });
+					let mut events = simd_json::value::owned::Object::new();
+					events.insert("events".to_owned(), state_after.clone());
+					let state_after_obj = OwnedValue::Object(Box::new(events));
 					if let Some(obj) = room.as_object_mut() {
 						obj.insert("state_after".to_owned(), state_after_obj.clone());
 						obj.insert("org.matrix.msc4222.state_after".to_owned(), state_after_obj);
@@ -110,7 +112,9 @@ impl SyncResponseBuilder {
 		if let Some(leave) = val.get_mut("rooms").and_then(|r| r.get_mut("leave")) {
 			for (room_id, state_after) in &self.left_state_after {
 				if let Some(room) = leave.get_mut(room_id.as_str()) {
-					let state_after_obj = simd_json::json!({ "events": state_after });
+					let mut events = simd_json::value::owned::Object::new();
+					events.insert("events".to_owned(), state_after.clone());
+					let state_after_obj = OwnedValue::Object(Box::new(events));
 					if let Some(obj) = room.as_object_mut() {
 						obj.insert("state_after".to_owned(), state_after_obj.clone());
 						obj.insert("org.matrix.msc4222.state_after".to_owned(), state_after_obj);
