@@ -41,7 +41,7 @@ doc: ##H Build docs
 
 .PHONY: test
 test: ##H Run tests
-	$(CARGO) test --all-targets --all-features
+	$(CARGO) test --all-targets --all-features --timings
 
 
 
