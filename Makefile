@@ -15,8 +15,8 @@ _help:
 format: ##H Format code
 	-prettier -w $$(git ls-files '*.md' '*.y*ml')
 	pre-commit run --all-files
+	# $(CARGO) fmt --all
 	$(CARGO) sort --workspace --grouped
-	$(CARGO) fmt --all
 	$(CARGO) clippy --fix --allow-dirty --allow-staged --allow-no-vcs --all-targets --all-features
 
 

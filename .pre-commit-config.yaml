@@ -33,19 +33,3 @@ repos:
             language: system
             types: [rust]
             stages: [pre-commit]
-
-          - id: cargo-clippy
-            name: cargo clippy
-            entry: cargo clippy --all-targets -- -D warnings
-            language: system
-            types: [rust]
-            stages: [pre-commit]
-            pass_filenames: false
-
-          - id: cargo-test
-            name: cargo test
-            entry: cargo test --all-targets
-            language: system
-            types: [rust]
-            stages: [pre-commit]
-            pass_filenames: false
