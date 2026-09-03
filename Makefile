@@ -38,7 +38,7 @@ fix: ##H Apply auto-fixes with clippy
 doc: ##H Build docs
 	$(CARGO) test --doc
 	$(CARGO) doc --no-deps
-	echo '<meta http-equiv="refresh" content="0;url=rezzy/index.html">' > target/doc/index.html
+	echo '<meta http-equiv="refresh" content="0;url=mtx_slipstream/index.html">' > target/doc/index.html
 
 
 
