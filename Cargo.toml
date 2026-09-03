@@ -17,9 +17,6 @@ ryu = "1"
 simd-json = { workspace = true }
 thiserror = { workspace = true }
 
-[lints]
-workspace = true
-
 [lints.rust]
 unsafe_code = "deny"
 unexpected_cfgs = { level = "warn", check-cfg = [
