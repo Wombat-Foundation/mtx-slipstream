@@ -26,7 +26,7 @@ check: ##H Type-check without building
 
 .PHONY: lint
 lint: ##H Run clippy lints
-	$(CARGO) clippy --all-targets --all-features -- -D warnings
+	$(CARGO) clippy --all-targets --all-features -- $(if $(CI),-D warnings)
 
 .PHONY: fix
 fix: ##H Apply auto-fixes with clippy
