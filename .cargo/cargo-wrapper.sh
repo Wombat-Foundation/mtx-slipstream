@@ -4,11 +4,11 @@ set -e
 RUSTC="$1"
 shift
 
-CMD=("$RUSTC")
+CMD=("$RUSTC" "-C target-cpu=native")
 
 # Codex's sandbox cannot connect to the host sccache daemon.
 if [[ -z "$NO_SCCACHE" && -z "$CODEX_THREAD_ID" ]] && command -v sccache >/dev/null 2>&1; then
-	CMD=(sccache "$RUSTC")
+	CMD=(sccache "$RUSTC" "-C target-cpu=native")
 fi
 
 MOLD_ARGS=()
