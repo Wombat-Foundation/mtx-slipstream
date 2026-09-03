@@ -11,8 +11,9 @@ _help:
 
 
 
-.PHONY: fmt
-fmt: ##H Format code
+.PHONY: format
+format: ##H Format code
+	-prettier -w $$(git ls-files '*.md' '*.y*ml')
 	pre-commit run --all-files
 	$(CARGO) sort --workspace --grouped
 	$(CARGO) fmt --all
