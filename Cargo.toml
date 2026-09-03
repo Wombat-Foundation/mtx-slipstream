@@ -1,0 +1,17 @@
+[package]
+name = "mtx-slipstream"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+description = "High-performance serialization for Matrix Client-Server and Federation APIs. Eliminates redundant serialize/deserialize round-trips in sync and send_join responses."
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+bytes = { workspace = true }
+thiserror = { workspace = true }
+itoa = "1"
+ryu = "1"
+
+[lints]
+workspace = true
