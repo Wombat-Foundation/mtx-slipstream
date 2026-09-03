@@ -2,22 +2,50 @@
 name = "mtx-slipstream"
 version = "0.1.0"
 edition = "2024"
-license = "Apache-2.0"
+license = "MIT OR Apache-2.0"
 authors = ["Shane Jaroch <chown_tee@proton.me>"]
 description = "High-performance serialization for hottest Matrix federation and C2S endpoints."
 keywords = ["matrix", "federation", "C2S"]
 categories = ["http", "optimization"]
-license = "MIT OR Apache-2.0"
 repository = "https://github.com/Wombat-Foundation/mtx-slipstream"
 
 [dependencies]
 bytes = { workspace = true }
 itoa = "1"
 ryu = "1"
-serde = { workspace = true }
 
 simd-json = { workspace = true }
 thiserror = { workspace = true }
 
 [lints]
 workspace = true
+
+[lints.rust]
+unsafe_code = "deny"
+unexpected_cfgs = { level = "warn", check-cfg = [
+    "cfg(coverage)",
+    "cfg(coverage_nightly)",
+    "cfg(tarpaulin)",
+    "cfg(has_res_submodule)",
+] }
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+perf = { level = "warn", priority = -1 }
+complexity = { level = "warn", priority = -1 }
+style = { level = "warn", priority = -1 }
+correctness = { level = "warn", priority = -1 }
+suspicious = { level = "warn", priority = -1 }
+cargo = { level = "warn", priority = -1 }
+module_name_repetitions = "allow"
+similar_names = "allow"
+# Build-time proc-macro duplication only: curve25519-dalek-derive uses syn 3.0
+# while most of the graph is on syn 2.0. This is unavoidable, benign, and does
+# not affect the runtime binary.
+multiple_crate_versions = "allow"
+
+# High-Value Security & Robustness restrictions
+arithmetic_side_effects = "warn"
+undocumented_unsafe_blocks = "warn"
+dbg_macro = "warn"
+get_unwrap = "warn"
