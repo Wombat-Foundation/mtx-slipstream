@@ -86,11 +86,11 @@ impl SyncResponseBuilder {
 	///
 	/// # Errors
 	///
-	/// Returns `simd_json::Error` if serialization fails.
-	pub fn build_http_response(self, val: &OwnedValue) -> Result<BytesMut, simd_json::Error> {
+	/// Returns `io::Error` if serialization fails.
+	pub fn build_http_response(self, val: &simd_json::OwnedValue) -> std::io::Result<BytesMut> {
 		let mut buf = BytesMut::with_capacity(8192);
 		let mut writer = BufWriter(&mut buf);
-		simd_json::to_writer(&mut writer, val)?;
+		val.write(&mut writer)?;
 		Ok(buf)
 	}
 
@@ -224,7 +224,7 @@ mod tests {
 		let val = simd_json::json!({"next_batch": "s123", "rooms": {"join": {}}});
 		let bytes = builder.build_http_response(&val).unwrap();
 		let mut input = bytes.to_vec();
-		let parsed: OwnedValue = simd_json::from_slice(&mut input).unwrap();
+		let parsed: OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
 		assert_eq!(parsed, val);
 	}
 }

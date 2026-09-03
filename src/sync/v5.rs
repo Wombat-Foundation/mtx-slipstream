@@ -66,11 +66,11 @@ impl SlidingSyncResponseBuilder {
 	///
 	/// # Errors
 	///
-	/// Returns `simd_json::Error` if serialization fails.
-	pub fn build_http_response(self, val: &OwnedValue) -> Result<BytesMut, simd_json::Error> {
+	/// Returns `io::Error` if serialization fails.
+	pub fn build_http_response(self, val: &OwnedValue) -> std::io::Result<BytesMut> {
 		let mut buf = BytesMut::with_capacity(8192);
 		let mut writer = BufWriter(&mut buf);
-		simd_json::to_writer(&mut writer, val)?;
+		val.write(&mut writer)?;
 		Ok(buf)
 	}
 
@@ -107,11 +107,14 @@ impl SlidingSyncResponseBuilder {
 			if let Some(timeline) = room.get("timeline").cloned() {
 				room.insert("timeline_events".to_owned(), timeline);
 			}
-			if let Ok(mut lists_vec) = simd_json::to_vec(&extra.lists)
-				&& let Ok(lists_val) = simd_json::to_owned_value(&mut lists_vec)
-			{
-				room.insert("lists".to_owned(), lists_val);
-			}
+			let lists_val = OwnedValue::Array(Box::new(
+				extra
+					.lists
+					.iter()
+					.map(|s| OwnedValue::from(s.as_str()))
+					.collect(),
+			));
+			room.insert("lists".to_owned(), lists_val);
 			if extra.expanded_timeline {
 				room.insert("expanded_timeline".to_owned(), OwnedValue::from(true));
 			}
@@ -171,7 +174,7 @@ mod tests {
 		let val = json!({"rooms": {}});
 		let bytes = builder.build_http_response(&val).unwrap();
 		let mut input = bytes.to_vec();
-		let parsed: OwnedValue = simd_json::from_slice(&mut input).unwrap();
+		let parsed: OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
 		assert_eq!(parsed, val);
 	}
 }

@@ -12,8 +12,10 @@
 //! 2. **Direct serialization** — serialize `OwnedValue` directly to bytes,
 //!    skipping the `Box<RawValue>` intermediate allocation.
 
+use std::io;
+
 use bytes::{BufMut, BytesMut};
-use simd_json::prelude::*;
+use simd_json::{OwnedValue, prelude::*};
 
 use crate::writer::BufWriter;
 
@@ -28,7 +30,7 @@ use crate::writer::BufWriter;
 /// Returns `simd_json::Error` if the input is not valid JSON.
 #[inline]
 pub fn parse_jsonsimd(buf: &mut [u8]) -> Result<simd_json::OwnedValue, simd_json::Error> {
-	simd_json::from_slice(buf)
+	simd_json::to_owned_value(buf)
 }
 
 /// Parse a JSON string using simd-json.
@@ -39,7 +41,7 @@ pub fn parse_jsonsimd(buf: &mut [u8]) -> Result<simd_json::OwnedValue, simd_json
 #[inline]
 pub fn parse_jsonsimd_str(s: &mut str) -> Result<simd_json::OwnedValue, simd_json::Error> {
 	let mut buf = s.as_bytes().to_vec();
-	simd_json::from_slice(&mut buf)
+	simd_json::to_owned_value(&mut buf)
 }
 
 /// Parse JSON bytes from the database using simd-json.
@@ -56,15 +58,15 @@ pub fn parse_jsonsimd_str(s: &mut str) -> Result<simd_json::OwnedValue, simd_jso
 ///
 /// Returns `simd_json::Error` if the input is not valid JSON.
 pub fn parse_pdu_json(buf: &mut [u8]) -> Result<simd_json::OwnedValue, simd_json::Error> {
-	simd_json::from_slice(buf)
+	simd_json::to_owned_value(buf)
 }
 
 /// Serialize an `OwnedValue` directly to a `BytesMut` buffer.
 ///
 /// # Errors
 ///
-/// Returns `simd_json::Error` if serialization fails.
-pub fn canonical_to_bytes(pdu: &simd_json::OwnedValue) -> Result<BytesMut, simd_json::Error> {
+/// Returns `io::Error` if serialization fails.
+pub fn canonical_to_bytes(pdu: &simd_json::OwnedValue) -> io::Result<BytesMut> {
 	let mut buf = BytesMut::with_capacity(2048);
 	write_canonical_value(&mut buf, pdu)?;
 	Ok(buf)
@@ -74,12 +76,12 @@ pub fn canonical_to_bytes(pdu: &simd_json::OwnedValue) -> Result<BytesMut, simd_
 ///
 /// # Errors
 ///
-/// Returns `simd_json::Error` if serialization fails.
+/// Returns `io::Error` if serialization fails.
 ///
 /// # Panics
 ///
 /// Panics if the serialized JSON is not valid UTF-8 (should never happen).
-pub fn canonical_to_string(pdu: &simd_json::OwnedValue) -> Result<String, simd_json::Error> {
+pub fn canonical_to_string(pdu: &simd_json::OwnedValue) -> Result<String, std::io::Error> {
 	let bytes = canonical_to_bytes(pdu)?;
 	Ok(String::from_utf8(bytes.to_vec()).expect("JSON serialization produces valid UTF-8"))
 }
@@ -91,11 +93,11 @@ pub fn canonical_to_string(pdu: &simd_json::OwnedValue) -> Result<String, simd_j
 ///
 /// # Errors
 ///
-/// Returns `simd_json::Error` if serialization fails.
+/// Returns `io::Error` if serialization fails.
 pub fn canonical_to_bytes_without(
 	pdu: &simd_json::OwnedValue,
 	skip_fields: &[&str],
-) -> Result<BytesMut, simd_json::Error> {
+) -> io::Result<BytesMut> {
 	let mut val = pdu.clone();
 	if let Some(obj) = val.as_object_mut() {
 		for field in skip_fields {
@@ -105,10 +107,7 @@ pub fn canonical_to_bytes_without(
 	canonical_to_bytes(&val)
 }
 
-fn write_canonical_value(
-	buf: &mut BytesMut,
-	value: &simd_json::OwnedValue,
-) -> Result<(), simd_json::Error> {
+fn write_canonical_value(buf: &mut BytesMut, value: &simd_json::OwnedValue) -> io::Result<()> {
 	if let Some(array) = value.as_array() {
 		buf.put_u8(b'[');
 		for (index, item) in array.iter().enumerate() {
@@ -127,13 +126,13 @@ fn write_canonical_value(
 			if index > 0 {
 				buf.put_u8(b',');
 			}
-			simd_json::to_writer(&mut BufWriter(buf), key)?;
+			OwnedValue::from(key.as_str()).write(&mut BufWriter(buf))?;
 			buf.put_u8(b':');
 			write_canonical_value(buf, item)?;
 		}
 		buf.put_u8(b'}');
 	} else {
-		simd_json::to_writer(&mut BufWriter(buf), value)?;
+		value.write(&mut BufWriter(buf))?;
 	}
 
 	Ok(())
@@ -187,7 +186,7 @@ mod tests {
 		});
 		let bytes = canonical_to_bytes(&obj).unwrap();
 		let mut input = bytes.to_vec();
-		let parsed: simd_json::OwnedValue = simd_json::from_slice(&mut input).unwrap();
+		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
 		assert_eq!(parsed["event_id"], "$abc");
 	}
 
@@ -196,7 +195,7 @@ mod tests {
 		let obj = json!({"key": "value"});
 		let s = canonical_to_string(&obj).unwrap();
 		let mut input = s.into_bytes();
-		let parsed: simd_json::OwnedValue = simd_json::from_slice(&mut input).unwrap();
+		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
 		assert_eq!(parsed["key"], "value");
 	}
 
@@ -209,7 +208,7 @@ mod tests {
 		});
 		let bytes = canonical_to_bytes_without(&obj, &["unsigned"]).unwrap();
 		let mut input = bytes.to_vec();
-		let parsed: simd_json::OwnedValue = simd_json::from_slice(&mut input).unwrap();
+		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
 		assert_eq!(parsed["event_id"], "$abc");
 		assert!(parsed.get("unsigned").is_none());
 	}

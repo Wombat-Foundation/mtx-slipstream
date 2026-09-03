@@ -3,12 +3,12 @@
 use std::io;
 
 use bytes::BytesMut;
-use simd_json::OwnedValue;
+use simd_json::prelude::*;
 
 /// Adapter that implements [`io::Write`] for a [`BytesMut`] buffer.
 ///
-/// Used with [`simd_json::to_writer`] to serialize values directly into
-/// a growable byte buffer without intermediate heap allocations.
+/// Used with [`Writable::write`] to serialize values directly into a
+/// growable byte buffer without intermediate heap allocations.
 pub struct BufWriter<'a>(pub &'a mut BytesMut);
 
 impl io::Write for BufWriter<'_> {
@@ -23,16 +23,16 @@ impl io::Write for BufWriter<'_> {
 /// Serialize an `OwnedValue` directly to a `BytesMut` buffer.
 ///
 /// Allocates an 8 KiB buffer, serializes the value via simd-json's native
-/// serializer, and returns the result.
+/// [`Writable`] serializer, and returns the result.
 ///
 /// # Errors
 ///
-/// Returns `simd_json::Error` if serialization fails.
+/// Returns `io::Error` if serialization fails.
 #[inline]
-pub fn to_bytes(value: &OwnedValue) -> Result<BytesMut, simd_json::Error> {
+pub fn to_bytes(value: &simd_json::OwnedValue) -> io::Result<BytesMut> {
 	let mut buf = BytesMut::with_capacity(8192);
 	let mut writer = BufWriter(&mut buf);
-	simd_json::to_writer(&mut writer, value)?;
+	value.write(&mut writer)?;
 	Ok(buf)
 }
 
@@ -47,17 +47,17 @@ mod tests {
 	fn test_to_bytes_primitives() {
 		let bytes = to_bytes(&json!(true)).unwrap();
 		let mut input = bytes.to_vec();
-		let parsed: OwnedValue = simd_json::from_slice(&mut input).unwrap();
+		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
 		assert_eq!(parsed, json!(true));
 
 		let bytes = to_bytes(&json!(42)).unwrap();
 		let mut input = bytes.to_vec();
-		let parsed: OwnedValue = simd_json::from_slice(&mut input).unwrap();
+		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
 		assert_eq!(parsed, json!(42));
 
 		let bytes = to_bytes(&json!("hello")).unwrap();
 		let mut input = bytes.to_vec();
-		let parsed: OwnedValue = simd_json::from_slice(&mut input).unwrap();
+		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
 		assert_eq!(parsed, json!("hello"));
 	}
 
@@ -65,7 +65,7 @@ mod tests {
 	fn test_to_bytes_map() {
 		let bytes = to_bytes(&json!({"a": 1, "b": "two"})).unwrap();
 		let mut input = bytes.to_vec();
-		let parsed: OwnedValue = simd_json::from_slice(&mut input).unwrap();
+		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
 		assert_eq!(parsed, json!({"a": 1, "b": "two"}));
 	}
 
@@ -82,7 +82,7 @@ mod tests {
 		}))
 		.unwrap();
 		let mut input = bytes.to_vec();
-		let parsed: OwnedValue = simd_json::from_slice(&mut input).unwrap();
+		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
 		assert_eq!(
 			parsed["rooms"]["join"]["!room:example.com"]["timeline"]["events"][0]["type"],
 			"m.room.message"
