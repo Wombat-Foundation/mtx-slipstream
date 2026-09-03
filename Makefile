@@ -46,6 +46,20 @@ doc: ##H Build docs
 test: ##H Run tests
 	$(CARGO) test --all-targets --all-features --timings
 
+.PHONY: cov
+cov: ##H Run code coverage and generate HTML report
+	# TODO: include `src/bin/` in coverage
+	# Run coverage
+	$(CARGO) llvm-cov --lib --tests \
+		--html --output-dir .coverage \
+		--ignore-filename-regex 'src/bin/.*|scripts/.*'
+	# Process report to codecov-compatible JSON
+	$(CARGO) llvm-cov report \
+		--ignore-filename-regex 'src/bin/.*|scripts/.*' \
+		--codecov --output-path .coverage/codecov.json
+	@echo DONE. You may open it with:
+	@echo firefox .coverage/html/index.html
+
 
 
 .PHONY: clean

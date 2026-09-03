@@ -5,7 +5,7 @@
 //! PDUs incrementally into a growing byte buffer.
 
 use bytes::{BufMut, BytesMut};
-use simd_json::serde::Serialize;
+use simd_json::OwnedValue;
 
 use crate::writer::JsonWriter;
 
@@ -34,13 +34,13 @@ impl PduStreamWriter {
 		self.count += 1;
 	}
 
-	/// Write a serializable PDU value.
-	pub fn write_pdu<T: Serialize>(&mut self, pdu: &T) -> Result<(), simd_json::Error> {
+	/// Write a PDU value.
+	pub fn write_pdu(&mut self, pdu: &OwnedValue) -> Result<(), simd_json::Error> {
 		if self.count > 0 {
 			self.buf.put_u8(b',');
 		}
 		let mut writer = JsonWriter::with_capacity(2048);
-		writer.serialize_value(pdu)?;
+		writer.write_value(pdu)?;
 		self.buf.put_slice(writer.as_bytes());
 		self.count += 1;
 		Ok(())
@@ -96,13 +96,13 @@ impl FederationResponseWriter {
 		self.state_count += 1;
 	}
 
-	pub fn write_state_pdu<T: Serialize>(&mut self, pdu: &T) -> Result<(), simd_json::Error> {
+	pub fn write_state_pdu(&mut self, pdu: &OwnedValue) -> Result<(), simd_json::Error> {
 		debug_assert_eq!(self.phase, ResponsePhase::State);
 		if self.state_count > 0 {
 			self.buf.put_u8(b',');
 		}
 		let mut writer = JsonWriter::with_capacity(2048);
-		writer.serialize_value(pdu)?;
+		writer.write_value(pdu)?;
 		self.buf.put_slice(writer.as_bytes());
 		self.state_count += 1;
 		Ok(())
@@ -123,16 +123,13 @@ impl FederationResponseWriter {
 		self.auth_chain_count += 1;
 	}
 
-	pub fn write_auth_chain_pdu<T: Serialize>(
-		&mut self,
-		pdu: &T,
-	) -> Result<(), simd_json::Error> {
+	pub fn write_auth_chain_pdu(&mut self, pdu: &OwnedValue) -> Result<(), simd_json::Error> {
 		debug_assert_eq!(self.phase, ResponsePhase::AuthChain);
 		if self.auth_chain_count > 0 {
 			self.buf.put_u8(b',');
 		}
 		let mut writer = JsonWriter::with_capacity(2048);
-		writer.serialize_value(pdu)?;
+		writer.write_value(pdu)?;
 		self.buf.put_slice(writer.as_bytes());
 		self.auth_chain_count += 1;
 		Ok(())
@@ -171,7 +168,7 @@ mod tests {
 	}
 
 	#[test]
-	fn test_pdu_stream_writer_serializable() {
+	fn test_pdu_stream_writer_owned_value() {
 		let mut stream = PduStreamWriter::with_capacity(2);
 		stream.write_pdu(&json!({"event_id": "$a"})).unwrap();
 		stream.write_pdu(&json!({"event_id": "$b"})).unwrap();

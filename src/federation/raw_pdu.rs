@@ -1,11 +1,11 @@
-//! Direct `CanonicalJsonObject` → bytes conversion.
+//! Direct `OwnedValue` → bytes conversion.
 //!
 //! The current pipeline for federation PDUs is:
 //! ```text
-//! DB (JSON text) → simd_json::from_slice → OwnedValue → to_raw_value → Box<RawValue>
+//! DB (JSON text) → simd_json::from_slice → OwnedValue → patch → JsonWriter → bytes
 //! ```
 //!
-//! This module provides two optimizations:
+//! This module provides:
 //! 1. **simd-json parsing** — use `simd_json::from_slice` instead of
 //!    `serde_json::from_slice` for SIMD-accelerated deserialization of PDUs
 //!    from the database.
@@ -15,31 +15,22 @@
 use std::io;
 
 use bytes::BytesMut;
-use simd_json::{prelude::*, serde::Serialize};
+use simd_json::prelude::*;
 
 /// Parse JSON bytes using simd-json (SIMD-accelerated).
-///
-/// This is a drop-in replacement for `serde_json::from_slice` that uses
-/// SIMD instructions for significantly faster parsing of large JSON payloads.
 ///
 /// The input buffer is mutated in-place during parsing (simd-json's
 /// `ScratchSpace` strategy), so the caller should not rely on the buffer
 /// contents after this call.
 #[inline]
-pub fn parse_jsonsimd<'a, T>(buf: &'a mut [u8]) -> Result<T, simd_json::Error>
-where
-	T: simd_json::serde::Deserialize<'a>,
-{
+pub fn parse_jsonsimd(buf: &mut [u8]) -> Result<simd_json::OwnedValue, simd_json::Error> {
 	simd_json::from_slice(buf)
 }
 
 /// Parse a JSON string using simd-json.
 #[inline]
 #[allow(unsafe_code)]
-pub fn parse_jsonsimd_str<'a, T>(s: &'a mut str) -> Result<T, simd_json::Error>
-where
-	T: simd_json::serde::Deserialize<'a>,
-{
+pub fn parse_jsonsimd_str(s: &mut str) -> Result<simd_json::OwnedValue, simd_json::Error> {
 	// SAFETY: simd_json::from_str requires the input to be valid UTF-8,
 	// which &str guarantees.
 	unsafe { simd_json::from_str(s) }
@@ -57,30 +48,27 @@ pub fn parse_pdu_json(buf: &mut [u8]) -> Result<simd_json::OwnedValue, simd_json
 	simd_json::from_slice(buf)
 }
 
-/// Serialize a value directly to a `BytesMut` buffer.
-///
-/// Uses simd-json's serializer internally.
-pub fn canonical_to_bytes<T: Serialize>(pdu: &T) -> Result<BytesMut, simd_json::Error> {
+/// Serialize an `OwnedValue` directly to a `BytesMut` buffer.
+pub fn canonical_to_bytes(pdu: &simd_json::OwnedValue) -> Result<BytesMut, simd_json::Error> {
 	let mut buf = BytesMut::with_capacity(2048);
 	let mut writer = BufWriter(&mut buf);
 	simd_json::to_writer(&mut writer, pdu)?;
 	Ok(buf)
 }
 
-/// Serialize a value to a `String`.
-pub fn canonical_to_string<T: Serialize>(pdu: &T) -> Result<String, simd_json::Error> {
+/// Serialize an `OwnedValue` to a `String`.
+pub fn canonical_to_string(pdu: &simd_json::OwnedValue) -> Result<String, simd_json::Error> {
 	simd_json::to_string(pdu)
 }
 
-/// Serialize a value directly, removing specified fields.
+/// Serialize an `OwnedValue` directly, removing specified fields.
 ///
-/// Parses with simd-json, removes fields, then serializes back.
-pub fn canonical_to_bytes_without<T: Serialize>(
-	pdu: &T,
+/// Removes fields, then serializes back.
+pub fn canonical_to_bytes_without(
+	pdu: &simd_json::OwnedValue,
 	skip_fields: &[&str],
 ) -> Result<BytesMut, simd_json::Error> {
-	let mut json_vec = simd_json::to_vec(pdu)?;
-	let mut val: simd_json::OwnedValue = simd_json::to_owned_value(&mut json_vec)?;
+	let mut val = pdu.clone();
 	if let Some(obj) = val.as_object_mut() {
 		for field in skip_fields {
 			obj.remove(*field);
@@ -121,14 +109,14 @@ mod tests {
 	#[test]
 	fn test_parse_jsonsimd() {
 		let mut input = br#"{"event_id":"$abc","type":"m.room.create"}"#.to_vec();
-		let val: simd_json::OwnedValue = parse_jsonsimd(&mut input).unwrap();
+		let val = parse_jsonsimd(&mut input).unwrap();
 		assert_eq!(val["event_id"], "$abc");
 	}
 
 	#[test]
 	fn test_parse_jsonsimd_str() {
 		let mut input = r#"{"key":"value"}"#.to_string();
-		let val: simd_json::OwnedValue = parse_jsonsimd_str(&mut input).unwrap();
+		let val = parse_jsonsimd_str(&mut input).unwrap();
 		assert_eq!(val["key"], "value");
 	}
 
