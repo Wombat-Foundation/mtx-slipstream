@@ -2,12 +2,15 @@
 extern crate test;
 
 use bytes::BytesMut;
+use mtx_slipstream::{
+	federation::{
+		pdu_stream::{FederationResponseWriter, PduStreamWriter},
+		raw_pdu::{canonical_to_bytes, canonical_to_bytes_without},
+	},
+	writer::{BufWriter, to_bytes},
+};
 use simd_json::prelude::*;
 use test::Bencher;
-
-use mtx_slipstream::federation::pdu_stream::{FederationResponseWriter, PduStreamWriter};
-use mtx_slipstream::federation::raw_pdu::{canonical_to_bytes, canonical_to_bytes_without};
-use mtx_slipstream::writer::{to_bytes, BufWriter};
 
 // ── Shared payloads ──────────────────────────────────────────────────
 
@@ -105,17 +108,16 @@ fn pdus(n: usize) -> Vec<simd_json::OwnedValue> {
 				"type": "m.room.message",
 				"room_id": "!room:example.com",
 				"sender": format!("@user{i}:example.com"),
-				"origin_server_ts": 1_700_000_000_000u64 + i as u64,
+				"origin_server_ts": 1_700_000_000_000u64.saturating_add(i as u64),
 				"content": {"msgtype": "m.text", "body": format!("message {i}")}
 			})
 		})
 		.collect()
 }
 
-/// Encode a value to a `Vec<u8>` without serde (replaces `simd_json::to_string`).
-fn encode_bytes(val: &simd_json::OwnedValue) -> Vec<u8> {
-	val.encode().into_bytes()
-}
+/// Encode a value to a `Vec<u8>` without serde (replaces
+/// `simd_json::to_string`).
+fn encode_bytes(val: &simd_json::OwnedValue) -> Vec<u8> { val.encode().into_bytes() }
 
 // ── Parse benchmarks ─────────────────────────────────────────────────
 
@@ -262,8 +264,7 @@ fn bench_federation_response_10(b: &mut Bencher) {
 	let state = pdus(10);
 	let auth_chain = pdus(5);
 	b.iter(|| {
-		let mut writer =
-			FederationResponseWriter::with_capacity(state.len(), auth_chain.len());
+		let mut writer = FederationResponseWriter::with_capacity(state.len(), auth_chain.len());
 		for pdu in &state {
 			writer.write_state_pdu(pdu).unwrap();
 		}
