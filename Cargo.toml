@@ -15,9 +15,18 @@ readme = "README.md"
 # inheriting the enclosing superproject's workspace when invoked from here.
 [workspace]
 
+[features]
+serde-comparison = ["dep:serde_json"]
+
 [dependencies]
 bytes = "1.10.1"
+serde_json = { version = "1", optional = true, default-features = false, features = ["alloc"] }
 simd-json = { version = "0.18", default-features = false, features = ["runtime-detection"] }
+
+[[bench]]
+name = "serde_cmp"
+path = "benches/serde_cmp.rs"
+required-features = ["serde-comparison"]
 
 [lints.rust]
 unsafe_code = "warn"

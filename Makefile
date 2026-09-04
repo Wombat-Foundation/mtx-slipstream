@@ -26,15 +26,15 @@ check-cargo-sort:
 
 .PHONY: check
 check: ##H Type-check without building
-	$(CARGO) check --all-targets --all-features
+	$(CARGO) check --all-targets
 
 .PHONY: lint
 lint: ##H Run clippy lints
-	$(CARGO) clippy --all-targets --all-features -- $(if $(CI),-D warnings)
+	$(CARGO) clippy --all-targets -- $(if $(CI),-D warnings)
 
 .PHONY: fix
 fix: ##H Apply auto-fixes with clippy
-	$(CARGO) clippy --fix --allow-dirty --allow-staged --allow-no-vcs --all-targets --all-features
+	$(CARGO) clippy --fix --allow-dirty --allow-staged --allow-no-vcs --all-targets
 
 
 
@@ -48,7 +48,7 @@ doc: ##H Build docs
 
 .PHONY: test
 test: ##H Run tests
-	$(CARGO) test --all-targets --all-features --timings
+	$(CARGO) test --all-targets --timings
 
 .PHONY: cov
 cov: ##H Run code coverage and generate HTML report
@@ -71,6 +71,10 @@ build: ##H Build the lib/binary
 	cargo build --release --timings
 
 
+
+.PHONY: bench
+bench: ##H Run benchmarks (p=<bench-name>, default: all)
+	$(CARGO) +nightly bench $(if $(p),--bench $(p) $(if $(filter serde_cmp,$(p)),--features serde-comparison))
 
 .PHONY: clean
 clean: ##H Clean build artifacts
