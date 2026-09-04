@@ -11,7 +11,10 @@
 extern crate test;
 
 use mtx_slipstream::{
-	federation::raw_pdu::{canonical_to_bytes, canonical_to_bytes_without},
+	federation::{
+		pdu_stream::PduStreamWriter,
+		raw_pdu::{canonical_to_bytes, canonical_to_bytes_without},
+	},
 	writer::to_bytes,
 };
 use simd_json::prelude::*;
@@ -213,4 +216,63 @@ fn bench_simd_canonical_small(b: &mut Bencher) {
 fn bench_simd_canonical_without_fields(b: &mut Bencher) {
 	let pdu = small_pdu();
 	b.iter(|| canonical_to_bytes_without(&pdu, &["unsigned"]).unwrap());
+}
+
+// ── Zero-copy parse benchmarks ───────────────────────────────────────
+// These use simd_json::to_borrowed_value which borrows directly from the
+// input buffer — no OwnedValue tree construction. This is where SIMD
+// acceleration actually shines: the lex/validate pass is pure scan.
+
+#[bench]
+fn bench_simd_zerocopy_parse_small(b: &mut Bencher) {
+	let pdu = small_pdu();
+	let mut json = encode_bytes(&pdu);
+	let original = json.clone();
+
+	b.iter(|| {
+		json.clone_from_slice(&original);
+		simd_json::to_borrowed_value(&mut json).unwrap();
+	});
+}
+
+#[bench]
+fn bench_simd_zerocopy_parse_huge(b: &mut Bencher) {
+	let val = huge_sync_response();
+	let mut json = encode_bytes(&val);
+	let original = json.clone();
+
+	b.iter(|| {
+		json.clone_from_slice(&original);
+		simd_json::to_borrowed_value(&mut json).unwrap();
+	});
+}
+
+// ── Raw passthrough benchmarks ───────────────────────────────────────
+// The actual hot path for PDUs that don't need patching: just shove the
+// raw JSON bytes through the stream writer. Zero parse, zero serialize.
+
+#[bench]
+fn bench_raw_passthrough_small(b: &mut Bencher) {
+	let pdu = small_pdu();
+	let json_str = encode_bytes(&pdu);
+	let json_str = String::from_utf8(json_str).unwrap();
+
+	b.iter(|| {
+		let mut stream = PduStreamWriter::with_capacity(1);
+		stream.write_raw_pdu(&json_str);
+		stream.finish()
+	});
+}
+
+#[bench]
+fn bench_raw_passthrough_huge(b: &mut Bencher) {
+	let val = huge_sync_response();
+	let json_str = encode_bytes(&val);
+	let json_str = String::from_utf8(json_str).unwrap();
+
+	b.iter(|| {
+		let mut stream = PduStreamWriter::with_capacity(1);
+		stream.write_raw_pdu(&json_str);
+		stream.finish()
+	});
 }
