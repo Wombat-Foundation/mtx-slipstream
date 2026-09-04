@@ -21,9 +21,15 @@ mimalloc-alloc = ["dep:mimalloc"]
 
 [dependencies]
 bytes = "1.10.1"
+# Only ever used by the `#[global_allocator]` in the bench binaries
+# (feature-gated so a plain `cargo build`/`cargo test` never compiles or
+# links it into the library). It's a regular optional dependency rather
+# than a dev-dependency specifically so it can be selected at bench time
+# via `cargo bench --features mimalloc-alloc` -- dev-dependencies can't be
+# optional in Cargo.
 mimalloc = { version = "0.1", optional = true, default-features = false }
 serde_json = { version = "1", optional = true, default-features = false, features = ["alloc"] }
-simd-json = { version = "0.18", default-features = false, features = ["runtime-detection"] }
+simd-json = { version = "0.18", default-features = false, features = ["runtime-detection", "swar-number-parsing"] }
 
 [[bench]]
 name = "serialization"
