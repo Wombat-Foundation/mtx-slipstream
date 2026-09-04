@@ -2,17 +2,85 @@
 name = "mtx-slipstream"
 version = "0.1.0"
 edition = "2024"
-license = "Apache-2.0"
-description = "High-performance serialization for Matrix Client-Server and Federation APIs. Eliminates redundant serialize/deserialize round-trips in sync and send_join responses."
+license = "MIT OR Apache-2.0"
+authors = ["Shane Jaroch <chown_tee@proton.me>"]
+description = "High-performance serialization for hottest Matrix federation and C2S endpoints."
+keywords = ["matrix", "federation", "C2S"]
+categories = ["http", "optimization"]
+repository = "https://github.com/Wombat-Foundation/mtx-slipstream"
+readme = "README.md"
+
+# This repository is consumed as a Git submodule, but it owns its dependency
+# resolution and lockfile. Declaring an explicit workspace stops Cargo from
+# inheriting the enclosing superproject's workspace when invoked from here.
+[workspace]
+
+[features]
+serde-comparison = ["dep:serde_json"]
+mimalloc-alloc = ["dep:mimalloc"]
 
 [dependencies]
-bytes = { workspace = true }
-itoa = "1"
-ryu = "1"
-serde = { workspace = true }
-serde_json = { workspace = true, features = ["std"] }
-simd-json = { workspace = true }
-thiserror = { workspace = true }
+bytes = "1.10.1"
+# Only ever used by the `#[global_allocator]` in the bench binaries
+# (feature-gated so a plain `cargo build`/`cargo test` never compiles or
+# links it into the library). It's a regular optional dependency rather
+# than a dev-dependency specifically so it can be selected at bench time
+# via `cargo bench --features mimalloc-alloc` -- dev-dependencies can't be
+# optional in Cargo.
+mimalloc = { version = "0.1", optional = true, default-features = false }
+serde_json = { version = "1", optional = true, default-features = false, features = ["alloc"] }
+simd-json = { version = "0.18", default-features = false, features = ["runtime-detection", "swar-number-parsing"] }
 
-[lints]
-workspace = true
+[[bench]]
+name = "serialization"
+path = "benches/serialization.rs"
+test = false
+
+[[bench]]
+name = "serde_cmp"
+path = "benches/serde_cmp.rs"
+test = false
+required-features = ["serde-comparison"]
+
+[lints.rust]
+unsafe_code = "warn"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+perf = { level = "warn", priority = -1 }
+complexity = { level = "warn", priority = -1 }
+style = { level = "warn", priority = -1 }
+correctness = { level = "warn", priority = -1 }
+suspicious = { level = "warn", priority = -1 }
+cargo = { level = "warn", priority = -1 }
+module_name_repetitions = "allow"
+similar_names = "allow"
+# Build-time proc-macro duplication only: curve25519-dalek-derive uses syn 3.0
+# while most of the graph is on syn 2.0. This is unavoidable, benign, and does
+# not affect the runtime binary.
+multiple_crate_versions = "allow"
+
+# High-Value Security & Robustness restrictions
+arithmetic_side_effects = "warn"
+undocumented_unsafe_blocks = "warn"
+dbg_macro = "warn"
+get_unwrap = "warn"
+
+[profile.release]
+strip = "symbols"
+lto = "thin"
+
+# Optimize for quick edit/compile cycles. Full debug info makes artifacts much
+# larger and slows linking; use a debug build with symbols only when needed.
+[profile.dev]
+opt-level = 0
+debug = 0
+strip = "debuginfo"
+incremental = true
+codegen-units = 256
+
+[profile.test]
+debug = 0
+strip = "debuginfo"
+incremental = true
+codegen-units = 256

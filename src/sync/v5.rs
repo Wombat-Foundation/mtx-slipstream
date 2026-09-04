@@ -1,84 +1,105 @@
 //! High-performance sync v5 (sliding sync) response builder.
 
 use bytes::BytesMut;
-use serde_json::Value;
+use simd_json::{OwnedValue, prelude::*};
 
-use crate::writer::JsonWriter;
+use crate::writer::BufWriter;
 
 /// Per-room extra data for v5 sliding sync responses.
 #[derive(Debug, Clone)]
 pub struct RoomExtras {
+	/// The membership state of the local user in this room.
 	pub membership: Option<String>,
+	/// List identifiers the room appears in.
 	pub lists: Vec<String>,
+	/// Whether to include the full expanded timeline.
 	pub expanded_timeline: bool,
 }
 
 /// Builder for constructing a patched sync v5 response.
 #[derive(Debug, Default)]
 pub struct SlidingSyncResponseBuilder {
-	thread_subscriptions: Option<Value>,
+	thread_subscriptions: Option<OwnedValue>,
 	room_extras: Vec<(String, RoomExtras)>,
 }
 
 impl SlidingSyncResponseBuilder {
+	/// Create a new empty builder.
 	#[inline]
+	#[must_use]
 	pub fn new() -> Self { Self::default() }
 
+	/// Set the `io.element.msc4308.thread_subscriptions` extension value.
 	#[inline]
-	pub fn thread_subscriptions(mut self, data: Value) -> Self {
+	#[must_use]
+	pub fn thread_subscriptions(mut self, data: OwnedValue) -> Self {
 		self.thread_subscriptions = Some(data);
 		self
 	}
 
+	/// Add a single room's extra data.
 	#[inline]
+	#[must_use]
 	pub fn room_extra(mut self, room_id: String, extras: RoomExtras) -> Self {
 		self.room_extras.push((room_id, extras));
 		self
 	}
 
+	/// Replace all room extras at once.
 	#[inline]
+	#[must_use]
 	pub fn room_extras(mut self, extras: Vec<(String, RoomExtras)>) -> Self {
 		self.room_extras = extras;
 		self
 	}
 
-	pub fn patch(&self, val: &mut Value) {
+	/// Patch a sync response value in place.
+	///
+	/// Applies thread subscriptions and per-room extra fields (membership,
+	/// lists, timeline, `stripped_state`).
+	pub fn patch(&self, val: &mut OwnedValue) {
 		self.patch_thread_subscriptions(val);
 		self.patch_rooms(val);
 	}
 
-	pub fn build_http_response(self, val: &Value) -> Result<BytesMut, serde_json::Error> {
-		let mut writer = JsonWriter::with_capacity(8192);
-		writer.serialize_value(val)?;
-		Ok(writer.into_bytes())
+	/// Serialize the patched value into a complete HTTP response body.
+	///
+	/// # Errors
+	///
+	/// Returns `io::Error` if serialization fails.
+	pub fn build_http_response(self, val: &OwnedValue) -> std::io::Result<BytesMut> {
+		let mut buf = BytesMut::with_capacity(8192);
+		let mut writer = BufWriter(&mut buf);
+		val.write(&mut writer)?;
+		Ok(buf)
 	}
 
-	fn patch_thread_subscriptions(&self, val: &mut Value) {
+	fn patch_thread_subscriptions(&self, val: &mut OwnedValue) {
 		let Some(ref subs) = self.thread_subscriptions else {
 			return;
 		};
 		val.as_object_mut()
 			.expect("sync response is a JSON object")
-			.entry("extensions")
-			.or_insert_with(|| Value::Object(Default::default()))
+			.entry("extensions".to_owned())
+			.or_insert_with(|| OwnedValue::from(simd_json::value::owned::Object::default()))
 			.as_object_mut()
 			.expect("sync response extensions is a JSON object")
 			.insert("io.element.msc4308.thread_subscriptions".to_owned(), subs.clone());
 	}
 
-	fn patch_rooms(&self, val: &mut Value) {
-		let Some(rooms) = val.get_mut("rooms").and_then(Value::as_object_mut) else {
+	fn patch_rooms(&self, val: &mut OwnedValue) {
+		let Some(rooms) = val.get_mut("rooms").and_then(|v| v.as_object_mut()) else {
 			return;
 		};
 		for (room_id, extra) in &self.room_extras {
 			let Some(room) = rooms
 				.get_mut(room_id.as_str())
-				.and_then(Value::as_object_mut)
+				.and_then(|v| v.as_object_mut())
 			else {
 				continue;
 			};
 			if let Some(ref membership) = extra.membership {
-				room.insert("membership".to_owned(), Value::String(membership.clone()));
+				room.insert("membership".to_owned(), OwnedValue::from(membership.clone()));
 			}
 			if let Some(invite_state) = room.get("invite_state").cloned() {
 				room.insert("stripped_state".to_owned(), invite_state);
@@ -86,19 +107,25 @@ impl SlidingSyncResponseBuilder {
 			if let Some(timeline) = room.get("timeline").cloned() {
 				room.insert("timeline_events".to_owned(), timeline);
 			}
-			if let Ok(lists_val) = serde_json::to_value(&extra.lists) {
-				room.insert("lists".to_owned(), lists_val);
-			}
+			let lists_val = OwnedValue::Array(Box::new(
+				extra
+					.lists
+					.iter()
+					.map(|s| OwnedValue::from(s.as_str()))
+					.collect(),
+			));
+			room.insert("lists".to_owned(), lists_val);
 			if extra.expanded_timeline {
-				room.insert("expanded_timeline".to_owned(), Value::Bool(true));
+				room.insert("expanded_timeline".to_owned(), OwnedValue::from(true));
 			}
 		}
 	}
 }
 
 #[cfg(test)]
+#[coverage(off)]
 mod tests {
-	use serde_json::json;
+	use simd_json::json;
 
 	use super::*;
 
@@ -146,7 +173,8 @@ mod tests {
 		let builder = SlidingSyncResponseBuilder::new();
 		let val = json!({"rooms": {}});
 		let bytes = builder.build_http_response(&val).unwrap();
-		let parsed: Value = serde_json::from_slice(&bytes).unwrap();
+		let mut input = bytes.to_vec();
+		let parsed: OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
 		assert_eq!(parsed, val);
 	}
 }
