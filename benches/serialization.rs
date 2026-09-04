@@ -199,6 +199,37 @@ fn bench_canonical_without_fields(b: &mut Bencher) {
 	b.iter(|| canonical_to_bytes_without(&pdu, &["unsigned"]).unwrap());
 }
 
+// ── Field injection: splice vs parse+mutate+serialize ────────────────
+// Compares `splice_insert_fields` (byte-level, no tree) against the
+// current pipeline (parse → mutate `OwnedValue` → serialize) for the
+// common case of patching a couple of known keys into an already-
+// serialized PDU (e.g. `unsigned`/`age` injection).
+
+#[bench]
+fn bench_patch_via_tree_small(b: &mut Bencher) {
+	let pdu = small_pdu();
+	let json = encode_bytes(&pdu);
+
+	b.iter(|| {
+		let mut input = json.clone();
+		let mut val = simd_json::to_owned_value(&mut input).unwrap();
+		if let Some(obj) = val.as_object_mut() {
+			obj.insert("age".to_owned(), simd_json::OwnedValue::from(42));
+		}
+		to_bytes(&val).unwrap()
+	});
+}
+
+#[bench]
+fn bench_patch_via_splice_small(b: &mut Bencher) {
+	let pdu = small_pdu();
+	let json = encode_bytes(&pdu);
+
+	b.iter(|| {
+		mtx_slipstream::federation::raw_pdu::splice_insert_fields(&json, &[("age", b"42")])
+	});
+}
+
 // ── Parse → serialize round-trip ─────────────────────────────────────
 
 #[bench]

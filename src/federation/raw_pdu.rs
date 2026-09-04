@@ -149,6 +149,60 @@ pub fn remove_fields(pdu: &mut simd_json::OwnedValue, skip_fields: &[&str]) {
 		}
 	}
 }
+
+/// Insert top-level fields into a raw JSON object's byte representation
+/// without parsing it into an `OwnedValue` tree.
+///
+/// This is the fast path for the common "patch a couple of known keys into
+/// an already-serialized PDU" case (e.g. injecting `unsigned`/`age` before
+/// forwarding a PDU read straight from the database) — it avoids the
+/// allocation cost of `to_owned_value` → mutate → re-serialize entirely.
+///
+/// `raw` must be a JSON object with no leading/trailing whitespace (i.e.
+/// bytes ending in `}`), such as the output of [`canonical_to_bytes`] or a
+/// PDU fetched verbatim from storage. `fields` are `(key, value)` pairs
+/// where `value` is **already-serialized** JSON (a literal, string, or
+/// nested object/array) and `key` contains no characters that require JSON
+/// string escaping (safe for the fixed field names this is meant for, e.g.
+/// `"unsigned"`, `"age"`).
+///
+/// Returns `raw` unchanged (copied) if `fields` is empty.
+///
+/// # Panics
+///
+/// Debug-asserts that `raw` ends with `}` — the caller is expected to only
+/// pass well-formed JSON objects.
+#[must_use]
+pub fn splice_insert_fields(raw: &[u8], fields: &[(&str, &[u8])]) -> Vec<u8> {
+	debug_assert!(raw.last() == Some(&b'}'), "splice_insert_fields requires a JSON object");
+
+	if fields.is_empty() {
+		return raw.to_vec();
+	}
+
+	// An object with no existing fields (`{}`) needs no leading comma before
+	// the first inserted field.
+	let body_is_empty = raw.len() >= 2 && raw[raw.len().saturating_sub(2)] == b'{';
+
+	let extra: usize = fields
+		.iter()
+		.map(|(k, v)| k.len().saturating_add(v.len()).saturating_add(4))
+		.sum();
+	let mut out = Vec::with_capacity(raw.len().saturating_add(extra));
+	out.extend_from_slice(&raw[..raw.len().saturating_sub(1)]);
+
+	for (index, (key, value)) in fields.iter().enumerate() {
+		if !body_is_empty || index > 0 {
+			out.push(b',');
+		}
+		out.push(b'"');
+		out.extend_from_slice(key.as_bytes());
+		out.extend_from_slice(b"\":");
+		out.extend_from_slice(value);
+	}
+	out.push(b'}');
+	out
+}
 #[cfg(test)]
 #[coverage(off)]
 mod tests {
@@ -219,6 +273,46 @@ mod tests {
 
 		assert_eq!(canonical_to_bytes(&value).unwrap().as_ref(), br#"{"a":0,"z":{"a":1,"b":2}}"#,);
 		assert_eq!(canonical_to_string(&value).unwrap(), r#"{"a":0,"z":{"a":1,"b":2}}"#,);
+	}
+
+	#[test]
+	fn test_splice_insert_fields_into_populated_object() {
+		let raw = br#"{"event_id":"$abc","type":"m.room.message"}"#;
+		let out = splice_insert_fields(raw, &[("unsigned", br#"{"age":42}"#)]);
+
+		let mut input = out.clone();
+		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
+		assert_eq!(parsed["event_id"], "$abc");
+		assert_eq!(parsed["unsigned"]["age"], 42);
+	}
+
+	#[test]
+	fn test_splice_insert_fields_into_empty_object() {
+		let raw = br"{}";
+		let out = splice_insert_fields(raw, &[("age", b"42")]);
+
+		let mut input = out.clone();
+		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
+		assert_eq!(parsed["age"], 42);
+	}
+
+	#[test]
+	fn test_splice_insert_fields_multiple() {
+		let raw = br#"{"event_id":"$abc"}"#;
+		let out = splice_insert_fields(raw, &[("age", b"1"), ("transaction_id", br#""t1""#)]);
+
+		let mut input = out.clone();
+		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
+		assert_eq!(parsed["event_id"], "$abc");
+		assert_eq!(parsed["age"], 1);
+		assert_eq!(parsed["transaction_id"], "t1");
+	}
+
+	#[test]
+	fn test_splice_insert_fields_empty_fields_is_noop() {
+		let raw = br#"{"event_id":"$abc"}"#;
+		let out = splice_insert_fields(raw, &[]);
+		assert_eq!(out, raw);
 	}
 
 	#[test]
