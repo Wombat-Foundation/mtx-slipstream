@@ -28,3 +28,22 @@ jobs:
       - run: "cargo +nightly fmt --all -- --check"
       - run: "cargo +nightly clippy --all-targets -- -D warnings"
       - run: "cargo +nightly test --all-features --all-targets"
+
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: taiki-e/install-action@cargo-llvm-cov
+      - run: make cov
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: .coverage/codecov.json
+          fail_ci_if_error: false

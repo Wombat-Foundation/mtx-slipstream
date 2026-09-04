@@ -152,7 +152,11 @@ fn write_canonical_value(buf: &mut BytesMut, value: &simd_json::OwnedValue) -> i
 		let out_of_range = value
 			.as_i64()
 			.map(|i| !(CANONICAL_MIN_SAFE_INT..=CANONICAL_MAX_SAFE_INT).contains(&i))
-			.or_else(|| value.as_u64().map(|u| u > u64::try_from(CANONICAL_MAX_SAFE_INT).unwrap_or(u64::MAX)))
+			.or_else(|| {
+				value
+					.as_u64()
+					.map(|u| u > u64::try_from(CANONICAL_MAX_SAFE_INT).unwrap_or(u64::MAX))
+			})
 			.unwrap_or(false);
 		if out_of_range {
 			return Err(io::Error::new(
@@ -273,21 +277,22 @@ fn has_top_level_key(body: &[u8], key: &str) -> bool {
 			continue;
 		}
 		match byte {
-			b'"' => {
+			| b'"' => {
 				if depth == 0 {
 					let after_quote = index.saturating_add(1);
 					let after_key = after_quote.saturating_add(key.len());
 					if body.get(after_quote..after_key) == Some(key)
-						&& body.get(after_key..after_key.saturating_add(2)) == Some(b"\":".as_slice())
+						&& body.get(after_key..after_key.saturating_add(2))
+							== Some(b"\":".as_slice())
 					{
 						return true;
 					}
 				}
 				in_string = true;
 			},
-			b'{' | b'[' => depth = depth.saturating_add(1),
-			b'}' | b']' => depth = depth.saturating_sub(1),
-			_ => {},
+			| b'{' | b'[' => depth = depth.saturating_add(1),
+			| b'}' | b']' => depth = depth.saturating_sub(1),
+			| _ => {},
 		}
 		index = index.saturating_add(1);
 	}
