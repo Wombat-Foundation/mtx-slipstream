@@ -10,6 +10,10 @@
 
 extern crate test;
 
+#[cfg(feature = "mimalloc-alloc")]
+#[global_allocator]
+static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 use mtx_slipstream::{
 	federation::{
 		pdu_stream::PduStreamWriter,
