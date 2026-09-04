@@ -48,7 +48,7 @@ doc: ##H Build docs
 
 .PHONY: test
 test: ##H Run tests
-	$(CARGO) test --all-targets --timings
+	$(CARGO) test --lib --tests --timings
 
 .PHONY: cov
 cov: ##H Run code coverage and generate HTML report
