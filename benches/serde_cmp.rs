@@ -218,7 +218,13 @@ fn bench_simd_canonical_small(b: &mut Bencher) {
 
 #[bench]
 fn bench_simd_canonical_without_fields(b: &mut Bencher) {
-	let pdu = small_pdu();
+	// small_pdu() has no "unsigned" key -- add one so this actually
+	// exercises the removal path in canonical_to_bytes_without, rather
+	// than just canonical serialization of an unchanged PDU.
+	let mut pdu = small_pdu();
+	pdu.as_object_mut()
+		.unwrap()
+		.insert("unsigned".to_owned(), simd_json::json!({"age": 42}));
 	b.iter(|| canonical_to_bytes_without(&pdu, &["unsigned"]).unwrap());
 }
 

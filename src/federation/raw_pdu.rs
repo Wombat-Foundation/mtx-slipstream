@@ -107,6 +107,12 @@ pub fn canonical_to_bytes_without(
 	canonical_to_bytes(&val)
 }
 
+/// Matrix canonical JSON requires integers to round-trip exactly through an
+/// IEEE-754 double, i.e. within ±(2^53 - 1). See the Matrix spec's appendix
+/// on canonical JSON.
+const CANONICAL_MAX_SAFE_INT: i64 = 9_007_199_254_740_991;
+const CANONICAL_MIN_SAFE_INT: i64 = -9_007_199_254_740_991;
+
 fn write_canonical_value(buf: &mut BytesMut, value: &simd_json::OwnedValue) -> io::Result<()> {
 	if let Some(array) = value.as_array() {
 		buf.put_u8(b'[');
@@ -132,6 +138,28 @@ fn write_canonical_value(buf: &mut BytesMut, value: &simd_json::OwnedValue) -> i
 		}
 		buf.put_u8(b'}');
 	} else {
+		// Matrix canonical JSON forbids floating-point values outright, and
+		// restricts integers to the range that round-trips exactly through
+		// an f64. Reject violations here rather than silently emitting
+		// non-canonical bytes that would fail interop event-hash checks
+		// against other homeservers.
+		if value.is_f64() {
+			return Err(io::Error::new(
+				io::ErrorKind::InvalidData,
+				"canonical JSON forbids floating-point values",
+			));
+		}
+		let out_of_range = value
+			.as_i64()
+			.map(|i| !(CANONICAL_MIN_SAFE_INT..=CANONICAL_MAX_SAFE_INT).contains(&i))
+			.or_else(|| value.as_u64().map(|u| u > u64::try_from(CANONICAL_MAX_SAFE_INT).unwrap_or(u64::MAX)))
+			.unwrap_or(false);
+		if out_of_range {
+			return Err(io::Error::new(
+				io::ErrorKind::InvalidData,
+				"integer exceeds canonical JSON safe range (+/-(2^53-1))",
+			));
+		}
 		value.write(&mut BufWriter(buf))?;
 	}
 
@@ -335,6 +363,53 @@ mod tests {
 
 		assert_eq!(canonical_to_bytes(&value).unwrap().as_ref(), br#"{"a":0,"z":{"a":1,"b":2}}"#,);
 		assert_eq!(canonical_to_string(&value).unwrap(), r#"{"a":0,"z":{"a":1,"b":2}}"#,);
+	}
+
+	#[test]
+	fn test_canonical_rejects_float() {
+		let value = json!({"depth": 1.5});
+		let err = canonical_to_bytes(&value).unwrap_err();
+		assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+	}
+
+	#[test]
+	fn test_canonical_rejects_negative_zero_float() {
+		let value = json!({"x": -0.0});
+		let err = canonical_to_bytes(&value).unwrap_err();
+		assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+	}
+
+	#[test]
+	fn test_canonical_rejects_integer_above_safe_range() {
+		let value = json!({"count": 9_007_199_254_740_992_u64}); // 2^53
+		assert!(canonical_to_bytes(&value).is_err());
+	}
+
+	#[test]
+	fn test_canonical_rejects_integer_below_safe_range() {
+		let value = json!({"count": -9_007_199_254_740_992_i64}); // -(2^53)
+		assert!(canonical_to_bytes(&value).is_err());
+	}
+
+	#[test]
+	fn test_canonical_accepts_boundary_safe_integers() {
+		let value = json!({
+			"max": 9_007_199_254_740_991_i64,
+			"min": -9_007_199_254_740_991_i64
+		});
+		assert!(canonical_to_bytes(&value).is_ok());
+	}
+
+	#[test]
+	fn test_canonical_rejects_float_nested_in_array() {
+		let value = json!({"list": [1, 2, 2.5]});
+		assert!(canonical_to_bytes(&value).is_err());
+	}
+
+	#[test]
+	fn test_canonical_rejects_float_nested_in_object() {
+		let value = json!({"content": {"ratio": 0.5}});
+		assert!(canonical_to_bytes(&value).is_err());
 	}
 
 	#[test]
