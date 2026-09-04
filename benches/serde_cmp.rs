@@ -251,6 +251,52 @@ fn bench_simd_zerocopy_parse_huge(b: &mut Bencher) {
 	});
 }
 
+// ── Tape field-peek benchmarks ─────────────────────────────────────────
+// simd_json::to_tape produces a single flat Vec<Node> for the whole
+// document (one allocation total, not one per container like
+// Owned/BorrowedValue). Value::get() walks it using each container's
+// precomputed `count` to skip subtrees it doesn't need. This is the
+// GJSON-style "peek a couple of fields, skip the rest" path — no tree of
+// heap objects gets built at all.
+
+#[bench]
+fn bench_simd_tape_peek_field_small(b: &mut Bencher) {
+	let pdu = small_pdu();
+	let mut json = encode_bytes(&pdu);
+	let original = json.clone();
+
+	b.iter(|| {
+		json.clone_from_slice(&original);
+		let tape = simd_json::to_tape(&mut json).unwrap();
+		let root = tape.as_value();
+		if let Some(v) = root.get("type") {
+			if let Some(field) = v.as_str() {
+				test::black_box(field);
+			}
+		}
+	});
+}
+
+#[bench]
+fn bench_simd_tape_peek_field_huge(b: &mut Bencher) {
+	let val = huge_sync_response();
+	let mut json = encode_bytes(&val);
+	let original = json.clone();
+
+	b.iter(|| {
+		json.clone_from_slice(&original);
+		let tape = simd_json::to_tape(&mut json).unwrap();
+		let root = tape.as_value();
+		// Same shape of lookup as the small case: reach one known field a
+		// couple of levels deep, without touching the other 2000 rooms.
+		if let Some(v) = root.get("next_batch") {
+			if let Some(field) = v.as_str() {
+				test::black_box(field);
+			}
+		}
+	});
+}
+
 // ── Raw passthrough benchmarks ───────────────────────────────────────
 // The actual hot path for PDUs that don't need patching: just shove the
 // raw JSON bytes through the stream writer. Zero parse, zero serialize.
