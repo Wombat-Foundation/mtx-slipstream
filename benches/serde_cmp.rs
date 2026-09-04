@@ -287,12 +287,17 @@ fn bench_simd_tape_peek_field_huge(b: &mut Bencher) {
 		json.clone_from_slice(&original);
 		let tape = simd_json::to_tape(&mut json).unwrap();
 		let root = tape.as_value();
-		// Same shape of lookup as the small case: reach one known field a
-		// couple of levels deep, without touching the other 2000 rooms.
-		if let Some(v) = root.get("next_batch") {
-			if let Some(field) = v.as_str() {
-				test::black_box(field);
-			}
+		// "device_one_time_keys_count" is the *last* top-level key, defined
+		// after "rooms" (the ~12MB, 2000-room blob). Reaching it exercises
+		// the actual skip-subtree benefit: Value::get() uses "rooms"'s
+		// precomputed `count` to jump straight past it instead of
+		// descending into it, which is what a full Owned/BorrowedValue
+		// parse would be forced to do to build the tree at all.
+		if let Some(v) = root
+			.get("device_one_time_keys_count")
+			.and_then(|obj| obj.get("signed_curve25519"))
+		{
+			test::black_box(v);
 		}
 	});
 }
