@@ -168,6 +168,12 @@ pub fn remove_fields(pdu: &mut simd_json::OwnedValue, skip_fields: &[&str]) {
 ///
 /// Returns `raw` unchanged (copied) if `fields` is empty.
 ///
+/// If a key in `fields` already exists as a top-level key in `raw`, that
+/// entry is left untouched and skipped — this fast path only supports
+/// *inserting* new keys, not replacing existing ones (which would require
+/// locating and removing the old value, at which point a real parse is
+/// cheaper and less error-prone).
+///
 /// # Panics
 ///
 /// Debug-asserts that `raw` ends with `}` — the caller is expected to only
@@ -180,9 +186,11 @@ pub fn splice_insert_fields(raw: &[u8], fields: &[(&str, &[u8])]) -> Vec<u8> {
 		return raw.to_vec();
 	}
 
-	// An object with no existing fields (`{}`) needs no leading comma before
-	// the first inserted field.
-	let body_is_empty = raw.len() >= 2 && raw[raw.len().saturating_sub(2)] == b'{';
+	let body = raw.get(1..raw.len().saturating_sub(1)).unwrap_or(&[]);
+	// An object with no existing fields (`{}`, or `{ }` with only
+	// whitespace between the braces) needs no leading comma before the
+	// first inserted field.
+	let body_is_empty = body.iter().all(u8::is_ascii_whitespace);
 
 	let extra: usize = fields
 		.iter()
@@ -191,17 +199,71 @@ pub fn splice_insert_fields(raw: &[u8], fields: &[(&str, &[u8])]) -> Vec<u8> {
 	let mut out = Vec::with_capacity(raw.len().saturating_add(extra));
 	out.extend_from_slice(&raw[..raw.len().saturating_sub(1)]);
 
-	for (index, (key, value)) in fields.iter().enumerate() {
-		if !body_is_empty || index > 0 {
+	let mut wrote_any = false;
+	for (key, value) in fields {
+		if has_top_level_key(body, key) {
+			continue;
+		}
+		if !body_is_empty || wrote_any {
 			out.push(b',');
 		}
 		out.push(b'"');
 		out.extend_from_slice(key.as_bytes());
 		out.extend_from_slice(b"\":");
 		out.extend_from_slice(value);
+		wrote_any = true;
 	}
 	out.push(b'}');
 	out
+}
+
+/// Checks whether `key` appears as a top-level (depth-0) key in the body of
+/// a JSON object (the bytes strictly between its outer `{` and `}`).
+///
+/// This is a lightweight scan, not a full parser: it tracks string/escape
+/// state and brace/bracket nesting depth just enough to avoid mistaking a
+/// key name that appears inside a nested value or a string literal for a
+/// real top-level key.
+fn has_top_level_key(body: &[u8], key: &str) -> bool {
+	let key = key.as_bytes();
+
+	let mut depth: i32 = 0;
+	let mut in_string = false;
+	let mut escaped = false;
+	let mut index = 0;
+	while index < body.len() {
+		let byte = body[index];
+		if in_string {
+			if escaped {
+				escaped = false;
+			} else if byte == b'\\' {
+				escaped = true;
+			} else if byte == b'"' {
+				in_string = false;
+			}
+			index = index.saturating_add(1);
+			continue;
+		}
+		match byte {
+			b'"' => {
+				if depth == 0 {
+					let after_quote = index.saturating_add(1);
+					let after_key = after_quote.saturating_add(key.len());
+					if body.get(after_quote..after_key) == Some(key)
+						&& body.get(after_key..after_key.saturating_add(2)) == Some(b"\":".as_slice())
+					{
+						return true;
+					}
+				}
+				in_string = true;
+			},
+			b'{' | b'[' => depth = depth.saturating_add(1),
+			b'}' | b']' => depth = depth.saturating_sub(1),
+			_ => {},
+		}
+		index = index.saturating_add(1);
+	}
+	false
 }
 #[cfg(test)]
 #[coverage(off)]
@@ -313,6 +375,44 @@ mod tests {
 		let raw = br#"{"event_id":"$abc"}"#;
 		let out = splice_insert_fields(raw, &[]);
 		assert_eq!(out, raw);
+	}
+
+	#[test]
+	fn test_splice_insert_fields_into_whitespace_only_object() {
+		// `{ }` has no top-level fields, but the byte before the closing
+		// brace isn't `{` -- must not emit a leading comma.
+		let raw = b"{ }";
+		let out = splice_insert_fields(raw, &[("age", b"42")]);
+
+		let mut input = out.clone();
+		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
+		assert_eq!(parsed["age"], 42);
+	}
+
+	#[test]
+	fn test_splice_insert_fields_skips_existing_key() {
+		let raw = br#"{"event_id":"$abc","age":1}"#;
+		let out = splice_insert_fields(raw, &[("age", b"999"), ("new_field", b"7")]);
+
+		let mut input = out.clone();
+		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
+		// Existing "age" is left untouched, not duplicated or overwritten.
+		assert_eq!(parsed["age"], 1);
+		assert_eq!(parsed["new_field"], 7);
+		assert_eq!(out.windows(6).filter(|w| *w == b"\"age\":").count(), 1);
+	}
+
+	#[test]
+	fn test_splice_insert_fields_ignores_key_inside_nested_value() {
+		// "age" appears inside a nested object's value here, not as a
+		// top-level key -- it must not be mistaken for an existing field.
+		let raw = br#"{"content":{"age":5}}"#;
+		let out = splice_insert_fields(raw, &[("age", b"42")]);
+
+		let mut input = out.clone();
+		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
+		assert_eq!(parsed["age"], 42);
+		assert_eq!(parsed["content"]["age"], 5);
 	}
 
 	#[test]
