@@ -32,6 +32,22 @@ mimalloc = { version = "0.1", optional = true, default-features = false }
 rezzy = { git = "https://gitlab.com/gamesguru/rezzy.git", branch = "alpha" }
 serde_json = { version = "1", optional = true, default-features = false, features = ["alloc"] }
 simd-json = { version = "0.18", default-features = false, features = ["runtime-detection", "swar-number-parsing"] }
+ruma = { git = "https://forgejo.ellis.link/continuwuation/ruwuma", rev = "d00b51a8669b21689c4eb47fb81f3a8b27c3e371", features = [
+	"compat",
+	"compat-arbitrary-length-ids",
+	"rand",
+	"appservice-api-c",
+	"client-api",
+	"federation-api",
+	"markdown",
+	"push-gateway-api-c",
+	"unstable-exhaustive-types",
+	"ring-compat",
+	"compat-upload-signatures",
+	"identifiers-validation",
+	"unstable-unspecified",
+	"unstable-pdu",
+] }
 
 [[bench]]
 name = "serialization"
