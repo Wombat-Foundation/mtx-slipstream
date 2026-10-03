@@ -38,7 +38,7 @@ impl core::error::Error for MatrixIdParseError {}
 
 macro_rules! matrix_id {
 	($borrowed:ident, $owned:ident) => {
-		#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+		#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, ::serde::Serialize, ::serde::Deserialize)]
 		pub struct $owned(alloc::string::String);
 
 		pub type $borrowed = $owned;
@@ -131,7 +131,7 @@ macro_rules! int {
 	};
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, ::serde::Serialize, ::serde::Deserialize)]
 pub enum RoomVersionId {
 	V1,
 	V2,
@@ -334,6 +334,7 @@ pub mod api {
 
 pub mod events {
 	#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+	#[derive(serde::Serialize, serde::Deserialize)]
 	pub enum TimelineEventType {
 		RoomAliases,
 		RoomCreate,
@@ -353,6 +354,7 @@ pub mod events {
 	}
 	pub mod relation {
 		#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+		#[derive(serde::Serialize, serde::Deserialize)]
 		pub enum RelationType {
 			Reply,
 			Replacement,
@@ -376,6 +378,7 @@ pub mod events {
 			#[derive(Clone, Debug, Default)]
 			pub struct RoomMemberEventContent;
 			#[derive(Clone, Debug)]
+			#[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 			pub enum MembershipState {
 				Join,
 				Invite,
@@ -463,14 +466,21 @@ pub mod signatures {
 }
 
 pub mod serde {
+	use core::marker::PhantomData;
+
 	#[must_use]
-	pub fn default_true() -> bool {
-		true
+	pub fn default_true() -> bool { true }
+
+	#[derive(Clone, Debug, Default, ::serde::Serialize, ::serde::Deserialize)]
+	pub struct Raw<T>(pub alloc::string::String, pub PhantomData<T>);
+
+	impl<T> Raw<T> {
+		#[must_use]
+		pub fn get(&self) -> &str { &self.0 }
 	}
+
 	#[derive(Clone, Debug, Default)]
 	pub struct Base64;
-	#[derive(Clone, Debug, Default)]
-	pub struct Raw<T>(pub alloc::string::String, pub core::marker::PhantomData<T>);
 }
 
 #[derive(Clone, Debug)]
