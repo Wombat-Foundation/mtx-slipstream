@@ -9,6 +9,7 @@
 
 extern crate alloc;
 
+pub mod canonical_json;
 pub mod federation;
 pub mod sync;
 pub mod writer;
@@ -485,9 +486,9 @@ pub struct IdParseError;
 ///
 /// This is intentionally kept at the crate root so the eventual migration
 /// from `ruma` can be a namespace change rather than another JSON rewrite.
-pub type CanonicalJsonObject = json::Object;
-pub type CanonicalJsonValue = json::Value;
-pub type CanonicalJsonArray = alloc::vec::Vec<json::Value>;
+pub type CanonicalJsonObject = canonical_json::Object;
+pub type CanonicalJsonValue = canonical_json::Value;
+pub type CanonicalJsonArray = canonical_json::Array;
 
 pub mod canonical_json {
 	pub use crate::{CanonicalJsonArray, CanonicalJsonObject, CanonicalJsonValue};
