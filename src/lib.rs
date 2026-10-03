@@ -16,6 +16,10 @@ pub mod writer;
 /// Canonical JSON substrate supplied by Rezzy.
 pub use rezzy::json;
 
+/// Primitive Matrix scalar compatibility types.
+pub type Int = i64;
+pub type UInt = u64;
+
 /// Matrix-facing names shared by the server and the serialization layer.
 ///
 /// This is intentionally kept at the crate root so the eventual migration
