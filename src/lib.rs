@@ -7,6 +7,8 @@
 
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 
+extern crate alloc;
+
 pub mod federation;
 pub mod sync;
 pub mod writer;

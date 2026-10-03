@@ -14,6 +14,9 @@ use bytes::BytesMut;
 use simd_json::{OwnedValue, prelude::*};
 
 use crate::writer::BufWriter;
+use alloc::vec::Vec;
+use alloc::string::String;
+use alloc::boxed::Box;
 
 /// Builder for constructing a patched sync v3 response.
 #[derive(Debug, Default)]

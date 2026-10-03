@@ -18,6 +18,8 @@ use bytes::{BufMut, BytesMut};
 use simd_json::{OwnedValue, prelude::*};
 
 use crate::writer::BufWriter;
+use alloc::vec::Vec;
+use alloc::string::String;
 
 /// Parse JSON bytes using simd-json (SIMD-accelerated).
 ///

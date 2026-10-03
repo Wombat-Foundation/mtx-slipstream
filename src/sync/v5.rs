@@ -3,6 +3,9 @@
 use bytes::BytesMut;
 use simd_json::{OwnedValue, prelude::*};
 
+use alloc::boxed::Box;
+use alloc::vec::Vec;
+
 use crate::writer::BufWriter;
 
 /// Per-room extra data for v5 sliding sync responses.
