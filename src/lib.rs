@@ -13,3 +13,15 @@ pub mod writer;
 
 /// Canonical JSON substrate supplied by Rezzy.
 pub use rezzy::json;
+
+/// Matrix-facing names shared by the server and the serialization layer.
+///
+/// This is intentionally kept at the crate root so the eventual migration
+/// from `ruma` can be a namespace change rather than another JSON rewrite.
+pub type CanonicalJsonObject = json::Object;
+pub type CanonicalJsonValue = json::Value;
+pub type CanonicalJsonArray = Vec<json::Value>;
+
+pub mod canonical_json {
+	pub use crate::{CanonicalJsonArray, CanonicalJsonObject, CanonicalJsonValue};
+}
