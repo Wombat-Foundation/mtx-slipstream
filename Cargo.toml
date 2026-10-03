@@ -17,12 +17,12 @@ autobenches = false
 [workspace]
 
 [features]
-serde-comparison = ["dep:serde_json"]
 mimalloc-alloc = ["dep:mimalloc"]
 nightly-benches = []
 
 [dependencies]
 bytes = "1.10.1"
+http = "1.3.1"
 # Only ever used by the `#[global_allocator]` in the bench binaries
 # (feature-gated so a plain `cargo build`/`cargo test` never compiles or
 # links it into the library). It's a regular optional dependency rather
@@ -31,7 +31,6 @@ bytes = "1.10.1"
 # optional in Cargo.
 mimalloc = { version = "0.1", optional = true, default-features = false }
 rezzy = { git = "https://gitlab.com/gamesguru/rezzy.git", branch = "alpha" }
-serde_json = { version = "1", optional = true, default-features = false, features = ["alloc"] }
 simd-json = { version = "0.18", default-features = false, features = ["runtime-detection", "swar-number-parsing"] }
 
 [lints.rust]
