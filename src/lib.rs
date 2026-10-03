@@ -109,6 +109,18 @@ matrix_id!(RoomOrAliasId, OwnedRoomOrAliasId);
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct MilliSecondsSinceUnixEpoch(pub UInt);
 
+impl MilliSecondsSinceUnixEpoch {
+	#[must_use]
+	pub fn get(self) -> UInt { self.0 }
+	#[must_use]
+	pub fn now() -> Self {
+		let millis = std::time::SystemTime::now()
+			.duration_since(std::time::UNIX_EPOCH)
+			.map_or(0, |duration| duration.as_millis() as UInt);
+		Self(millis)
+	}
+}
+
 #[macro_export]
 macro_rules! int {
 	($value:expr) => {
