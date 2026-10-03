@@ -26,11 +26,11 @@ check-cargo-sort:
 
 .PHONY: check
 check: ##H Type-check without building
-	$(CARGO) check --all-targets
+	$(CARGO) check --all-targets --all-features
 
 .PHONY: lint
 lint: ##H Run clippy lints
-	$(CARGO) clippy --all-targets -- $(if $(CI),-D warnings)
+	$(CARGO) clippy --all-targets --all-features -- $(if $(CI),-D warnings)
 
 .PHONY: fix
 fix: ##H Apply auto-fixes with clippy
@@ -48,13 +48,14 @@ doc: ##H Build docs
 
 .PHONY: test
 test: ##H Run tests
-	$(CARGO) test --lib --tests --timings
+	$(CARGO) test --lib --tests --timings --all-targets --all-features
 
 .PHONY: cov
 cov: ##H Run code coverage and generate HTML report
 	# TODO: include `src/bin/` in coverage
 	# Run coverage
 	$(CARGO) llvm-cov --lib --tests \
+		--all-targets --all-features \
 		--html --output-dir .coverage \
 		--ignore-filename-regex 'src/bin/.*|scripts/.*'
 	# Process report to codecov-compatible JSON
@@ -68,7 +69,7 @@ cov: ##H Run code coverage and generate HTML report
 
 .PHONY: build
 build: ##H Build the lib/binary
-	cargo build --release --timings
+	cargo build --release --timings --all-targets --all-features
 
 
 

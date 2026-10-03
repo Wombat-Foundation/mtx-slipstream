@@ -111,10 +111,12 @@ pub struct MilliSecondsSinceUnixEpoch(pub UInt);
 
 #[macro_export]
 macro_rules! int {
-	($value:expr) => { $crate::Int::from($value) };
+	($value:expr) => {
+		$crate::Int::from($value)
+	};
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum RoomVersionId {
 	V1,
 	V2,
@@ -132,11 +134,21 @@ pub enum RoomVersionId {
 }
 
 impl RoomVersionId {
+	#[must_use]
 	pub fn as_str(&self) -> &str {
 		match self {
-			Self::V1 => "1", Self::V2 => "2", Self::V3 => "3", Self::V4 => "4",
-			Self::V5 => "5", Self::V6 => "6", Self::V7 => "7", Self::V8 => "8",
-			Self::V9 => "9", Self::V10 => "10", Self::V11 => "11", Self::V12 => "12",
+			Self::V1 => "1",
+			Self::V2 => "2",
+			Self::V3 => "3",
+			Self::V4 => "4",
+			Self::V5 => "5",
+			Self::V6 => "6",
+			Self::V7 => "7",
+			Self::V8 => "8",
+			Self::V9 => "9",
+			Self::V10 => "10",
+			Self::V11 => "11",
+			Self::V12 => "12",
 			Self::Custom(value) => value,
 		}
 	}
@@ -146,9 +158,18 @@ impl TryFrom<&str> for RoomVersionId {
 	type Error = ();
 	fn try_from(value: &str) -> Result<Self, Self::Error> {
 		Ok(match value {
-			"1" => Self::V1, "2" => Self::V2, "3" => Self::V3, "4" => Self::V4,
-			"5" => Self::V5, "6" => Self::V6, "7" => Self::V7, "8" => Self::V8,
-			"9" => Self::V9, "10" => Self::V10, "11" => Self::V11, "12" => Self::V12,
+			"1" => Self::V1,
+			"2" => Self::V2,
+			"3" => Self::V3,
+			"4" => Self::V4,
+			"5" => Self::V5,
+			"6" => Self::V6,
+			"7" => Self::V7,
+			"8" => Self::V8,
+			"9" => Self::V9,
+			"10" => Self::V10,
+			"11" => Self::V11,
+			"12" => Self::V12,
 			other => Self::Custom(other.to_owned()),
 		})
 	}
