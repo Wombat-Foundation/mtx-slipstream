@@ -24,6 +24,11 @@ check-cargo-sort:
 
 
 
+.PHONY: all
+all:	##H Run all main targets
+all: check doc format lint test
+
+
 .PHONY: check
 check: ##H Type-check without building
 	$(CARGO) check --all-targets --all-features
