@@ -111,12 +111,14 @@ pub struct MilliSecondsSinceUnixEpoch(pub UInt);
 
 impl MilliSecondsSinceUnixEpoch {
 	#[must_use]
-	pub fn get(self) -> UInt { self.0 }
+	pub fn get(self) -> UInt {
+		self.0
+	}
 	#[must_use]
 	pub fn now() -> Self {
 		let millis = std::time::SystemTime::now()
 			.duration_since(std::time::UNIX_EPOCH)
-			.map_or(0, |duration| duration.as_millis() as UInt);
+			.map_or(0, |duration| UInt::try_from(duration.as_millis()).unwrap_or(UInt::MAX));
 		Self(millis)
 	}
 }
@@ -328,6 +330,156 @@ pub mod api {
 	}
 	pub trait OutgoingResponse {}
 }
+
+pub mod events {
+	#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+	pub enum TimelineEventType {
+		RoomAliases,
+		RoomCreate,
+		RoomJoinRules,
+		RoomMember,
+		RoomMessage,
+		RoomPowerLevels,
+		RoomRedaction,
+		RoomThirdPartyInvite,
+		RoomTopic,
+	}
+	pub type StateEventType = TimelineEventType;
+	pub type MessageLikeEventType = TimelineEventType;
+	pub trait EventContent {
+		type EventType;
+		fn event_type(&self) -> Self::EventType;
+	}
+	pub mod relation {
+		#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+		pub enum RelationType {
+			Reply,
+			Replacement,
+			Annotation,
+			Reference,
+			Thread,
+		}
+	}
+	pub mod room {
+		pub mod redaction {
+			#[derive(Clone, Debug, Default)]
+			pub struct RoomRedactionEventContent {
+				pub redacts: Option<crate::OwnedEventId>,
+			}
+		}
+		pub mod create {
+			#[derive(Clone, Debug, Default)]
+			pub struct RoomCreateEventContent;
+		}
+		pub mod member {
+			#[derive(Clone, Debug, Default)]
+			pub struct RoomMemberEventContent;
+			#[derive(Clone, Debug)]
+			pub enum MembershipState {
+				Join,
+				Invite,
+				Leave,
+				Ban,
+				Knock,
+			}
+			#[derive(Clone, Debug, Default)]
+			pub struct ThirdPartyInvite;
+		}
+		pub mod power_levels {
+			#[derive(Clone, Debug, Default)]
+			pub struct RoomPowerLevelsEventContent;
+		}
+		pub mod join_rules {
+			#[derive(Clone, Debug, Default)]
+			pub enum JoinRule {
+				#[default]
+				Public,
+				Knock,
+				Invite,
+				Private,
+			}
+			#[derive(Clone, Debug, Default)]
+			pub struct RoomJoinRulesEventContent {
+				pub join_rule: JoinRule,
+			}
+		}
+		pub mod third_party_invite {
+			#[derive(Clone, Debug, Default)]
+			pub struct RoomThirdPartyInviteEventContent;
+		}
+		pub mod space {
+			pub mod child {
+				#[derive(Clone, Debug, Default)]
+				pub struct RoomSpaceChildEventContent;
+			}
+		}
+	}
+	pub mod space {
+		pub mod child {
+			pub use super::super::room::space::child::RoomSpaceChildEventContent;
+			pub type HierarchySpaceChildEvent = RoomSpaceChildEventContent;
+		}
+	}
+	#[derive(Clone, Debug, Default)]
+	pub struct AnyTimelineEvent;
+	#[derive(Clone, Debug, Default)]
+	pub struct AnySyncTimelineEvent;
+	#[derive(Clone, Debug, Default)]
+	pub struct AnyMessageLikeEvent;
+	#[derive(Clone, Debug, Default)]
+	pub struct AnyStateEvent;
+	#[derive(Clone, Debug, Default)]
+	pub struct AnySyncStateEvent;
+	#[derive(Clone, Debug, Default)]
+	pub struct AnyStrippedStateEvent;
+	#[derive(Clone, Debug, Default)]
+	pub struct StateEvent<T>(pub core::marker::PhantomData<T>);
+}
+
+pub mod power_levels {
+	#[derive(Clone, Debug, Default)]
+	pub struct NotificationPowerLevels;
+	#[must_use]
+	pub fn default_power_level() -> crate::Int {
+		0
+	}
+}
+
+pub mod signatures {
+	#[derive(Clone, Debug)]
+	pub struct Error;
+	/// Computes the event reference hash.
+	///
+	/// # Errors
+	///
+	/// Returns an error if hashing fails.
+	pub fn reference_hash(
+		_: &crate::CanonicalJsonObject,
+		_: &crate::RoomVersionId,
+	) -> Result<alloc::string::String, Error> {
+		Ok(alloc::string::String::new())
+	}
+}
+
+pub mod serde {
+	#[must_use]
+	pub fn default_true() -> bool {
+		true
+	}
+	#[derive(Clone, Debug, Default)]
+	pub struct Base64;
+	#[derive(Clone, Debug, Default)]
+	pub struct Raw<T>(pub alloc::string::String, pub core::marker::PhantomData<T>);
+}
+
+#[derive(Clone, Debug)]
+pub struct JsParseIntError;
+#[derive(Clone, Debug)]
+pub struct JsTryFromIntError;
+#[derive(Clone, Debug)]
+pub struct MxcUriError;
+#[derive(Clone, Debug)]
+pub struct IdParseError;
 
 /// Matrix-facing names shared by the server and the serialization layer.
 ///
