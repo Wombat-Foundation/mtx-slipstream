@@ -70,9 +70,9 @@ macro_rules! matrix_id {
 				Self(value.to_owned())
 			}
 		}
-		impl AsRef<str> for $owned {
-			fn as_ref(&self) -> &str {
-				self.as_str()
+		impl AsRef<$owned> for $owned {
+			fn as_ref(&self) -> &$owned {
+				self
 			}
 		}
 		impl Borrow<str> for $owned {
@@ -177,6 +177,144 @@ impl TryFrom<&str> for RoomVersionId {
 
 pub mod int {
 	pub use crate::{Int, UInt};
+}
+
+pub mod http_headers {
+	use alloc::string::String;
+
+	#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+	pub enum ContentDispositionType {
+		Inline,
+		Attachment,
+	}
+
+	#[derive(Clone, Debug, Eq, PartialEq)]
+	pub struct ContentDisposition {
+		pub disposition: ContentDispositionType,
+		pub filename: Option<String>,
+	}
+
+	impl ContentDisposition {
+		#[must_use]
+		pub fn new(disposition: ContentDispositionType) -> Self {
+			Self {
+				disposition,
+				filename: None,
+			}
+		}
+		#[must_use]
+		pub fn with_filename(mut self, filename: Option<String>) -> Self {
+			self.filename = filename;
+			self
+		}
+	}
+
+	#[derive(Clone, Debug, Eq, PartialEq)]
+	pub struct ContentDispositionParseError;
+}
+
+pub mod api {
+	#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+	pub enum Direction {
+		Forward,
+		Backward,
+	}
+
+	pub mod client {
+		pub mod filter {
+			#[derive(Clone, Debug, Default)]
+			pub struct RoomEventFilter {
+				pub not_rooms: alloc::vec::Vec<crate::OwnedRoomId>,
+				pub rooms: Option<alloc::vec::Vec<crate::OwnedRoomId>>,
+				pub not_senders: alloc::vec::Vec<crate::OwnedUserId>,
+				pub senders: Option<alloc::vec::Vec<crate::OwnedUserId>>,
+				pub types: Option<alloc::vec::Vec<alloc::string::String>>,
+				pub not_types: alloc::vec::Vec<alloc::string::String>,
+				pub contains_url: Option<bool>,
+				pub not_rooms_or_senders: alloc::vec::Vec<alloc::string::String>,
+				pub not_types_or_rel_types: alloc::vec::Vec<alloc::string::String>,
+				pub lazy_load_options: Option<()>,
+			}
+			#[derive(Clone, Debug, Default)]
+			pub struct UrlFilter;
+		}
+		pub mod discovery {
+			pub mod discover_homeserver {
+				#[derive(Clone, Debug, Default)]
+				pub struct RtcFocusInfo;
+			}
+			pub mod discover_support {
+				#[derive(Clone, Debug, Default)]
+				pub struct ContactRole;
+			}
+			pub mod get_capabilities {
+				#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+				pub enum RoomVersionStability {
+					Stable,
+					Unstable,
+				}
+			}
+		}
+		pub mod error {
+			#[derive(Clone, Debug)]
+			pub enum ErrorKind {
+				LimitExceeded {
+					retry_after_ms: Option<crate::UInt>,
+				},
+				SenderIgnored {
+					room_id: Option<crate::OwnedRoomId>,
+				},
+				WrongRoomKeysVersion {
+					_value: (),
+				},
+				Forbidden {
+					_value: (),
+				},
+				UnknownToken {
+					soft_logout: bool,
+				},
+				NotImplemented,
+				FeatureDisabled,
+				NotFound,
+				TooLarge,
+				Unrecognized,
+				CannotOverwriteMedia,
+				NotYetUploaded,
+				GuestAccessForbidden,
+				ThreepidAuthFailed,
+				UserDeactivated,
+				ThreepidDenied,
+				InviteBlocked,
+				UserSuspended,
+				MissingToken,
+				Unauthorized,
+				UserLocked,
+				Unknown,
+				BadJson,
+				InvalidParam,
+			}
+			#[derive(Clone, Debug)]
+			pub enum ErrorBody {
+				Standard {
+					kind: ErrorKind,
+					message: alloc::string::String,
+				},
+				Other,
+			}
+			#[derive(Clone, Debug)]
+			pub struct Error {
+				pub status_code: http::StatusCode,
+				pub body: ErrorBody,
+			}
+		}
+		pub mod uiaa {
+			#[derive(Clone, Debug, Default)]
+			pub struct UiaaInfo;
+			#[derive(Clone, Debug)]
+			pub struct UiaaResponse;
+		}
+	}
+	pub trait OutgoingResponse {}
 }
 
 /// Matrix-facing names shared by the server and the serialization layer.
