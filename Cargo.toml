@@ -9,6 +9,7 @@ keywords = ["matrix", "federation", "C2S"]
 categories = ["http", "optimization"]
 repository = "https://github.com/Wombat-Foundation/mtx-slipstream"
 readme = "README.md"
+autobenches = false
 
 # This repository is consumed as a Git submodule, but it owns its dependency
 # resolution and lockfile. Declaring an explicit workspace stops Cargo from
@@ -32,18 +33,6 @@ mimalloc = { version = "0.1", optional = true, default-features = false }
 rezzy = { git = "https://gitlab.com/gamesguru/rezzy.git", branch = "alpha" }
 serde_json = { version = "1", optional = true, default-features = false, features = ["alloc"] }
 simd-json = { version = "0.18", default-features = false, features = ["runtime-detection", "swar-number-parsing"] }
-
-[[bench]]
-name = "serialization"
-path = "benches/serialization.rs"
-test = false
-required-features = ["nightly-benches"]
-
-[[bench]]
-name = "serde_cmp"
-path = "benches/serde_cmp.rs"
-test = false
-required-features = ["serde-comparison", "nightly-benches"]
 
 [lints.rust]
 unsafe_code = "warn"
