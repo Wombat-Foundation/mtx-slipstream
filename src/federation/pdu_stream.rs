@@ -135,7 +135,7 @@ impl FederationResponseWriter {
 	///
 	/// # Panics
 	///
-	/// Panics if called after [`begin_auth_chain`].
+	/// Panics if called after [`Self::begin_auth_chain`].
 	pub fn write_raw_state_pdu(&mut self, pdu_json: &str) {
 		debug_assert_eq!(self.phase, ResponsePhase::State);
 		if self.state_count > 0 {
@@ -153,7 +153,7 @@ impl FederationResponseWriter {
 	///
 	/// # Panics
 	///
-	/// Panics if called after [`begin_auth_chain`].
+	/// Panics if called after [`Self::begin_auth_chain`].
 	pub fn write_state_pdu(&mut self, pdu: &simd_json::OwnedValue) -> std::io::Result<()> {
 		debug_assert_eq!(self.phase, ResponsePhase::State);
 		if self.state_count > 0 {
@@ -181,7 +181,7 @@ impl FederationResponseWriter {
 	///
 	/// # Panics
 	///
-	/// Panics if called before [`begin_auth_chain`].
+	/// Panics if called before [`Self::begin_auth_chain`].
 	pub fn write_raw_auth_chain_pdu(&mut self, pdu_json: &str) {
 		debug_assert_eq!(self.phase, ResponsePhase::AuthChain);
 		if self.auth_chain_count > 0 {
@@ -199,7 +199,7 @@ impl FederationResponseWriter {
 	///
 	/// # Panics
 	///
-	/// Panics if called before [`begin_auth_chain`].
+	/// Panics if called before [`Self::begin_auth_chain`].
 	pub fn write_auth_chain_pdu(&mut self, pdu: &simd_json::OwnedValue) -> std::io::Result<()> {
 		debug_assert_eq!(self.phase, ResponsePhase::AuthChain);
 		if self.auth_chain_count > 0 {

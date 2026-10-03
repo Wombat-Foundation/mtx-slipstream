@@ -10,6 +10,7 @@
 extern crate alloc;
 
 pub mod canonical_json;
+pub mod codec;
 pub mod federation;
 pub mod sync;
 pub mod writer;
@@ -38,7 +39,7 @@ impl core::error::Error for MatrixIdParseError {}
 
 macro_rules! matrix_id {
 	($borrowed:ident, $owned:ident) => {
-		#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, ::serde::Serialize, ::serde::Deserialize)]
+		#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 		pub struct $owned(alloc::string::String);
 
 		pub type $borrowed = $owned;
@@ -131,7 +132,7 @@ macro_rules! int {
 	};
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, ::serde::Serialize, ::serde::Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum RoomVersionId {
 	V1,
 	V2,
@@ -166,6 +167,18 @@ impl RoomVersionId {
 			Self::V12 => "12",
 			Self::Custom(value) => value,
 		}
+	}
+}
+
+impl codec::Serialize for RoomVersionId {
+	fn to_json(&self) -> json::Value {
+		json::Value::String(self.as_str().to_owned())
+	}
+}
+impl codec::Deserialize for RoomVersionId {
+	fn from_json(value: &json::Value) -> Result<Self, codec::DeError> {
+		let s = value.as_str().ok_or_else(|| codec::DeError::expected("room version"))?;
+		Self::try_from(s).map_err(|()| codec::DeError::expected("room version"))
 	}
 }
 
@@ -334,7 +347,6 @@ pub mod api {
 
 pub mod events {
 	#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-	#[derive(serde::Serialize, serde::Deserialize)]
 	pub enum TimelineEventType {
 		RoomAliases,
 		RoomCreate,
@@ -354,7 +366,6 @@ pub mod events {
 	}
 	pub mod relation {
 		#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-		#[derive(serde::Serialize, serde::Deserialize)]
 		pub enum RelationType {
 			Reply,
 			Replacement,
@@ -377,8 +388,7 @@ pub mod events {
 		pub mod member {
 			#[derive(Clone, Debug, Default)]
 			pub struct RoomMemberEventContent;
-			#[derive(Clone, Debug)]
-			#[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+			#[derive(Clone, Debug, PartialEq, Eq)]
 			pub enum MembershipState {
 				Join,
 				Invite,
@@ -469,14 +479,18 @@ pub mod serde {
 	use core::marker::PhantomData;
 
 	#[must_use]
-	pub fn default_true() -> bool { true }
+	pub fn default_true() -> bool {
+		true
+	}
 
-	#[derive(Clone, Debug, Default, ::serde::Serialize, ::serde::Deserialize)]
+	#[derive(Clone, Debug, Default)]
 	pub struct Raw<T>(pub alloc::string::String, pub PhantomData<T>);
 
 	impl<T> Raw<T> {
 		#[must_use]
-		pub fn get(&self) -> &str { &self.0 }
+		pub fn get(&self) -> &str {
+			&self.0
+		}
 	}
 
 	#[derive(Clone, Debug, Default)]
