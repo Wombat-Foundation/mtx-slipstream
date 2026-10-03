@@ -39,7 +39,7 @@ pub fn to_bytes(value: &simd_json::OwnedValue) -> io::Result<BytesMut> {
 }
 
 #[cfg(test)]
-#[coverage(off)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
 	use simd_json::json;
 

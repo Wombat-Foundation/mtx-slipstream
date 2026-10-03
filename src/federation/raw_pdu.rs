@@ -299,7 +299,7 @@ fn has_top_level_key(body: &[u8], key: &str) -> bool {
 	false
 }
 #[cfg(test)]
-#[coverage(off)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
 	use simd_json::json;
 

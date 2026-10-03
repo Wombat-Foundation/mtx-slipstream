@@ -5,7 +5,7 @@
 //! Eliminates redundant serialize/deserialize round-trips in sync and
 //! `send_join` responses.
 
-#![feature(coverage_attribute)]
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 
 pub mod federation;
 pub mod sync;

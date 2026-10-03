@@ -18,6 +18,7 @@ readme = "README.md"
 [features]
 serde-comparison = ["dep:serde_json"]
 mimalloc-alloc = ["dep:mimalloc"]
+nightly-benches = []
 
 [dependencies]
 bytes = "1.10.1"
@@ -36,15 +37,17 @@ simd-json = { version = "0.18", default-features = false, features = ["runtime-d
 name = "serialization"
 path = "benches/serialization.rs"
 test = false
+required-features = ["nightly-benches"]
 
 [[bench]]
 name = "serde_cmp"
 path = "benches/serde_cmp.rs"
 test = false
-required-features = ["serde-comparison"]
+required-features = ["serde-comparison", "nightly-benches"]
 
 [lints.rust]
 unsafe_code = "warn"
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(coverage_nightly)"] }
 
 [lints.clippy]
 pedantic = { level = "warn", priority = -1 }
