@@ -224,10 +224,8 @@ pub fn splice_insert_fields(raw: &[u8], fields: &[(&str, &[u8])]) -> Vec<u8> {
 	// first inserted field.
 	let body_is_empty = body.iter().all(u8::is_ascii_whitespace);
 
-	let extra: usize = fields
-		.iter()
-		.map(|(k, v)| k.len().saturating_add(v.len()).saturating_add(4))
-		.sum();
+	let extra: usize =
+		fields.iter().map(|(k, v)| k.len().saturating_add(v.len()).saturating_add(4)).sum();
 	let mut out = Vec::with_capacity(raw.len().saturating_add(extra));
 	out.extend_from_slice(&raw[..raw.len().saturating_sub(1)]);
 
@@ -277,7 +275,7 @@ fn has_top_level_key(body: &[u8], key: &str) -> bool {
 			continue;
 		}
 		match byte {
-			| b'"' => {
+			b'"' => {
 				if depth == 0 {
 					let after_quote = index.saturating_add(1);
 					let after_key = after_quote.saturating_add(key.len());
@@ -289,10 +287,10 @@ fn has_top_level_key(body: &[u8], key: &str) -> bool {
 					}
 				}
 				in_string = true;
-			},
-			| b'{' | b'[' => depth = depth.saturating_add(1),
-			| b'}' | b']' => depth = depth.saturating_sub(1),
-			| _ => {},
+			}
+			b'{' | b'[' => depth = depth.saturating_add(1),
+			b'}' | b']' => depth = depth.saturating_sub(1),
+			_ => {}
 		}
 		index = index.saturating_add(1);
 	}

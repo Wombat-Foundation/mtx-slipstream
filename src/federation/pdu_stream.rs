@@ -27,7 +27,10 @@ impl PduStreamWriter {
 		let cap = estimated_pdus.saturating_mul(2048);
 		let mut buf = BytesMut::with_capacity(cap);
 		buf.put_u8(b'[');
-		Self { buf, count: 0 }
+		Self {
+			buf,
+			count: 0,
+		}
 	}
 
 	/// Write a single pre-serialized PDU (raw JSON bytes).
@@ -212,8 +215,7 @@ impl FederationResponseWriter {
 	/// returning the accumulated buffer.
 	#[must_use]
 	pub fn finish(mut self) -> BytesMut {
-		self.buf
-			.put_slice(b"],\"event\":null,\"members_omitted\":false}");
+		self.buf.put_slice(b"],\"event\":null,\"members_omitted\":false}");
 		self.buf
 	}
 

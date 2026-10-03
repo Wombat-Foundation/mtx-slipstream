@@ -224,9 +224,7 @@ fn bench_simd_canonical_without_fields(b: &mut Bencher) {
 	// exercises the removal path in canonical_to_bytes_without, rather
 	// than just canonical serialization of an unchanged PDU.
 	let mut pdu = small_pdu();
-	pdu.as_object_mut()
-		.unwrap()
-		.insert("unsigned".to_owned(), simd_json::json!({"age": 42}));
+	pdu.as_object_mut().unwrap().insert("unsigned".to_owned(), simd_json::json!({"age": 42}));
 	b.iter(|| canonical_to_bytes_without(&pdu, &["unsigned"]).unwrap());
 }
 
@@ -301,9 +299,8 @@ fn bench_simd_tape_peek_field_huge(b: &mut Bencher) {
 		// precomputed `count` to jump straight past it instead of
 		// descending into it, which is what a full Owned/BorrowedValue
 		// parse would be forced to do to build the tree at all.
-		if let Some(v) = root
-			.get("device_one_time_keys_count")
-			.and_then(|obj| obj.get("signed_curve25519"))
+		if let Some(v) =
+			root.get("device_one_time_keys_count").and_then(|obj| obj.get("signed_curve25519"))
 		{
 			test::black_box(v);
 		}

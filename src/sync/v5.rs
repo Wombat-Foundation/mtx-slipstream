@@ -94,9 +94,7 @@ impl SlidingSyncResponseBuilder {
 			return;
 		};
 		for (room_id, extra) in &self.room_extras {
-			let Some(room) = rooms
-				.get_mut(room_id.as_str())
-				.and_then(|v| v.as_object_mut())
+			let Some(room) = rooms.get_mut(room_id.as_str()).and_then(|v| v.as_object_mut())
 			else {
 				continue;
 			};
@@ -110,11 +108,7 @@ impl SlidingSyncResponseBuilder {
 				room.insert("timeline_events".to_owned(), timeline);
 			}
 			let lists_val = OwnedValue::Array(Box::new(
-				extra
-					.lists
-					.iter()
-					.map(|s| OwnedValue::from(s.as_str()))
-					.collect(),
+				extra.lists.iter().map(|s| OwnedValue::from(s.as_str())).collect(),
 			));
 			room.insert("lists".to_owned(), lists_val);
 			if extra.expanded_timeline {
