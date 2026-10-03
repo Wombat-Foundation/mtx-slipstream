@@ -23,6 +23,18 @@ pub type UInt = u64;
 use alloc::borrow::Borrow;
 use core::{fmt, hash::Hash, ops::Deref};
 
+/// Error returned when parsing a Matrix identifier fails.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct MatrixIdParseError;
+
+impl fmt::Display for MatrixIdParseError {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.write_str("invalid Matrix identifier")
+	}
+}
+
+impl core::error::Error for MatrixIdParseError {}
+
 macro_rules! matrix_id {
 	($borrowed:ident, $owned:ident) => {
 		#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -37,12 +49,14 @@ macro_rules! matrix_id {
 			///
 			/// This compatibility parser currently accepts every input and never
 			/// returns an error.
-			#[allow(clippy::result_unit_err)]
-			pub fn parse(value: &str) -> Result<Self, ()> {
+			pub fn parse(value: &str) -> Result<Self, MatrixIdParseError> {
 				Ok(Self(value.to_owned()))
 			}
 			pub fn as_str(&self) -> &str {
 				&self.0
+			}
+			pub fn server_name(&self) -> Option<OwnedServerName> {
+				self.as_str().rsplit_once(':').map(|(_, server)| OwnedServerName::from(server))
 			}
 		}
 
@@ -92,7 +106,13 @@ matrix_id!(ServerName, OwnedServerName);
 matrix_id!(UserId, OwnedUserId);
 matrix_id!(RoomOrAliasId, OwnedRoomOrAliasId);
 
-pub type MilliSecondsSinceUnixEpoch = UInt;
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct MilliSecondsSinceUnixEpoch(pub UInt);
+
+#[macro_export]
+macro_rules! int {
+	($value:expr) => { $crate::Int::from($value) };
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum RoomVersionId {
@@ -108,6 +128,30 @@ pub enum RoomVersionId {
 	V10,
 	V11,
 	V12,
+	Custom(alloc::string::String),
+}
+
+impl RoomVersionId {
+	pub fn as_str(&self) -> &str {
+		match self {
+			Self::V1 => "1", Self::V2 => "2", Self::V3 => "3", Self::V4 => "4",
+			Self::V5 => "5", Self::V6 => "6", Self::V7 => "7", Self::V8 => "8",
+			Self::V9 => "9", Self::V10 => "10", Self::V11 => "11", Self::V12 => "12",
+			Self::Custom(value) => value,
+		}
+	}
+}
+
+impl TryFrom<&str> for RoomVersionId {
+	type Error = ();
+	fn try_from(value: &str) -> Result<Self, Self::Error> {
+		Ok(match value {
+			"1" => Self::V1, "2" => Self::V2, "3" => Self::V3, "4" => Self::V4,
+			"5" => Self::V5, "6" => Self::V6, "7" => Self::V7, "8" => Self::V8,
+			"9" => Self::V9, "10" => Self::V10, "11" => Self::V11, "12" => Self::V12,
+			other => Self::Custom(other.to_owned()),
+		})
+	}
 }
 
 pub mod int {
