@@ -10,3 +10,6 @@
 pub mod federation;
 pub mod sync;
 pub mod writer;
+
+/// Canonical JSON substrate supplied by Rezzy.
+pub use rezzy::json;
