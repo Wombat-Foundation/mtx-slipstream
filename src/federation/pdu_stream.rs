@@ -74,12 +74,16 @@ impl PduStreamWriter {
 	/// Returns the number of PDUs written to the stream.
 	#[inline]
 	#[must_use]
-	pub fn len(&self) -> usize { self.count }
+	pub fn len(&self) -> usize {
+		self.count
+	}
 
 	/// Returns `true` if no PDUs have been written.
 	#[inline]
 	#[must_use]
-	pub fn is_empty(&self) -> bool { self.count == 0 }
+	pub fn is_empty(&self) -> bool {
+		self.count == 0
+	}
 }
 
 /// Streaming writer for federation responses with `state` and `auth_chain`
@@ -216,12 +220,16 @@ impl FederationResponseWriter {
 	/// Returns the number of state PDUs written.
 	#[inline]
 	#[must_use]
-	pub fn state_len(&self) -> usize { self.state_count }
+	pub fn state_len(&self) -> usize {
+		self.state_count
+	}
 
 	/// Returns the number of `auth_chain` PDUs written.
 	#[inline]
 	#[must_use]
-	pub fn auth_chain_len(&self) -> usize { self.auth_chain_count }
+	pub fn auth_chain_len(&self) -> usize {
+		self.auth_chain_count
+	}
 }
 
 #[cfg(test)]

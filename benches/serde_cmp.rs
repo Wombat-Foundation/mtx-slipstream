@@ -77,7 +77,9 @@ fn huge_sync_response() -> simd_json::OwnedValue {
 	simd_json::to_owned_value(&mut bytes).unwrap()
 }
 
-fn encode_bytes(val: &simd_json::OwnedValue) -> Vec<u8> { val.encode().into_bytes() }
+fn encode_bytes(val: &simd_json::OwnedValue) -> Vec<u8> {
+	val.encode().into_bytes()
+}
 
 // ── Parse benchmarks ─────────────────────────────────────────────────
 

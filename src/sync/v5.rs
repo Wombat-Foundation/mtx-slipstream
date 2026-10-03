@@ -27,7 +27,9 @@ impl SlidingSyncResponseBuilder {
 	/// Create a new empty builder.
 	#[inline]
 	#[must_use]
-	pub fn new() -> Self { Self::default() }
+	pub fn new() -> Self {
+		Self::default()
+	}
 
 	/// Set the `io.element.msc4308.thread_subscriptions` extension value.
 	#[inline]

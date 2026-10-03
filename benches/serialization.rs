@@ -121,7 +121,9 @@ fn pdus(n: usize) -> Vec<simd_json::OwnedValue> {
 
 /// Encode a value to a `Vec<u8>` without serde (replaces
 /// `simd_json::to_string`).
-fn encode_bytes(val: &simd_json::OwnedValue) -> Vec<u8> { val.encode().into_bytes() }
+fn encode_bytes(val: &simd_json::OwnedValue) -> Vec<u8> {
+	val.encode().into_bytes()
+}
 
 // ── Parse benchmarks ─────────────────────────────────────────────────
 

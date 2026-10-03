@@ -17,7 +17,9 @@ impl io::Write for BufWriter<'_> {
 		Ok(buf.len())
 	}
 
-	fn flush(&mut self) -> io::Result<()> { Ok(()) }
+	fn flush(&mut self) -> io::Result<()> {
+		Ok(())
+	}
 }
 
 /// Serialize an `OwnedValue` directly to a `BytesMut` buffer.

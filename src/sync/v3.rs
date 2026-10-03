@@ -29,7 +29,9 @@ impl SyncResponseBuilder {
 	/// Create a new empty builder.
 	#[inline]
 	#[must_use]
-	pub fn new() -> Self { Self::default() }
+	pub fn new() -> Self {
+		Self::default()
+	}
 
 	/// Set the joined rooms' `state_after` patches.
 	#[inline]
