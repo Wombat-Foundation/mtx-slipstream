@@ -489,7 +489,3 @@ pub struct IdParseError;
 pub type CanonicalJsonObject = canonical_json::Object;
 pub type CanonicalJsonValue = canonical_json::Value;
 pub type CanonicalJsonArray = canonical_json::Array;
-
-pub mod canonical_json {
-	pub use crate::{CanonicalJsonArray, CanonicalJsonObject, CanonicalJsonValue};
-}
