@@ -154,6 +154,50 @@ impl OwnedUserId {
 		crate::server_part(self.as_str()).unwrap_or_else(|| OwnedServerName::from(""))
 	}
 }
+/// The part of an identifier between its sigil and the first `:`.
+fn id_localpart(value: &str) -> &str {
+	let body = value.get(1..).unwrap_or_default();
+	body.split_once(':').map_or(body, |(local, _)| local)
+}
+impl OwnedRoomAliasId {
+	/// The alias part, without the `#` sigil or server name.
+	#[must_use]
+	pub fn alias(&self) -> &str { id_localpart(self.as_str()) }
+}
+impl OwnedRoomId {
+	#[must_use]
+	pub fn localpart(&self) -> &str { id_localpart(self.as_str()) }
+}
+impl OwnedEventId {
+	#[must_use]
+	pub fn localpart(&self) -> &str { id_localpart(self.as_str()) }
+}
+impl OwnedServerName {
+	/// The host, without any port, and with IPv6 brackets kept.
+	#[must_use]
+	pub fn host(&self) -> &str {
+		let name = self.as_str();
+		if name.starts_with('[') {
+			return name.find(']').and_then(|end| name.get(..=end)).unwrap_or(name);
+		}
+		name.rsplit_once(':').map_or(name, |(host, _)| host)
+	}
+
+	/// The port, if the server name carries one.
+	#[must_use]
+	pub fn port(&self) -> Option<u16> {
+		let name = self.as_str();
+		let rest = if name.starts_with('[') { name.split_once(']')?.1 } else { name };
+		rest.rsplit_once(':')?.1.parse().ok()
+	}
+
+	/// Whether the host is an IP literal rather than a DNS name.
+	#[must_use]
+	pub fn is_ip_literal(&self) -> bool {
+		let host = self.host();
+		host.starts_with('[') || host.parse::<core::net::Ipv4Addr>().is_ok()
+	}
+}
 impl OwnedRoomAliasId {
 	#[must_use]
 	pub fn server_name(&self) -> OwnedServerName {

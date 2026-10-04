@@ -95,3 +95,20 @@ fn room_version_parse() {
 	assert_eq!(RoomVersionId::parse("10").unwrap(), RoomVersionId::V10);
 	assert_eq!(RoomVersionId::parse("custom-1").unwrap().as_str(), "custom-1");
 }
+
+#[test]
+fn id_accessors() {
+	use mtx_slipstream::{OwnedRoomAliasId, OwnedRoomId, OwnedServerName};
+	let alias: OwnedRoomAliasId = "#room:example.org".into();
+	assert_eq!(alias.alias(), "room");
+	let room: OwnedRoomId = "!abc:example.org".into();
+	assert_eq!(room.localpart(), "abc");
+	let plain: OwnedServerName = "example.org".into();
+	assert_eq!((plain.host(), plain.port(), plain.is_ip_literal()), ("example.org", None, false));
+	let with_port: OwnedServerName = "example.org:8448".into();
+	assert_eq!((with_port.host(), with_port.port()), ("example.org", Some(8448)));
+	let v6: OwnedServerName = "[::1]:8448".into();
+	assert_eq!((v6.host(), v6.port(), v6.is_ip_literal()), ("[::1]", Some(8448), true));
+	let v4: OwnedServerName = "10.0.0.1:1".into();
+	assert!(v4.is_ip_literal());
+}
