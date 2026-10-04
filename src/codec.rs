@@ -230,17 +230,19 @@ macro_rules! impl_codec_struct {
 	($t:ident { $($field:ident : $ty:ty),* $(,)? }) => {
 		impl $crate::codec::Serialize for $t {
 			fn to_json(&self) -> $crate::json::Value {
-				#[allow(unused_mut)]
-				let mut object = $crate::json::Object::new();
-				$($crate::endpoint::put_field(&mut object, stringify!($field), &self.$field);)*
-				$crate::json::Value::Object(object)
+				$crate::json::Value::Object($crate::endpoint::object_from(::alloc::vec![
+					$((stringify!($field), $crate::codec::Serialize::to_json(&self.$field))),*
+				]))
 			}
 		}
 		impl $crate::codec::Deserialize for $t {
 			fn from_json(value: &$crate::json::Value) -> Result<Self, $crate::codec::DeError> {
-				Ok(Self {
-					$($field: $crate::endpoint::body_field::<$ty>(Some(value), stringify!($field))?,)*
-				})
+				let input = $crate::endpoint::Input::new(&[], &[], Some(value));
+				let parsed = Self {
+					$($field: input.body::<$ty>(stringify!($field))?,)*
+				};
+				input.finish()?;
+				Ok(parsed)
 			}
 		}
 	};

@@ -50,10 +50,6 @@ suspicious = { level = "warn", priority = -1 }
 cargo = { level = "warn", priority = -1 }
 module_name_repetitions = "allow"
 similar_names = "allow"
-# Build-time proc-macro duplication only: curve25519-dalek-derive uses syn 3.0
-# while most of the graph is on syn 2.0. This is unavoidable, benign, and does
-# not affect the runtime binary.
-multiple_crate_versions = "allow"
 
 # High-Value Security & Robustness restrictions
 arithmetic_side_effects = "warn"

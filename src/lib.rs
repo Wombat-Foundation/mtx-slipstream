@@ -69,10 +69,6 @@ macro_rules! matrix_id {
 			pub fn as_str(&self) -> &str {
 				&self.0
 			}
-			#[allow(dead_code, reason = "only some ID types expose server_name")]
-			pub(crate) fn server_part(&self) -> Option<OwnedServerName> {
-				self.as_str().rsplit_once(':').map(|(_, server)| OwnedServerName::from(server))
-			}
 		}
 
 		impl From<alloc::string::String> for $owned {
@@ -125,6 +121,11 @@ macro_rules! matrix_id {
 			}
 		}
 	};
+}
+
+/// The server part of an identifier of the form `<sigil><local>:<server>`.
+pub(crate) fn server_part(id: &str) -> Option<OwnedServerName> {
+	id.rsplit_once(':').map(|(_, server)| OwnedServerName::from(server))
 }
 
 matrix_id!(EventId, OwnedEventId);
@@ -215,6 +216,13 @@ pub use events::room::encryption::EventEncryptionAlgorithm;
 
 pub mod presence {
 	pub use crate::events::presence::PresenceState;
+}
+
+impl OwnedRoomId {
+	#[must_use]
+	pub fn new(server_name: &OwnedServerName) -> Self {
+		Self::from(alloc::format!("!admin:{server_name}"))
+	}
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -629,7 +637,15 @@ pub mod events {
 				pub creator: Option<crate::OwnedUserId>,
 				pub room_version: Option<crate::RoomVersionId>,
 				pub additional_creators: Option<alloc::vec::Vec<crate::OwnedUserId>>,
+				pub federate: bool,
+				pub predecessor: Option<crate::json::Value>,
 			}
+			impl RoomCreateEventContent {
+				pub fn new_v1(creator: crate::OwnedUserId) -> Self { Self { creator: Some(creator), federate: true, ..Self::default() } }
+				pub fn new_v11() -> Self { Self { federate: true, ..Self::default() } }
+				pub fn new_v12() -> Self { Self { federate: true, ..Self::default() } }
+			}
+			impl crate::events::EventContent for RoomCreateEventContent { type EventType = crate::events::StateEventType; fn event_type(&self) -> Self::EventType { crate::events::StateEventType::RoomCreate } }
 			impl crate::codec::Deserialize for RoomCreateEventContent {
 				fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
 					let object = value

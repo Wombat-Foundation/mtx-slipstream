@@ -61,6 +61,10 @@ pub fn redact_content_in_place(
 }
 
 /// Redacts a full event object, using its `type` field when no type is supplied.
+///
+/// # Errors
+///
+/// Returns an error if the room version has no known redaction rules.
 pub fn redact(
 	mut object: Object,
 	version: &crate::RoomVersionId,
@@ -77,6 +81,10 @@ pub fn redact(
 }
 
 /// Redacts a full event object in place.
+///
+/// # Errors
+///
+/// Returns an error if the room version has no known redaction rules.
 pub fn redact_in_place(
 	object: &mut Object,
 	version: &crate::RoomVersionId,

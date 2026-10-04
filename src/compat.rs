@@ -103,36 +103,36 @@ str_eq!(
 impl OwnedEventId {
 	#[must_use]
 	pub fn server_name(&self) -> Option<OwnedServerName> {
-		self.server_part()
+		crate::server_part(self.as_str())
 	}
 }
 impl OwnedRoomId {
 	#[must_use]
 	pub fn server_name(&self) -> Option<OwnedServerName> {
-		self.server_part()
+		crate::server_part(self.as_str())
 	}
 }
 impl OwnedRoomOrAliasId {
 	#[must_use]
 	pub fn server_name(&self) -> Option<OwnedServerName> {
-		self.server_part()
+		crate::server_part(self.as_str())
 	}
 }
 impl OwnedServerName {
 	#[must_use]
 	pub fn server_name(&self) -> Option<OwnedServerName> {
-		self.server_part()
+		crate::server_part(self.as_str())
 	}
 }
 impl OwnedUserId {
 	#[must_use]
 	pub fn server_name(&self) -> OwnedServerName {
-		self.server_part().unwrap_or_else(|| OwnedServerName::from(""))
+		crate::server_part(self.as_str()).unwrap_or_else(|| OwnedServerName::from(""))
 	}
 }
 impl OwnedRoomAliasId {
 	#[must_use]
 	pub fn server_name(&self) -> OwnedServerName {
-		self.server_part().unwrap_or_else(|| OwnedServerName::from(""))
+		crate::server_part(self.as_str()).unwrap_or_else(|| OwnedServerName::from(""))
 	}
 }

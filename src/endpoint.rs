@@ -1,7 +1,7 @@
 //! Minimal typed-endpoint machinery: requests, responses and HTTP conversion.
 //!
 //! An endpoint is a request type and a response type described once with
-//! [`endpoint!`]. The macro implements [`EndpointRequest`] and
+//! [`endpoint!`](macro@crate::endpoint). The macro implements [`EndpointRequest`] and
 //! [`EndpointResponse`]; blanket impls then provide the ruma-style
 //! `OutgoingRequest`, `IncomingResponse`, `IncomingRequest` and
 //! `OutgoingResponse` traits in both directions.
@@ -193,7 +193,7 @@ pub trait OutgoingResponse {
 	) -> Result<http::Response<B>, IntoHttpError>;
 }
 
-/// Request half of an endpoint, implemented by [`endpoint!`].
+/// Request half of an endpoint, implemented by [`endpoint!`](macro@crate::endpoint).
 pub trait EndpointRequest: Sized {
 	type Response: EndpointResponse;
 	const METADATA: Metadata;
@@ -212,7 +212,7 @@ pub trait EndpointRequest: Sized {
 	) -> Result<Self, DeError>;
 }
 
-/// Response half of an endpoint, implemented by [`endpoint!`].
+/// Response half of an endpoint, implemented by [`endpoint!`](macro@crate::endpoint).
 pub trait EndpointResponse: Sized {
 	fn to_body(&self) -> Value;
 	/// # Errors
@@ -388,11 +388,90 @@ pub fn body_field<T: Deserialize>(body: Option<&Value>, name: &str) -> Result<T,
 	T::from_json(value)
 }
 
-/// Inserts a field into a JSON object under construction.
-pub fn put_field<T: Serialize>(object: &mut Object, name: &str, value: &T) {
-	let json = value.to_json();
-	if !json.is_null() {
-		object.insert(name.to_string(), json);
+/// Builds a JSON object from named values, omitting nulls.
+#[must_use]
+pub fn object_from(fields: Vec<(&str, Value)>) -> Object {
+	fields
+		.into_iter()
+		.filter(|(_, value)| !value.is_null())
+		.map(|(name, value)| (name.to_string(), value))
+		.collect()
+}
+
+/// Keeps the query parameters that have a value.
+#[must_use]
+pub fn present_params(params: Vec<(&str, Option<String>)>) -> Vec<(String, String)> {
+	params
+		.into_iter()
+		.filter_map(|(name, value)| value.map(|value| (name.to_string(), value)))
+		.collect()
+}
+
+/// Reads typed values out of a request or response being decoded.
+pub struct Input<'a> {
+	path: &'a [String],
+	query: &'a [(String, String)],
+	body: Option<&'a Value>,
+	next: core::cell::Cell<usize>,
+}
+
+impl<'a> Input<'a> {
+	#[must_use]
+	pub fn new(
+		path: &'a [String],
+		query: &'a [(String, String)],
+		body: Option<&'a Value>,
+	) -> Self {
+		Self {
+			path,
+			query,
+			body,
+			next: core::cell::Cell::new(0),
+		}
+	}
+
+	/// The next path argument.
+	///
+	/// # Errors
+	///
+	/// Returns an error if the argument is missing or malformed.
+	pub fn path<T: Deserialize>(&self) -> Result<T, DeError> {
+		let index = self.next.get();
+		self.next.set(index.saturating_add(1));
+		from_param(self.path.get(index).map(String::as_str))
+	}
+
+	/// The named query parameter.
+	///
+	/// # Errors
+	///
+	/// Returns an error if the parameter is malformed or required and absent.
+	pub fn query<T: Deserialize>(&self, name: &str) -> Result<T, DeError> {
+		from_param(
+			self.query.iter().find(|(key, _)| key == name).map(|(_, value)| value.as_str()),
+		)
+	}
+
+	/// The named field of the JSON body.
+	///
+	/// # Errors
+	///
+	/// Returns an error if the field is malformed or required and absent.
+	pub fn body<T: Deserialize>(&self, name: &str) -> Result<T, DeError> {
+		body_field(self.body, name)
+	}
+
+	/// Checks that every path argument was consumed.
+	///
+	/// # Errors
+	///
+	/// Returns an error if the request carries unexpected path arguments.
+	pub fn finish(self) -> Result<(), DeError> {
+		if self.next.get() == self.path.len() {
+			Ok(())
+		} else {
+			Err(DeError("unexpected path arguments".to_string()))
+		}
 	}
 }
 
@@ -437,75 +516,57 @@ macro_rules! endpoint {
 			const METADATA: $crate::endpoint::Metadata =
 				$crate::endpoint::Metadata { method: $method, path: $path };
 
-			#[allow(clippy::vec_init_then_push)]
 			fn path_args(&self) -> ::alloc::vec::Vec<::alloc::string::String> {
-				#[allow(unused_mut)]
-				let mut args = ::alloc::vec::Vec::new();
-				$(args.push($crate::endpoint::to_param(&self.$path_field).unwrap_or_default());)*
-				args
+				::alloc::vec![$($crate::endpoint::to_param(&self.$path_field).unwrap_or_default()),*]
 			}
 
 			fn query(&self) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)> {
-				#[allow(unused_mut)]
-				let mut query = ::alloc::vec::Vec::new();
-				$(
-					if let Some(value) = $crate::endpoint::to_param(&self.$query_field) {
-						query.push((::alloc::string::String::from(stringify!($query_field)), value));
-					}
-				)*
-				query
+				$crate::endpoint::present_params(::alloc::vec![
+					$((stringify!($query_field), $crate::endpoint::to_param(&self.$query_field))),*
+				])
 			}
 
 			fn body(&self) -> Option<$crate::json::Value> {
-				#[allow(unused_mut)]
-				let mut object = $crate::json::Object::new();
-				$($crate::endpoint::put_field(&mut object, stringify!($body_field_name), &self.$body_field_name);)*
-				if object.is_empty() && $method == "GET" {
+				let object = $crate::endpoint::object_from(::alloc::vec![
+					$((stringify!($body_field_name), $crate::codec::Serialize::to_json(&self.$body_field_name))),*
+				]);
+				if object.is_empty() && <Self as $crate::endpoint::EndpointRequest>::METADATA.method == "GET" {
 					None
 				} else {
 					Some($crate::json::Value::Object(object))
 				}
 			}
 
-			#[allow(unused_variables, unused_mut, unused_assignments)]
 			fn from_parts(
 				path: &[::alloc::string::String],
 				query: &[(::alloc::string::String, ::alloc::string::String)],
 				body: Option<&$crate::json::Value>,
 			) -> Result<Self, $crate::codec::DeError> {
-				let mut index = 0_usize;
-				$(
-					let $path_field: $pt = $crate::endpoint::from_param(
-						path.get(index).map(::alloc::string::String::as_str),
-					)?;
-					index = index.saturating_add(1);
-				)*
-				Ok(Self {
-					$($path_field,)*
-					$($query_field: $crate::endpoint::from_param(
-						query
-							.iter()
-							.find(|(k, _)| k == stringify!($query_field))
-							.map(|(_, v)| v.as_str()),
-					)?,)*
-					$($body_field_name: $crate::endpoint::body_field(body, stringify!($body_field_name))?,)*
-				})
+				let input = $crate::endpoint::Input::new(path, query, body);
+				let value = Self {
+					$($path_field: input.path()?,)*
+					$($query_field: input.query(stringify!($query_field))?,)*
+					$($body_field_name: input.body(stringify!($body_field_name))?,)*
+				};
+				input.finish()?;
+				Ok(value)
 			}
 		}
 
 		impl $crate::endpoint::EndpointResponse for Response {
 			fn to_body(&self) -> $crate::json::Value {
-				#[allow(unused_mut)]
-				let mut object = $crate::json::Object::new();
-				$($crate::endpoint::put_field(&mut object, stringify!($resp_field), &self.$resp_field);)*
-				$crate::json::Value::Object(object)
+				$crate::json::Value::Object($crate::endpoint::object_from(::alloc::vec![
+					$((stringify!($resp_field), $crate::codec::Serialize::to_json(&self.$resp_field))),*
+				]))
 			}
 
-			#[allow(unused_variables)]
 			fn from_body(body: &$crate::json::Value) -> Result<Self, $crate::codec::DeError> {
-				Ok(Self {
-					$($resp_field: $crate::endpoint::body_field(Some(body), stringify!($resp_field))?,)*
-				})
+				let input = $crate::endpoint::Input::new(&[], &[], Some(body));
+				let value = Self {
+					$($resp_field: input.body(stringify!($resp_field))?,)*
+				};
+				input.finish()?;
+				Ok(value)
 			}
 		}
 	};
