@@ -44,3 +44,40 @@ fn slipstream_json_interpolates_codec_types() {
 		r#"{"id":"$e","ids":["$e"],"n":1,"nested":[null,{"ok":true}],"s":"x"}"#
 	);
 }
+
+#[test]
+fn slipstream_json_accepts_models_values_and_primitives() {
+	use mtx_slipstream::{
+		OwnedRoomId, OwnedUserId,
+		codec::to_string,
+		events::receipt::ReceiptEventContent,
+		json,
+	};
+
+	let content = ReceiptEventContent::default();
+	let user: OwnedUserId = "@a:example.org".into();
+	let rooms: Vec<OwnedRoomId> = vec!["!r:example.org".into(), "!s:example.org".into()];
+	let raw = json::json!({ "inner": [1, 2] });
+
+	let v = json!({
+		"type": "m.receipt",
+		"content": content,
+		"user": user,
+		"rooms": rooms,
+		"nested": { "deep": [ { "user": user, }, null, ], },
+		"flag": false,
+		"raw": raw,
+		"missing": null,
+		"count": 7_u64,
+	});
+
+	assert_eq!(
+		to_string(&v),
+		concat!(
+			r#"{"content":{},"count":7,"flag":false,"missing":null,"#,
+			r#""nested":{"deep":[{"user":"@a:example.org"},null]},"#,
+			r#""raw":{"inner":[1,2]},"rooms":["!r:example.org","!s:example.org"],"#,
+			r#""type":"m.receipt","user":"@a:example.org"}"#
+		)
+	);
+}
