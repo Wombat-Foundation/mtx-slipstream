@@ -17,6 +17,7 @@ pub mod codec;
 pub mod device;
 pub mod filter;
 pub mod room_api;
+pub mod search;
 pub mod threads;
 mod uiaa;
 pub use antispam::{draupnir as draupnir_antispam, meowlnir as meowlnir_antispam};
@@ -108,6 +109,11 @@ macro_rules! matrix_id {
 		impl AsRef<$owned> for $owned {
 			fn as_ref(&self) -> &$owned {
 				self
+			}
+		}
+		impl PartialEq<&$owned> for $owned {
+			fn eq(&self, other: &&$owned) -> bool {
+				self == *other
 			}
 		}
 		impl Borrow<str> for $owned {
@@ -474,6 +480,9 @@ pub mod api {
 		}
 		pub mod room {
 			pub use crate::room_api::*;
+		}
+		pub mod search {
+			pub use crate::search::search_events;
 		}
 		pub mod threads {
 			pub use crate::threads::{IncludeThreads, get_threads};

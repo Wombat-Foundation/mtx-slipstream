@@ -118,6 +118,8 @@ impl Deserialize for DehydratedDeviceData {
 }
 
 pub mod dehydrated_device {
+	pub use crate::device::DehydratedDeviceData;
+
 	pub mod put_dehydrated_device {
 		pub mod unstable {
 			use alloc::{collections::BTreeMap, string::String};
