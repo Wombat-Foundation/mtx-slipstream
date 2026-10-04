@@ -138,6 +138,41 @@ matrix_id!(ClientSecret, OwnedClientSecret);
 matrix_id!(SessionId, OwnedSessionId);
 matrix_id!(MxcUri, OwnedMxcUri);
 
+/// Borrowed MXC URI components used by media services.
+pub struct Mxc<'a> {
+	pub server_name: &'a OwnedServerName,
+	pub media_id: &'a str,
+}
+
+impl fmt::Display for Mxc<'_> {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		write!(f, "mxc://{}/{}", self.server_name, self.media_id)
+	}
+}
+
+impl OwnedMxcUri {
+	#[must_use]
+	pub fn is_valid(&self) -> bool { self.as_str().starts_with("mxc://") }
+	pub fn server_name(&self) -> Result<OwnedServerName, MatrixIdParseError> {
+		self.as_str().strip_prefix("mxc://")
+			.and_then(|value| value.split_once('/').map(|(server, _)| OwnedServerName::from(server)))
+			.ok_or(MatrixIdParseError)
+	}
+	pub fn media_id(&self) -> Result<&str, MatrixIdParseError> {
+		self.as_str().strip_prefix("mxc://").and_then(|value| value.split_once('/').map(|(_, media)| media)).ok_or(MatrixIdParseError)
+	}
+}
+
+pub mod identifiers_validation {
+	pub mod server_name {
+		pub fn validate(value: &str) -> Result<(), ()> {
+			if value.is_empty() { Err(()) } else { Ok(()) }
+		}
+	}
+}
+
+pub mod presence { pub use crate::events::presence::PresenceState; }
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct MilliSecondsSinceUnixEpoch(pub UInt);
 
