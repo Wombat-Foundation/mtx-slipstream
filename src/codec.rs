@@ -293,6 +293,20 @@ macro_rules! impl_codec_struct {
 	};
 }
 
+impl<A: Serialize, B: Serialize, C: Serialize> Serialize for (A, B, C) {
+	fn to_json(&self) -> Value {
+		Value::Array(alloc::vec![self.0.to_json(), self.1.to_json(), self.2.to_json()])
+	}
+}
+impl<A: Deserialize, B: Deserialize, C: Deserialize> Deserialize for (A, B, C) {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		match value.as_array().map(Vec::as_slice) {
+			Some([a, b, c]) => Ok((A::from_json(a)?, B::from_json(b)?, C::from_json(c)?)),
+			_ => Err(DeError::expected("three-element array")),
+		}
+	}
+}
+
 impl<A: Serialize, B: Serialize> Serialize for (A, B) {
 	fn to_json(&self) -> Value {
 		Value::Array(alloc::vec![self.0.to_json(), self.1.to_json()])

@@ -121,6 +121,11 @@ macro_rules! matrix_id {
 				Self::parse(value)
 			}
 		}
+		impl From<$owned> for alloc::string::String {
+			fn from(value: $owned) -> Self {
+				value.0
+			}
+		}
 		impl From<&$owned> for $owned {
 			fn from(value: &$owned) -> Self {
 				value.clone()
