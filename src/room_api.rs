@@ -65,8 +65,7 @@ pub mod create_room {
 		use super::super::{AnyInitialStateEvent, CreationContent, Visibility};
 		use crate::{
 			OwnedRoomId, OwnedUserId, RoomVersionId,
-			events::room::power_levels::RoomPowerLevelsEventContent,
-			serde::Raw,
+			events::room::power_levels::RoomPowerLevelsEventContent, serde::Raw,
 		};
 		use crate::{
 			codec::{DeError, Deserialize, Serialize},
@@ -146,7 +145,9 @@ pub mod create_room {
 			}
 		}
 
-		crate::endpoint_response!(response { room_id: OwnedRoomId });
+		crate::endpoint_response!(response {
+			room_id: OwnedRoomId
+		});
 
 		impl Response {
 			#[must_use]
@@ -264,7 +265,11 @@ pub mod get_event_by_timestamp {
 
 		impl Request {
 			#[must_use]
-			pub fn new(room_id: OwnedRoomId, ts: MilliSecondsSinceUnixEpoch, dir: Direction) -> Self {
+			pub fn new(
+				room_id: OwnedRoomId,
+				ts: MilliSecondsSinceUnixEpoch,
+				dir: Direction,
+			) -> Self {
 				Self {
 					room_id,
 					ts,
@@ -275,7 +280,10 @@ pub mod get_event_by_timestamp {
 
 		impl Response {
 			#[must_use]
-			pub fn new(event_id: OwnedEventId, origin_server_ts: MilliSecondsSinceUnixEpoch) -> Self {
+			pub fn new(
+				event_id: OwnedEventId,
+				origin_server_ts: MilliSecondsSinceUnixEpoch,
+			) -> Self {
 				Self {
 					event_id,
 					origin_server_ts,
@@ -290,13 +298,10 @@ pub mod get_summary {
 	pub mod msc3266 {
 		use alloc::{string::String, vec::Vec};
 
+		use crate::{EventEncryptionAlgorithm, room::RoomType, space::SpaceRoomJoinRule};
 		use crate::{
-			OwnedMxcUri, OwnedRoomAliasId, OwnedRoomId,
-			OwnedRoomOrAliasId, OwnedServerName, RoomVersionId, UInt,
-			events::room::member::MembershipState,
-		};
-		use crate::{
-			EventEncryptionAlgorithm, room::RoomType, space::SpaceRoomJoinRule,
+			OwnedMxcUri, OwnedRoomAliasId, OwnedRoomId, OwnedRoomOrAliasId, OwnedServerName,
+			RoomVersionId, UInt, events::room::member::MembershipState,
 		};
 
 		crate::endpoint_request! {
@@ -396,6 +401,7 @@ pub mod initial_sync {
 		use alloc::{string::String, vec::Vec};
 
 		use super::super::Visibility;
+		use crate::codec::{DeError, Serialize};
 		use crate::{
 			OwnedRoomId,
 			events::{
@@ -404,7 +410,6 @@ pub mod initial_sync {
 			},
 			serde::Raw,
 		};
-		use crate::codec::{DeError, Serialize};
 
 		crate::endpoint_request! {
 			method: "GET", path: "/_matrix/client/v3/rooms/{room_id}/initialSync",
@@ -478,10 +483,10 @@ mod room_endpoint_tests {
 	use crate::{
 		MilliSecondsSinceUnixEpoch, OwnedRoomId, RoomVersionId,
 		api::{IncomingRequest, OutgoingRequest, SendAccessToken},
-		events::room::member::MembershipState,
-		serde::Raw,
 		codec::{from_str, to_string},
 		endpoint::{EndpointRequest, EndpointResponse, MatrixVersion},
+		events::room::member::MembershipState,
+		serde::Raw,
 	};
 
 	#[test]
@@ -507,11 +512,7 @@ mod room_endpoint_tests {
 			Direction::Backward,
 		);
 		let http: http::Request<Vec<u8>> = request
-			.try_into_http_request(
-				"https://hs",
-				SendAccessToken::None,
-				&[MatrixVersion::V1_11],
-			)
+			.try_into_http_request("https://hs", SendAccessToken::None, &[MatrixVersion::V1_11])
 			.unwrap();
 		assert!(http.uri().to_string().ends_with("timestamp_to_event?ts=42&dir=b"));
 		let parsed =

@@ -114,6 +114,13 @@ macro_rules! matrix_id {
 				Self(value.to_owned())
 			}
 		}
+		impl core::str::FromStr for $owned {
+			type Err = MatrixIdParseError;
+
+			fn from_str(value: &str) -> Result<Self, Self::Err> {
+				Self::parse(value)
+			}
+		}
 		impl From<&$owned> for $owned {
 			fn from(value: &$owned) -> Self {
 				value.clone()

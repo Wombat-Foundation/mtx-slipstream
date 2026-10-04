@@ -16,3 +16,9 @@ fn json_macro_handles_common_shapes() {
 		r#"{"a":null,"list":[1,"two",null,{"k":true}],"n":4,"name":"bob","nested":{"x":[]}}"#
 	);
 }
+
+#[test]
+fn matrix_ids_parse_via_from_str() {
+	let id: mtx_slipstream::OwnedUserId = "@a:example.org".parse().unwrap();
+	assert_eq!(id.as_str(), "@a:example.org");
+}

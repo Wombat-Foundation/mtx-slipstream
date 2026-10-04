@@ -113,7 +113,9 @@ pub mod event {
 
 	pub mod get_event_by_timestamp {
 		pub mod v1 {
-			use crate::{MilliSecondsSinceUnixEpoch, OwnedEventId, OwnedRoomId, api::Direction, endpoint};
+			use crate::{
+				MilliSecondsSinceUnixEpoch, OwnedEventId, OwnedRoomId, api::Direction, endpoint,
+			};
 
 			endpoint! {
 				method: "GET", path: "/_matrix/federation/v1/timestamp_to_event/{room_id}",
@@ -127,7 +129,11 @@ pub mod event {
 
 			impl Request {
 				#[must_use]
-				pub fn new(room_id: OwnedRoomId, ts: MilliSecondsSinceUnixEpoch, dir: Direction) -> Self {
+				pub fn new(
+					room_id: OwnedRoomId,
+					ts: MilliSecondsSinceUnixEpoch,
+					dir: Direction,
+				) -> Self {
 					Self {
 						room_id,
 						dir,
