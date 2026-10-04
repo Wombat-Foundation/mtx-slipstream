@@ -221,6 +221,10 @@ impl UiaaResponse {
 
 impl<T> Raw<T> {
 	/// Parses the raw JSON value without deserializing it into `T`.
+	///
+	/// # Errors
+	///
+	/// Returns an error if the stored text is not valid JSON.
 	pub fn json(&self) -> Result<crate::json::Value, DeError> {
 		crate::codec::from_str(&self.0)
 	}
