@@ -569,40 +569,10 @@ pub mod api {
 }
 
 pub mod events {
-	pub use crate::event_type::{MessageLikeEventType, StateEventType, TimelineEventType};
-	use core::fmt;
-	#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-	pub enum GlobalAccountDataEventType {
-		PushRules,
-		Direct,
-		IgnoredUserList,
-	}
-	crate::impl_codec_enum!(GlobalAccountDataEventType {
-		PushRules => "m.push_rules", Direct => "m.direct", IgnoredUserList => "m.ignored_user_list",
-	});
-	impl fmt::Display for GlobalAccountDataEventType {
-		fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-			f.write_str(match self {
-				Self::PushRules => "m.push_rules",
-				Self::Direct => "m.direct",
-				Self::IgnoredUserList => "m.ignored_user_list",
-			})
-		}
-	}
-	#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-	pub enum RoomAccountDataEventType {
-		Tag,
-		FullyRead,
-	}
-	crate::impl_codec_enum!(RoomAccountDataEventType { Tag => "m.tag", FullyRead => "m.fully_read" });
-	impl fmt::Display for RoomAccountDataEventType {
-		fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-			f.write_str(match self {
-				Self::Tag => "m.tag",
-				Self::FullyRead => "m.fully_read",
-			})
-		}
-	}
+	pub use crate::event_type::{
+		GlobalAccountDataEventType, MessageLikeEventType, RoomAccountDataEventType,
+		StateEventType, TimelineEventType,
+	};
 	#[derive(Clone, Debug, Default)]
 	pub struct AnyGlobalAccountDataEvent;
 	#[derive(Clone, Debug, Default)]

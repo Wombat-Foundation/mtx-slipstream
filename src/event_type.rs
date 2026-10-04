@@ -120,3 +120,14 @@ convert!(TimelineEventType => StateEventType);
 convert!(TimelineEventType => MessageLikeEventType);
 convert!(StateEventType => TimelineEventType);
 convert!(MessageLikeEventType => TimelineEventType);
+
+event_type!(GlobalAccountDataEventType {
+	PushRules => "m.push_rules",
+	Direct => "m.direct",
+	IgnoredUserList => "m.ignored_user_list",
+});
+
+event_type!(RoomAccountDataEventType {
+	Tag => "m.tag",
+	FullyRead => "m.fully_read",
+});
