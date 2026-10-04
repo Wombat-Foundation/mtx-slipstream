@@ -1,12 +1,11 @@
 use crate::{MilliSecondsSinceUnixEpoch, OwnedUserId};
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-#[derive(Default)]
+#[derive(Clone, Debug, Eq, PartialEq, Default)]
 pub enum PresenceState {
 	Online,
 	Unavailable,
 	#[default]
- Offline,
+	Offline,
 	Busy,
 }
 crate::impl_codec_enum!(PresenceState {

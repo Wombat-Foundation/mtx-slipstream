@@ -158,6 +158,11 @@ impl OwnedMxcUri {
 	pub fn is_valid(&self) -> bool {
 		self.as_str().starts_with("mxc://")
 	}
+	/// The server part of the `mxc://` URI.
+	///
+	/// # Errors
+	///
+	/// Returns an error if the URI is not of the form `mxc://server/media_id`.
 	pub fn server_name(&self) -> Result<OwnedServerName, MatrixIdParseError> {
 		self.as_str()
 			.strip_prefix("mxc://")
@@ -166,6 +171,11 @@ impl OwnedMxcUri {
 			})
 			.ok_or(MatrixIdParseError)
 	}
+	/// The media ID part of the `mxc://` URI.
+	///
+	/// # Errors
+	///
+	/// Returns an error if the URI is not of the form `mxc://server/media_id`.
 	pub fn media_id(&self) -> Result<&str, MatrixIdParseError> {
 		self.as_str()
 			.strip_prefix("mxc://")
@@ -176,9 +186,14 @@ impl OwnedMxcUri {
 
 pub mod identifiers_validation {
 	pub mod server_name {
-		pub fn validate(value: &str) -> Result<(), ()> {
+		/// Checks that a server name is valid.
+		///
+		/// # Errors
+		///
+		/// Returns an error if `value` is empty.
+		pub fn validate(value: &str) -> Result<(), crate::MatrixIdParseError> {
 			if value.is_empty() {
-				Err(())
+				Err(crate::MatrixIdParseError)
 			} else {
 				Ok(())
 			}
