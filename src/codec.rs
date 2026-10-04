@@ -105,7 +105,11 @@ impl Serialize for bool {
 	}
 }
 impl Deserialize for bool {
+	/// An absent or null boolean is `false`, as most Matrix flags default to it.
 	fn from_json(value: &Value) -> Result<Self, DeError> {
+		if value.is_null() {
+			return Ok(false);
+		}
 		value.as_bool().ok_or_else(|| DeError::expected("bool"))
 	}
 }

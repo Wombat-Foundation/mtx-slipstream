@@ -217,6 +217,10 @@ pub mod media {
 pub type JsOption<T> = Option<T>;
 pub use events::room::encryption::EventEncryptionAlgorithm;
 
+pub mod space {
+	pub use crate::federation_api::space::SpaceRoomJoinRule;
+}
+
 pub mod presence {
 	pub use crate::events::presence::PresenceState;
 }
