@@ -459,6 +459,15 @@ pub enum RoomVersionId {
 }
 
 impl RoomVersionId {
+	/// Parses a room version identifier.
+	///
+	/// # Errors
+	///
+	/// Returns [`IdParseError`] when the string is not a known room version.
+	pub fn parse(value: impl AsRef<str>) -> Result<Self, IdParseError> {
+		value.as_ref().parse()
+	}
+
 	#[must_use]
 	pub fn as_str(&self) -> &str {
 		match self {

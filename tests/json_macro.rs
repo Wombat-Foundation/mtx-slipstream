@@ -88,3 +88,10 @@ fn slipstream_json_accepts_computed_keys() {
 	let v = json!({ "users": { (alice): 100, ("lit"): 1 } });
 	assert_eq!(to_string(&v), r#"{"users":{"@alice:foo":100,"lit":1}}"#);
 }
+
+#[test]
+fn room_version_parse() {
+	use mtx_slipstream::RoomVersionId;
+	assert_eq!(RoomVersionId::parse("10").unwrap(), RoomVersionId::V10);
+	assert_eq!(RoomVersionId::parse("custom-1").unwrap().as_str(), "custom-1");
+}
