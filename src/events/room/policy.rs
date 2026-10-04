@@ -1,1 +1,2 @@
-#[derive(Clone, Debug, Default)] pub struct RoomPolicyEventContent;
+#[derive(Clone, Debug, Default)]
+pub struct RoomPolicyEventContent;

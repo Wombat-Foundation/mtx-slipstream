@@ -1,2 +1,4 @@
 #[derive(Clone, Debug, Default)]
-pub struct RoomTopicEventContent { pub topic: String }
+pub struct RoomTopicEventContent {
+	pub topic: String,
+}

@@ -406,22 +406,22 @@ macro_rules! endpoint {
 	(
 		method: $method:literal, path: $path:literal,
 		request {
-			path { $($pn:ident : $pt:ty),* $(,)? }
-			query { $($qn:ident : $qt:ty),* $(,)? }
-			body { $($bn:ident : $bt:ty),* $(,)? }
+			path { $($path_field:ident : $pt:ty),* $(,)? }
+			query { $($query_field:ident : $qt:ty),* $(,)? }
+			body { $($body_field_name:ident : $bt:ty),* $(,)? }
 		}
-		response { $($rn:ident : $rt:ty),* $(,)? }
+		response { $($resp_field:ident : $rt:ty),* $(,)? }
 	) => {
 		#[derive(Clone, Debug, Default)]
 		pub struct Request {
-			$(pub $pn: $pt,)*
-			$(pub $qn: $qt,)*
-			$(pub $bn: $bt,)*
+			$(pub $path_field: $pt,)*
+			$(pub $query_field: $qt,)*
+			$(pub $body_field_name: $bt,)*
 		}
 
 		#[derive(Clone, Debug, Default)]
 		pub struct Response {
-			$(pub $rn: $rt,)*
+			$(pub $resp_field: $rt,)*
 		}
 
 		impl $crate::endpoint::EndpointRequest for Request {
@@ -432,7 +432,7 @@ macro_rules! endpoint {
 			fn path_args(&self) -> ::alloc::vec::Vec<::alloc::string::String> {
 				#[allow(unused_mut)]
 				let mut args = ::alloc::vec::Vec::new();
-				$(args.push($crate::endpoint::to_param(&self.$pn).unwrap_or_default());)*
+				$(args.push($crate::endpoint::to_param(&self.$path_field).unwrap_or_default());)*
 				args
 			}
 
@@ -440,8 +440,8 @@ macro_rules! endpoint {
 				#[allow(unused_mut)]
 				let mut query = ::alloc::vec::Vec::new();
 				$(
-					if let Some(value) = $crate::endpoint::to_param(&self.$qn) {
-						query.push((::alloc::string::String::from(stringify!($qn)), value));
+					if let Some(value) = $crate::endpoint::to_param(&self.$query_field) {
+						query.push((::alloc::string::String::from(stringify!($query_field)), value));
 					}
 				)*
 				query
@@ -450,7 +450,7 @@ macro_rules! endpoint {
 			fn body(&self) -> Option<$crate::json::Value> {
 				#[allow(unused_mut)]
 				let mut object = $crate::json::Object::new();
-				$($crate::endpoint::put_field(&mut object, stringify!($bn), &self.$bn);)*
+				$($crate::endpoint::put_field(&mut object, stringify!($body_field_name), &self.$body_field_name);)*
 				if object.is_empty() && $method == "GET" {
 					None
 				} else {
@@ -466,20 +466,20 @@ macro_rules! endpoint {
 			) -> Result<Self, $crate::codec::DeError> {
 				let mut index = 0_usize;
 				$(
-					let $pn: $pt = $crate::endpoint::from_param(
+					let $path_field: $pt = $crate::endpoint::from_param(
 						path.get(index).map(::alloc::string::String::as_str),
 					)?;
 					index += 1;
 				)*
 				Ok(Self {
-					$($pn,)*
-					$($qn: $crate::endpoint::from_param(
+					$($path_field,)*
+					$($query_field: $crate::endpoint::from_param(
 						query
 							.iter()
-							.find(|(k, _)| k == stringify!($qn))
+							.find(|(k, _)| k == stringify!($query_field))
 							.map(|(_, v)| v.as_str()),
 					)?,)*
-					$($bn: $crate::endpoint::body_field(body, stringify!($bn))?,)*
+					$($body_field_name: $crate::endpoint::body_field(body, stringify!($body_field_name))?,)*
 				})
 			}
 		}
@@ -488,14 +488,14 @@ macro_rules! endpoint {
 			fn to_body(&self) -> $crate::json::Value {
 				#[allow(unused_mut)]
 				let mut object = $crate::json::Object::new();
-				$($crate::endpoint::put_field(&mut object, stringify!($rn), &self.$rn);)*
+				$($crate::endpoint::put_field(&mut object, stringify!($resp_field), &self.$resp_field);)*
 				$crate::json::Value::Object(object)
 			}
 
 			#[allow(unused_variables)]
 			fn from_body(body: &$crate::json::Value) -> Result<Self, $crate::codec::DeError> {
 				Ok(Self {
-					$($rn: $crate::endpoint::body_field(Some(body), stringify!($rn))?,)*
+					$($resp_field: $crate::endpoint::body_field(Some(body), stringify!($resp_field))?,)*
 				})
 			}
 		}

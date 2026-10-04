@@ -1,1 +1,2 @@
-#[derive(Clone, Debug, Default)] pub struct RoomEncryptedEventContent;
+#[derive(Clone, Debug, Default)]
+pub struct RoomEncryptedEventContent;

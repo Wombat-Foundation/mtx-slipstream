@@ -1,1 +1,2 @@
-#[derive(Clone, Debug, Default)] pub struct RoomServerAclEventContent;
+#[derive(Clone, Debug, Default)]
+pub struct RoomServerAclEventContent;

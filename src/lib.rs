@@ -16,6 +16,7 @@ mod content;
 mod event_type;
 mod events_codec;
 pub mod federation;
+pub mod push;
 pub mod sync;
 pub mod writer;
 
@@ -496,9 +497,64 @@ pub mod api {
 
 pub mod events {
 	pub use crate::event_type::{MessageLikeEventType, StateEventType, TimelineEventType};
+	use core::fmt;
+	#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+	pub enum GlobalAccountDataEventType {
+		PushRules,
+		Direct,
+		IgnoredUserList,
+	}
+	crate::impl_codec_enum!(GlobalAccountDataEventType {
+		PushRules => "m.push_rules", Direct => "m.direct", IgnoredUserList => "m.ignored_user_list",
+	});
+	impl fmt::Display for GlobalAccountDataEventType {
+		fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+			f.write_str(match self {
+				Self::PushRules => "m.push_rules",
+				Self::Direct => "m.direct",
+				Self::IgnoredUserList => "m.ignored_user_list",
+			})
+		}
+	}
+	#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+	pub enum RoomAccountDataEventType {
+		Tag,
+		FullyRead,
+	}
+	crate::impl_codec_enum!(RoomAccountDataEventType { Tag => "m.tag", FullyRead => "m.fully_read" });
+	impl fmt::Display for RoomAccountDataEventType {
+		fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+			f.write_str(match self {
+				Self::Tag => "m.tag",
+				Self::FullyRead => "m.fully_read",
+			})
+		}
+	}
 	#[derive(Clone, Debug, Default)]
-	pub struct Mentions { pub room: bool }
-	impl Mentions { pub fn with_room_mention() -> Self { Self { room: true } } }
+	pub struct GlobalAccountDataEvent;
+	#[derive(Clone, Debug, Default)]
+	pub struct AnyGlobalAccountDataEvent;
+	#[derive(Clone, Debug, Default)]
+	pub struct AnyRawAccountDataEvent;
+	#[derive(Clone, Debug, Default)]
+	pub struct AnyRoomAccountDataEvent;
+	#[derive(Clone, Debug, Default)]
+	pub struct AnySyncEphemeralRoomEvent;
+	#[derive(Clone, Debug, Default)]
+	pub struct SyncEphemeralRoomEvent;
+	#[derive(Clone, Debug, Default)]
+	pub struct AnyToDeviceEvent;
+	#[derive(Clone, Debug, Default)]
+	pub struct Mentions {
+		pub room: bool,
+	}
+	impl Mentions {
+		pub fn with_room_mention() -> Self {
+			Self {
+				room: true,
+			}
+		}
+	}
 	pub mod presence;
 	pub mod receipt;
 	pub trait EventContent {
@@ -531,8 +587,8 @@ pub mod events {
 		pub mod history_visibility;
 		pub mod message;
 		pub mod name;
-		pub mod preview_url;
 		pub mod policy;
+		pub mod preview_url;
 		pub mod server_acl;
 		pub mod tombstone;
 		pub mod topic;
@@ -705,7 +761,12 @@ pub mod events {
 }
 
 pub mod room {
-	#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)] pub enum RoomType { #[default] Room, Space }
+	#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+	pub enum RoomType {
+		#[default]
+		Room,
+		Space,
+	}
 }
 
 pub mod power_levels {
