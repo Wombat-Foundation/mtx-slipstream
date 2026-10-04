@@ -11,6 +11,7 @@ extern crate alloc;
 
 pub mod canonical_json;
 pub mod codec;
+pub mod directory;
 mod key_id;
 pub use key_id::{
 	KeyId, OneTimeKeyAlgorithm, OneTimeKeyId, OneTimeKeyName, OwnedKeyId, OwnedOneTimeKeyId,
@@ -430,6 +431,9 @@ pub mod api {
 	}
 
 	pub mod client {
+		pub mod directory {
+			pub use crate::directory::{get_public_rooms, get_public_rooms_filtered};
+		}
 		pub mod appservice {
 			#[derive(Clone, Debug, Default)]
 			pub struct Namespace {

@@ -5,6 +5,8 @@ use crate::{json::Value, serde::Raw};
 /// A PDU as it appears on the wire.
 pub type RawPdu = Raw<Value>;
 
+pub use crate::directory::federation as directory;
+
 pub mod event {
 	pub mod get_event {
 		pub mod v1 {

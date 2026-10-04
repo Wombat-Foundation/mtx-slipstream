@@ -72,6 +72,12 @@ pub fn from_str<T: Deserialize>(input: &str) -> Result<T, DeError> {
 	T::from_json(&value)
 }
 
+impl<T: Serialize + ?Sized> Serialize for &T {
+	fn to_json(&self) -> Value {
+		(**self).to_json()
+	}
+}
+
 impl Serialize for Value {
 	fn to_json(&self) -> Value {
 		self.clone()
