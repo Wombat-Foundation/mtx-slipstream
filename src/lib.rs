@@ -657,6 +657,12 @@ pub mod serde {
 	}
 
 	impl<T> Raw<T> {
+		pub fn from_json_text(input: &str) -> Result<Self, crate::codec::DeError> {
+			crate::json::Value::parse(input)
+				.map(|_| Self(input.to_owned(), PhantomData))
+				.map_err(|error| crate::codec::DeError(error.to_string()))
+		}
+
 		#[must_use]
 		pub fn get(&self) -> &str {
 			&self.0
