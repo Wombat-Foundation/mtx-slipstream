@@ -39,6 +39,7 @@ mod events_codec;
 pub mod federation;
 pub mod federation_api;
 pub mod push;
+pub mod push_rules;
 pub mod pusher;
 pub mod sync;
 pub mod writer;
@@ -465,6 +466,11 @@ pub mod api {
 			pub use crate::pusher::{
 				HttpPusherData, Pusher, PusherIds, PusherKind, get_pushers, set_pusher,
 			};
+			pub use crate::push_rules::{
+				PushRule, delete_pushrule, get_pushrule, get_pushrule_actions,
+				get_pushrule_enabled, get_pushrules_all, get_pushrules_global_scope, set_pushrule,
+				set_pushrule_actions, set_pushrule_enabled,
+			};
 		}
 		pub mod directory {
 			pub use crate::directory::{get_public_rooms, get_public_rooms_filtered};
@@ -718,7 +724,7 @@ pub mod events {
 						.map(crate::codec::Deserialize::from_json)
 						.transpose()?
 						.unwrap_or_default(),
-					_ => crate::push::Ruleset,
+					_ => crate::push::Ruleset::default(),
 				};
 				Ok(Self {
 					global,
