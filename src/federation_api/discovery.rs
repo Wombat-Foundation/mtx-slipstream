@@ -185,7 +185,7 @@ pub mod get_remote_server_keys {
 			method: "GET", path: "/_matrix/key/v2/query/{server_name}",
 			request {
 				path { server_name: OwnedServerName }
-				query { minimum_valid_until_ts: MilliSecondsSinceUnixEpoch }
+				query { minimum_valid_until_ts: Option<MilliSecondsSinceUnixEpoch> }
 				body {}
 			}
 			response { server_keys: Vec<Raw<ServerSigningKeys>> }
