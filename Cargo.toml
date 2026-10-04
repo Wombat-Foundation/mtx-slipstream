@@ -33,8 +33,8 @@ http = "1.3.1"
 # optional in Cargo.
 mimalloc = { version = "0.1", optional = true, default-features = false }
 rand_core = { version = "0.6", features = ["getrandom"] }
-rezzy = { git = "https://gitlab.com/gamesguru/rezzy.git", branch = "alpha", features = ["signing-dalek"] }
-simd-json = { version = "=0.14.3", default-features = false, features = ["runtime-detection", "swar-number-parsing"] }
+rezzy = { path = "../rezzy", features = ["signing-dalek"] }
+simd-json = { version = "0.18", default-features = false, features = ["runtime-detection", "swar-number-parsing"] }
 
 [lints.rust]
 unsafe_code = "warn"
