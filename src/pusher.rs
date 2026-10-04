@@ -49,7 +49,10 @@ impl HttpPusherData {
 pub enum PusherKind {
 	Http(HttpPusherData),
 	Email(Object),
-	Custom { kind: String, data: Object },
+	Custom {
+		kind: String,
+		data: Object,
+	},
 }
 
 impl PusherKind {
@@ -58,7 +61,8 @@ impl PusherKind {
 			Self::Http(_) => "http",
 			Self::Email(_) => "email",
 			Self::Custom {
-				kind, ..
+				kind,
+				..
 			} => kind,
 		}
 	}
@@ -72,10 +76,11 @@ impl PusherKind {
 					object.insert("format".into(), format.to_json());
 				}
 				Value::Object(object)
-			},
+			}
 			Self::Email(data)
 			| Self::Custom {
-				data, ..
+				data,
+				..
 			} => Value::Object(data.clone()),
 		}
 	}
@@ -87,13 +92,14 @@ impl PusherKind {
 				let Some(Value::String(url)) = rest.remove("url") else {
 					return Err(DeError::expected("pusher data.url"));
 				};
-				let format = rest.remove("format").map(|v| PushFormat::from_json(&v)).transpose()?;
+				let format =
+					rest.remove("format").map(|v| PushFormat::from_json(&v)).transpose()?;
 				Self::Http(HttpPusherData {
 					url,
 					format,
 					data: rest,
 				})
-			},
+			}
 			"email" => Self::Email(data.clone()),
 			other => Self::Custom {
 				kind: other.into(),
@@ -249,17 +255,17 @@ pub mod set_pusher {
 					PusherAction::Post(post) => {
 						let mut value = post.pusher.to_json();
 						if let (Value::Object(object), true) = (&mut value, post.append) {
-								object.insert("append".into(), Value::Bool(true));
-							}
+							object.insert("append".into(), Value::Bool(true));
+						}
 						value
-					},
+					}
 					PusherAction::Delete(ids) => {
 						let mut object = Object::new();
 						object.insert("pushkey".into(), Value::String(ids.pushkey.clone()));
 						object.insert("app_id".into(), Value::String(ids.app_id.clone()));
 						object.insert("kind".into(), Value::Null);
 						Value::Object(object)
-					},
+					}
 				})
 			}
 
@@ -270,13 +276,12 @@ pub mod set_pusher {
 			) -> Result<Self, DeError> {
 				let body = body.ok_or_else(|| DeError::expected("request body"))?;
 				let object = body.as_object().ok_or_else(|| DeError::expected("object"))?;
-				let pushkey = |name| {
-					object
-						.get(name)
-						.and_then(Value::as_str)
-						.map(String::from)
-						.ok_or_else(|| DeError(alloc::format!("expected string field `{name}`")))
-				};
+				let pushkey =
+					|name| {
+						object.get(name).and_then(Value::as_str).map(String::from).ok_or_else(
+							|| DeError(alloc::format!("expected string field `{name}`")),
+						)
+					};
 				let action = if object.get("kind").is_none_or(Value::is_null) {
 					PusherAction::Delete(PusherIds {
 						pushkey: pushkey("pushkey")?,

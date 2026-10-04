@@ -108,6 +108,11 @@ macro_rules! matrix_id {
 				value.clone()
 			}
 		}
+		impl AsRef<str> for $owned {
+			fn as_ref(&self) -> &str {
+				self.as_str()
+			}
+		}
 		impl AsRef<$owned> for $owned {
 			fn as_ref(&self) -> &$owned {
 				self
@@ -463,13 +468,13 @@ pub mod api {
 
 	pub mod client {
 		pub mod push {
-			pub use crate::pusher::{
-				HttpPusherData, Pusher, PusherIds, PusherKind, get_pushers, set_pusher,
-			};
 			pub use crate::push_rules::{
 				PushRule, delete_pushrule, get_pushrule, get_pushrule_actions,
-				get_pushrule_enabled, get_pushrules_all, get_pushrules_global_scope, set_pushrule,
-				set_pushrule_actions, set_pushrule_enabled,
+				get_pushrule_enabled, get_pushrules_all, get_pushrules_global_scope,
+				set_pushrule, set_pushrule_actions, set_pushrule_enabled,
+			};
+			pub use crate::pusher::{
+				HttpPusherData, Pusher, PusherIds, PusherKind, get_pushers, set_pusher,
 			};
 		}
 		pub mod directory {

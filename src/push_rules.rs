@@ -97,12 +97,25 @@ predefined_ids!(PredefinedUnderrideRuleId {
 /// A condition that must hold for a rule to apply.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum PushCondition {
-	EventMatch { key: String, pattern: String },
+	EventMatch {
+		key: String,
+		pattern: String,
+	},
 	ContainsDisplayName,
-	RoomMemberCount { is: String },
-	SenderNotificationPermission { key: String },
-	EventPropertyIs { key: String, value: Value },
-	EventPropertyContains { key: String, value: Value },
+	RoomMemberCount {
+		is: String,
+	},
+	SenderNotificationPermission {
+		key: String,
+	},
+	EventPropertyIs {
+		key: String,
+		value: Value,
+	},
+	EventPropertyContains {
+		key: String,
+		value: Value,
+	},
 	Unknown(Value),
 }
 
@@ -121,10 +134,14 @@ impl Serialize for PushCondition {
 			Self::EventMatch {
 				key,
 				pattern,
-			} => vec![("kind", Value::String("event_match".into())), ("key", string(key)), ("pattern", string(pattern))],
+			} => vec![
+				("kind", Value::String("event_match".into())),
+				("key", string(key)),
+				("pattern", string(pattern)),
+			],
 			Self::ContainsDisplayName => {
 				vec![("kind", Value::String("contains_display_name".into()))]
-			},
+			}
 			Self::RoomMemberCount {
 				is,
 			} => vec![("kind", Value::String("room_member_count".into())), ("is", string(is))],
@@ -244,10 +261,13 @@ fn rule_flags(object: &Object) -> (bool, bool) {
 
 impl Serialize for ConditionalPushRule {
 	fn to_json(&self) -> Value {
-		rule_base(&self.actions, self.default, self.enabled, &self.rule_id, vec![(
-			"conditions",
-			self.conditions.to_json(),
-		)])
+		rule_base(
+			&self.actions,
+			self.default,
+			self.enabled,
+			&self.rule_id,
+			vec![("conditions", self.conditions.to_json())],
+		)
 	}
 }
 impl Deserialize for ConditionalPushRule {
@@ -268,10 +288,13 @@ impl Deserialize for ConditionalPushRule {
 
 impl Serialize for PatternedPushRule {
 	fn to_json(&self) -> Value {
-		rule_base(&self.actions, self.default, self.enabled, &self.rule_id, vec![(
-			"pattern",
-			Value::String(self.pattern.clone()),
-		)])
+		rule_base(
+			&self.actions,
+			self.default,
+			self.enabled,
+			&self.rule_id,
+			vec![("pattern", Value::String(self.pattern.clone()))],
+		)
 	}
 }
 impl Deserialize for PatternedPushRule {
@@ -437,7 +460,7 @@ impl NewPushRule {
 		let (actions, extra) = match self {
 			Self::Override(r) | Self::Underride(r) => {
 				(&r.actions, vec![("conditions", r.conditions.to_json())])
-			},
+			}
 			Self::Content(r) => (&r.actions, vec![("pattern", Value::String(r.pattern.clone()))]),
 			Self::Room(r) | Self::Sender(r) => (&r.actions, Vec::new()),
 		};
@@ -524,11 +547,107 @@ error_display! {
 /// A user's push rules, ordered by priority within each kind.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Ruleset {
-	pub override_: Vec<ConditionalPushRule>,
-	pub content: Vec<PatternedPushRule>,
-	pub room: Vec<SimplePushRule>,
-	pub sender: Vec<SimplePushRule>,
-	pub underride: Vec<ConditionalPushRule>,
+	pub override_: RuleList<ConditionalPushRule>,
+	pub content: RuleList<PatternedPushRule>,
+	pub room: RuleList<SimplePushRule>,
+	pub sender: RuleList<SimplePushRule>,
+	pub underride: RuleList<ConditionalPushRule>,
+}
+
+/// A rule with an ID unique within its list.
+pub trait HasRuleId {
+	fn rule_id(&self) -> &str;
+}
+impl HasRuleId for ConditionalPushRule {
+	fn rule_id(&self) -> &str {
+		&self.rule_id
+	}
+}
+impl HasRuleId for PatternedPushRule {
+	fn rule_id(&self) -> &str {
+		&self.rule_id
+	}
+}
+impl HasRuleId for SimplePushRule {
+	fn rule_id(&self) -> &str {
+		&self.rule_id
+	}
+}
+
+/// An ordered list of rules keyed by rule ID.
+///
+/// Dereferences to the underlying `Vec` for iteration and in-place edits; the
+/// by-ID `get`, `insert` and `shift_remove` mirror an insertion-ordered set.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RuleList<T>(Vec<T>);
+
+impl<T> Default for RuleList<T> {
+	fn default() -> Self {
+		Self(Vec::new())
+	}
+}
+impl<T> From<Vec<T>> for RuleList<T> {
+	fn from(rules: Vec<T>) -> Self {
+		Self(rules)
+	}
+}
+impl<T> core::ops::Deref for RuleList<T> {
+	type Target = Vec<T>;
+
+	fn deref(&self) -> &Vec<T> {
+		&self.0
+	}
+}
+impl<T> core::ops::DerefMut for RuleList<T> {
+	fn deref_mut(&mut self) -> &mut Vec<T> {
+		&mut self.0
+	}
+}
+impl<'a, T> IntoIterator for &'a RuleList<T> {
+	type IntoIter = core::slice::Iter<'a, T>;
+	type Item = &'a T;
+
+	fn into_iter(self) -> Self::IntoIter {
+		self.0.iter()
+	}
+}
+impl<T> IntoIterator for RuleList<T> {
+	type IntoIter = alloc::vec::IntoIter<T>;
+	type Item = T;
+
+	fn into_iter(self) -> Self::IntoIter {
+		self.0.into_iter()
+	}
+}
+impl<T> FromIterator<T> for RuleList<T> {
+	fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+		Self(iter.into_iter().collect())
+	}
+}
+
+impl<T: HasRuleId> RuleList<T> {
+	#[must_use]
+	pub fn get(&self, rule_id: &str) -> Option<&T> {
+		self.0.iter().find(|rule| rule.rule_id() == rule_id)
+	}
+
+	/// Adds a rule at the end, replacing any rule with the same ID in place.
+	/// Returns whether the ID was new.
+	pub fn insert(&mut self, rule: T) -> bool {
+		if let Some(slot) = self.0.iter_mut().find(|r| r.rule_id() == rule.rule_id()) {
+			*slot = rule;
+			false
+		} else {
+			self.0.push(rule);
+			true
+		}
+	}
+
+	/// Removes the rule with this ID, keeping the order of the rest.
+	pub fn shift_remove(&mut self, rule_id: &str) -> Option<T> {
+		let index = self.0.iter().position(|r| r.rule_id() == rule_id)?;
+		Some(self.0.remove(index))
+	}
 }
 
 /// Power-level data needed to evaluate `sender_notification_permission`.
@@ -598,8 +717,8 @@ impl Ruleset {
 	pub fn server_default(user_id: impl AsRef<str>) -> Self {
 		let user_id = user_id.as_ref();
 		Self {
-			override_: default_override_rules(user_id),
-			underride: default_underride_rules(),
+			override_: default_override_rules(user_id).into(),
+			underride: default_underride_rules().into(),
 			..Self::default()
 		}
 	}
@@ -610,17 +729,19 @@ impl Ruleset {
 		match kind {
 			RuleKind::Override => {
 				self.override_.iter().find(|r| r.rule_id == id).map(AnyPushRuleRef::Override)
-			},
+			}
 			RuleKind::Underride => {
 				self.underride.iter().find(|r| r.rule_id == id).map(AnyPushRuleRef::Underride)
-			},
+			}
 			RuleKind::Content => {
 				self.content.iter().find(|r| r.rule_id == id).map(AnyPushRuleRef::Content)
-			},
-			RuleKind::Room => self.room.iter().find(|r| r.rule_id == id).map(AnyPushRuleRef::Room),
+			}
+			RuleKind::Room => {
+				self.room.iter().find(|r| r.rule_id == id).map(AnyPushRuleRef::Room)
+			}
 			RuleKind::Sender => {
 				self.sender.iter().find(|r| r.rule_id == id).map(AnyPushRuleRef::Sender)
-			},
+			}
 		}
 	}
 
@@ -647,7 +768,8 @@ impl Ruleset {
 		if id.is_empty() || id.contains(['/', '\\']) {
 			return Err(InsertPushRuleError::InvalidRuleId);
 		}
-		if after.is_some_and(|a| a.starts_with('.')) || before.is_some_and(|b| b.starts_with('.')) {
+		if after.is_some_and(|a| a.starts_with('.')) || before.is_some_and(|b| b.starts_with('.'))
+		{
 			return Err(InsertPushRuleError::RelativeToServerDefaultRule);
 		}
 
@@ -655,8 +777,7 @@ impl Ruleset {
 		let position = |anchor: &str| ids.iter().position(|id| id == anchor);
 		let after_pos = after.map(|a| position(a).ok_or(InsertPushRuleError::UnknownRuleId));
 		let before_pos = before.map(|b| position(b).ok_or(InsertPushRuleError::UnknownRuleId));
-		let (after_pos, before_pos) =
-			(after_pos.transpose()?, before_pos.transpose()?);
+		let (after_pos, before_pos) = (after_pos.transpose()?, before_pos.transpose()?);
 		if matches!((after_pos, before_pos), (Some(a), Some(b)) if b > a) {
 			return Err(InsertPushRuleError::BeforeHigherThanAfter);
 		}
@@ -693,7 +814,7 @@ impl Ruleset {
 			Some(_) => {
 				self.remove_unchecked(kind, id);
 				Ok(())
-			},
+			}
 		}
 	}
 
@@ -712,19 +833,19 @@ impl Ruleset {
 		let slot = match kind {
 			RuleKind::Override => {
 				self.override_.iter_mut().find(|r| r.rule_id == id).map(|r| &mut r.actions)
-			},
+			}
 			RuleKind::Underride => {
 				self.underride.iter_mut().find(|r| r.rule_id == id).map(|r| &mut r.actions)
-			},
+			}
 			RuleKind::Content => {
 				self.content.iter_mut().find(|r| r.rule_id == id).map(|r| &mut r.actions)
-			},
+			}
 			RuleKind::Room => {
 				self.room.iter_mut().find(|r| r.rule_id == id).map(|r| &mut r.actions)
-			},
+			}
 			RuleKind::Sender => {
 				self.sender.iter_mut().find(|r| r.rule_id == id).map(|r| &mut r.actions)
-			},
+			}
 		};
 		*slot.ok_or(RuleNotFoundError)? = actions;
 		Ok(())
@@ -745,19 +866,19 @@ impl Ruleset {
 		let slot = match kind {
 			RuleKind::Override => {
 				self.override_.iter_mut().find(|r| r.rule_id == id).map(|r| &mut r.enabled)
-			},
+			}
 			RuleKind::Underride => {
 				self.underride.iter_mut().find(|r| r.rule_id == id).map(|r| &mut r.enabled)
-			},
+			}
 			RuleKind::Content => {
 				self.content.iter_mut().find(|r| r.rule_id == id).map(|r| &mut r.enabled)
-			},
+			}
 			RuleKind::Room => {
 				self.room.iter_mut().find(|r| r.rule_id == id).map(|r| &mut r.enabled)
-			},
+			}
 			RuleKind::Sender => {
 				self.sender.iter_mut().find(|r| r.rule_id == id).map(|r| &mut r.enabled)
-			},
+			}
 		};
 		*slot.ok_or(RuleNotFoundError)? = enabled;
 		Ok(())
@@ -767,8 +888,8 @@ impl Ruleset {
 	/// user's enabled flag and actions, adding missing rules and dropping
 	/// default rules that no longer exist.
 	pub fn update_with_server_default(&mut self, defaults: Self) {
-		merge_conditional(&mut self.override_, defaults.override_);
-		merge_conditional(&mut self.underride, defaults.underride);
+		merge_conditional(&mut self.override_.0, defaults.override_.0);
+		merge_conditional(&mut self.underride.0, defaults.underride.0);
 		self.content.retain(|r| !r.default);
 		self.room.retain(|r| !r.default);
 		self.sender.retain(|r| !r.default);
@@ -841,144 +962,147 @@ impl Ruleset {
 			list.insert(at.min(list.len()), item);
 		}
 		match rule {
-			NewPushRule::Override(r) => put(&mut self.override_, at, new_conditional(r)),
-			NewPushRule::Underride(r) => put(&mut self.underride, at, new_conditional(r)),
-			NewPushRule::Content(r) => put(&mut self.content, at, PatternedPushRule {
-				actions: r.actions,
-				default: false,
-				enabled: true,
-				rule_id: r.rule_id,
-				pattern: r.pattern,
-			}),
-			NewPushRule::Room(r) => put(&mut self.room, at, new_simple(r)),
-			NewPushRule::Sender(r) => put(&mut self.sender, at, new_simple(r)),
+			NewPushRule::Override(r) => put(&mut self.override_.0, at, new_conditional(r)),
+			NewPushRule::Underride(r) => put(&mut self.underride.0, at, new_conditional(r)),
+			NewPushRule::Content(r) => put(
+				&mut self.content,
+				at,
+				PatternedPushRule {
+					actions: r.actions,
+					default: false,
+					enabled: true,
+					rule_id: r.rule_id,
+					pattern: r.pattern,
+				},
+			),
+			NewPushRule::Room(r) => put(&mut self.room.0, at, new_simple(r)),
+			NewPushRule::Sender(r) => put(&mut self.sender.0, at, new_simple(r)),
 		}
 	}
 }
 
 fn default_override_rules(user_id: &str) -> Vec<ConditionalPushRule> {
-		let sound
- = Tweak::Sound("default".into());
-		let highlight = Tweak::Highlight(true);
-		let quiet = Tweak::Highlight(false);
-		let mention_user = PushCondition::EventPropertyContains {
-			key: "content.m\\.mentions.user_ids".into(),
-			value: Value::String(user_id.into()),
-		};
-		let mention_room = PushCondition::EventPropertyIs {
-			key: "content.m\\.mentions.room".into(),
-			value: Value::Bool(true),
-		};
-		let room_permission = PushCondition::SenderNotificationPermission {
-			key: "room".into(),
-		};
+	let sound = Tweak::Sound("default".into());
+	let highlight = Tweak::Highlight(true);
+	let quiet = Tweak::Highlight(false);
+	let mention_user = PushCondition::EventPropertyContains {
+		key: "content.m\\.mentions.user_ids".into(),
+		value: Value::String(user_id.into()),
+	};
+	let mention_room = PushCondition::EventPropertyIs {
+		key: "content.m\\.mentions.room".into(),
+		value: Value::Bool(true),
+	};
+	let room_permission = PushCondition::SenderNotificationPermission {
+		key: "room".into(),
+	};
 
-		vec![
-			default_conditional(
-				PredefinedOverrideRuleId::Master.as_str(),
-				false,
-				Vec::new(),
-				Vec::new(),
-			),
-			default_conditional(
-				PredefinedOverrideRuleId::SuppressNotices.as_str(),
-				true,
-				vec![event_match("content.msgtype", "m.notice")],
-				Vec::new(),
-			),
-			default_conditional(
-				PredefinedOverrideRuleId::InviteForMe.as_str(),
-				true,
-				vec![
-					event_match("type", "m.room.member"),
-					event_match("content.membership", "invite"),
-					event_match("state_key", user_id),
-				],
-				action_list(core::slice::from_ref(&sound), true),
-			),
-			default_conditional(
-				PredefinedOverrideRuleId::MemberEvent.as_str(),
-				true,
-				vec![event_match("type", "m.room.member")],
-				Vec::new(),
-			),
-			default_conditional(
-				PredefinedOverrideRuleId::IsUserMention.as_str(),
-				true,
-				vec![mention_user],
-				action_list(&[sound.clone(), highlight.clone()], true),
-			),
-			default_conditional(
-				PredefinedOverrideRuleId::IsRoomMention.as_str(),
-				true,
-				vec![mention_room, room_permission],
-				action_list(&[sound.clone(), highlight], true),
-			),
-			default_conditional(
-				PredefinedOverrideRuleId::Tombstone.as_str(),
-				true,
-				vec![event_match("type", "m.room.tombstone"), event_match("state_key", "")],
-				action_list(&[quiet], true),
-			),
-			default_conditional(
-				PredefinedOverrideRuleId::Reaction.as_str(),
-				true,
-				vec![event_match("type", "m.reaction")],
-				Vec::new(),
-			),
-			default_conditional(
-				PredefinedOverrideRuleId::ServerAcl.as_str(),
-				true,
-				vec![event_match("type", "m.room.server_acl"), event_match("state_key", "")],
-				Vec::new(),
-			),
-			default_conditional(
-				PredefinedOverrideRuleId::SuppressEdits.as_str(),
-				true,
-				vec![PushCondition::EventPropertyIs {
-					key: "content.m\\.relates_to.rel_type".into(),
-					value: Value::String("m.replace".into()),
-				}],
-				Vec::new(),
-			),
-		]
+	vec![
+		default_conditional(
+			PredefinedOverrideRuleId::Master.as_str(),
+			false,
+			Vec::new(),
+			Vec::new(),
+		),
+		default_conditional(
+			PredefinedOverrideRuleId::SuppressNotices.as_str(),
+			true,
+			vec![event_match("content.msgtype", "m.notice")],
+			Vec::new(),
+		),
+		default_conditional(
+			PredefinedOverrideRuleId::InviteForMe.as_str(),
+			true,
+			vec![
+				event_match("type", "m.room.member"),
+				event_match("content.membership", "invite"),
+				event_match("state_key", user_id),
+			],
+			action_list(core::slice::from_ref(&sound), true),
+		),
+		default_conditional(
+			PredefinedOverrideRuleId::MemberEvent.as_str(),
+			true,
+			vec![event_match("type", "m.room.member")],
+			Vec::new(),
+		),
+		default_conditional(
+			PredefinedOverrideRuleId::IsUserMention.as_str(),
+			true,
+			vec![mention_user],
+			action_list(&[sound.clone(), highlight.clone()], true),
+		),
+		default_conditional(
+			PredefinedOverrideRuleId::IsRoomMention.as_str(),
+			true,
+			vec![mention_room, room_permission],
+			action_list(&[sound.clone(), highlight], true),
+		),
+		default_conditional(
+			PredefinedOverrideRuleId::Tombstone.as_str(),
+			true,
+			vec![event_match("type", "m.room.tombstone"), event_match("state_key", "")],
+			action_list(&[quiet], true),
+		),
+		default_conditional(
+			PredefinedOverrideRuleId::Reaction.as_str(),
+			true,
+			vec![event_match("type", "m.reaction")],
+			Vec::new(),
+		),
+		default_conditional(
+			PredefinedOverrideRuleId::ServerAcl.as_str(),
+			true,
+			vec![event_match("type", "m.room.server_acl"), event_match("state_key", "")],
+			Vec::new(),
+		),
+		default_conditional(
+			PredefinedOverrideRuleId::SuppressEdits.as_str(),
+			true,
+			vec![PushCondition::EventPropertyIs {
+				key: "content.m\\.relates_to.rel_type".into(),
+				value: Value::String("m.replace".into()),
+			}],
+			Vec::new(),
+		),
+	]
 }
 
 fn default_underride_rules() -> Vec<ConditionalPushRule> {
 	let sound = Tweak::Sound("default".into());
 	let ring = Tweak::Sound("ring".into());
 	vec![
-			default_conditional(
-				PredefinedUnderrideRuleId::Call.as_str(),
-				true,
-				vec![event_match("type", "m.call.invite")],
-				action_list(&[ring, Tweak::Highlight(false)], true),
-			),
-			default_conditional(
-				PredefinedUnderrideRuleId::EncryptedRoomOneToOne.as_str(),
-				true,
-				vec![member_count_is("2"), event_match("type", "m.room.encrypted")],
-				action_list(&[sound.clone(), Tweak::Highlight(false)], true),
-			),
-			default_conditional(
-				PredefinedUnderrideRuleId::RoomOneToOne.as_str(),
-				true,
-				vec![member_count_is("2"), event_match("type", "m.room.message")],
-				action_list(&[sound.clone(), Tweak::Highlight(false)], true),
-			),
-			default_conditional(
-				PredefinedUnderrideRuleId::Message.as_str(),
-				true,
-				vec![event_match("type", "m.room.message")],
-				action_list(&[Tweak::Highlight(false)], true),
-			),
-			default_conditional(
-				PredefinedUnderrideRuleId::Encrypted.as_str(),
-				true,
-				vec![event_match("type", "m.room.encrypted")],
-				action_list(&[Tweak::Highlight(false)], true),
-			),
-		]
+		default_conditional(
+			PredefinedUnderrideRuleId::Call.as_str(),
+			true,
+			vec![event_match("type", "m.call.invite")],
+			action_list(&[ring, Tweak::Highlight(false)], true),
+		),
+		default_conditional(
+			PredefinedUnderrideRuleId::EncryptedRoomOneToOne.as_str(),
+			true,
+			vec![member_count_is("2"), event_match("type", "m.room.encrypted")],
+			action_list(&[sound.clone(), Tweak::Highlight(false)], true),
+		),
+		default_conditional(
+			PredefinedUnderrideRuleId::RoomOneToOne.as_str(),
+			true,
+			vec![member_count_is("2"), event_match("type", "m.room.message")],
+			action_list(&[sound.clone(), Tweak::Highlight(false)], true),
+		),
+		default_conditional(
+			PredefinedUnderrideRuleId::Message.as_str(),
+			true,
+			vec![event_match("type", "m.room.message")],
+			action_list(&[Tweak::Highlight(false)], true),
+		),
+		default_conditional(
+			PredefinedUnderrideRuleId::Encrypted.as_str(),
+			true,
+			vec![event_match("type", "m.room.encrypted")],
+			action_list(&[Tweak::Highlight(false)], true),
+		),
+	]
 }
 
 fn is_default(rule: AnyPushRuleRef<'_>) -> bool {
@@ -1040,24 +1164,28 @@ fn key_path(key: &str) -> Vec<String> {
 		match c {
 			'.' => parts.push(String::new()),
 			'\\' => match chars.next() {
-				Some(next @ ('.' | '\\')) => parts.last_mut().map(|p| p.push(next)).unwrap_or_default(),
+				Some(next @ ('.' | '\\')) => {
+					if let Some(last) = parts.last_mut() {
+						last.push(next);
+					}
+				}
 				Some(other) => {
 					if let Some(last) = parts.last_mut() {
 						last.push('\\');
 						last.push(other);
 					}
-				},
+				}
 				None => {
 					if let Some(last) = parts.last_mut() {
 						last.push('\\');
 					}
-				},
+				}
 			},
 			other => {
 				if let Some(last) = parts.last_mut() {
 					last.push(other);
 				}
-			},
+			}
 		}
 	}
 	parts
@@ -1078,11 +1206,11 @@ fn glob(pattern: &str, text: &str) -> bool {
 			Some(&c) if c == '?' || c == current => {
 				p = p.saturating_add(1);
 				t = t.saturating_add(1);
-			},
+			}
 			Some('*') => {
 				star = Some((p, t));
 				p = p.saturating_add(1);
-			},
+			}
 			_ => {
 				let Some((star_p, star_t)) = star else {
 					return false;
@@ -1091,7 +1219,7 @@ fn glob(pattern: &str, text: &str) -> bool {
 				p = star_p.saturating_add(1);
 				t = resume;
 				star = Some((star_p, resume));
-			},
+			}
 		}
 	}
 	pattern.get(p..).is_some_and(|rest| rest.iter().all(|&c| c == '*'))
@@ -1101,7 +1229,8 @@ fn glob(pattern: &str, text: &str) -> bool {
 fn word_glob(pattern: &str, text: &str) -> bool {
 	let chars: Vec<char> = text.chars().collect();
 	(0..chars.len()).any(|start| {
-		let word_before = start.checked_sub(1).and_then(|i| chars.get(i)).copied().is_some_and(is_word);
+		let word_before =
+			start.checked_sub(1).and_then(|i| chars.get(i)).copied().is_some_and(is_word);
 		!word_before
 			&& (start.saturating_add(1)..=chars.len()).any(|end| {
 				let word_after = chars.get(end).copied().is_some_and(is_word);
@@ -1141,13 +1270,13 @@ impl Matcher<'_> {
 				} else {
 					self.string(key).is_some_and(|text| glob(pattern, text))
 				}
-			},
+			}
 			PushCondition::ContainsDisplayName => {
 				!self.ctx.user_display_name.is_empty()
 					&& self.string("content.body").is_some_and(|body| {
 						word_glob(&escape_glob(&self.ctx.user_display_name), body)
 					})
-			},
+			}
 			PushCondition::RoomMemberCount {
 				is,
 			} => member_count_matches(is, self.ctx.member_count),
@@ -1173,7 +1302,11 @@ impl Matcher<'_> {
 		let (Some(levels), Some(sender)) = (&self.ctx.power_levels, self.string("sender")) else {
 			return false;
 		};
-		let required = if key == "room" { levels.notifications.room } else { 50 };
+		let required = if key == "room" {
+			levels.notifications.room
+		} else {
+			50
+		};
 		let level = levels
 			.users
 			.iter()
@@ -1207,7 +1340,11 @@ fn member_count_matches(is: &str, count: UInt) -> bool {
 impl Serialize for Ruleset {
 	fn to_json(&self) -> Value {
 		let list = |rules: Vec<Value>| {
-			if rules.is_empty() { Value::Null } else { Value::Array(rules) }
+			if rules.is_empty() {
+				Value::Null
+			} else {
+				Value::Array(rules)
+			}
 		};
 		Value::Object(object_from(vec![
 			("override", list(self.override_.iter().map(Serialize::to_json).collect())),
@@ -1227,11 +1364,11 @@ impl Deserialize for Ruleset {
 	fn from_json(value: &Value) -> Result<Self, DeError> {
 		let object = value.as_object().ok_or_else(|| DeError::expected("ruleset object"))?;
 		Ok(Self {
-			override_: list(object, "override")?,
-			content: list(object, "content")?,
-			room: list(object, "room")?,
-			sender: list(object, "sender")?,
-			underride: list(object, "underride")?,
+			override_: list::<_>(object, "override")?.into(),
+			content: list::<_>(object, "content")?.into(),
+			room: list::<_>(object, "room")?.into(),
+			sender: list::<_>(object, "sender")?.into(),
+			underride: list::<_>(object, "underride")?.into(),
 		})
 	}
 }
@@ -1552,8 +1689,12 @@ mod tests {
 				r#"{{"type":"m.room.message","sender":"{sender}","content":{{"body":"x","m.mentions":{{"room":true}}}}}}"#
 			)
 		};
-		assert!(actions(&json("@admin:x"), 5).contains(&Action::SetTweak(Tweak::Highlight(true))));
-		assert!(!actions(&json("@rando:x"), 5).contains(&Action::SetTweak(Tweak::Highlight(true))));
+		assert!(
+			actions(&json("@admin:x"), 5).contains(&Action::SetTweak(Tweak::Highlight(true)))
+		);
+		assert!(
+			!actions(&json("@rando:x"), 5).contains(&Action::SetTweak(Tweak::Highlight(true)))
+		);
 	}
 
 	#[test]
@@ -1602,7 +1743,9 @@ mod tests {
 		rules.set_enabled(RuleKind::Override, PredefinedOverrideRuleId::Master, true).unwrap();
 		rules.update_with_server_default(Ruleset::server_default("@me:x"));
 		assert!(rules.get(RuleKind::Override, PredefinedOverrideRuleId::Reaction).is_some());
-		assert!(rules.get(RuleKind::Override, PredefinedOverrideRuleId::Master).unwrap().enabled());
+		assert!(
+			rules.get(RuleKind::Override, PredefinedOverrideRuleId::Master).unwrap().enabled()
+		);
 	}
 
 	#[test]

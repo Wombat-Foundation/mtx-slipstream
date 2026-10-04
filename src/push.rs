@@ -10,7 +10,10 @@ use crate::{
 pub enum Tweak {
 	Sound(String),
 	Highlight(bool),
-	Custom { name: String, value: Value },
+	Custom {
+		name: String,
+		value: Value,
+	},
 }
 
 impl Serialize for Tweak {
