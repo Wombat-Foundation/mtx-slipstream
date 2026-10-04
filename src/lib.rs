@@ -39,6 +39,7 @@ mod events_codec;
 pub mod federation;
 pub mod federation_api;
 pub mod push;
+pub mod pusher;
 pub mod sync;
 pub mod writer;
 
@@ -455,7 +456,16 @@ pub mod api {
 		Backward,
 	}
 
+	pub mod push_gateway {
+		pub use crate::pusher::send_event_notification;
+	}
+
 	pub mod client {
+		pub mod push {
+			pub use crate::pusher::{
+				HttpPusherData, Pusher, PusherIds, PusherKind, get_pushers, set_pusher,
+			};
+		}
 		pub mod directory {
 			pub use crate::directory::{get_public_rooms, get_public_rooms_filtered};
 		}
@@ -810,7 +820,10 @@ pub mod events {
 			}
 			impl RoomMemberEventContent {
 				pub fn new(membership: MembershipState) -> Self {
-					Self { membership, join_authorized_via_users_server: None }
+					Self {
+						membership,
+						join_authorized_via_users_server: None,
+					}
 				}
 			}
 			#[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -916,7 +929,11 @@ pub mod events {
 				pub join_rule: JoinRule,
 			}
 			impl RoomJoinRulesEventContent {
-				pub fn new(join_rule: JoinRule) -> Self { Self { join_rule } }
+				pub fn new(join_rule: JoinRule) -> Self {
+					Self {
+						join_rule,
+					}
+				}
 			}
 		}
 		pub mod third_party_invite {
