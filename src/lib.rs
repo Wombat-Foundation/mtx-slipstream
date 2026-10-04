@@ -623,6 +623,30 @@ pub mod events {
 			Thread => "m.thread",
 		});
 	}
+	pub mod push_rules {
+		pub use crate::push::{Action, PushConditionPowerLevelsCtx, PushConditionRoomCtx, PushFormat, Ruleset, Tweak};
+		pub type PushRulesEvent = crate::events::GlobalAccountDataEvent<PushRulesEventContent>;
+		#[derive(Clone, Debug, Default, Eq, PartialEq)]
+		pub struct PushRulesEventContent {
+			pub global: crate::push::Ruleset,
+		}
+		impl crate::codec::Serialize for PushRulesEventContent {
+			fn to_json(&self) -> crate::json::Value {
+				let mut object = crate::json::Object::new();
+				object.insert("global".into(), self.global.to_json());
+				crate::json::Value::Object(object)
+			}
+		}
+		impl crate::codec::Deserialize for PushRulesEventContent {
+			fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+				let global = match value {
+					crate::json::Value::Object(object) => object.get("global").map(crate::codec::Deserialize::from_json).transpose()?.unwrap_or_default(),
+					_ => crate::push::Ruleset,
+				};
+				Ok(Self { global })
+			}
+		}
+	}
 	pub mod room {
 		pub mod avatar;
 		pub mod canonical_alias;
