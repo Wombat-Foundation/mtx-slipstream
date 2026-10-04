@@ -803,7 +803,7 @@ pub mod api {
 	pub use crate::appservice;
 	pub use crate::{
 		endpoint::{
-			EndpointError, FromHttpRequestError, FromHttpResponseError, IncomingRequest,
+			EndpointError, EndpointRequest, FromHttpRequestError, FromHttpResponseError, IncomingRequest,
 			IncomingResponse, MatrixVersion, Metadata, OutgoingRequest, OutgoingResponse,
 			SendAccessToken,
 		},

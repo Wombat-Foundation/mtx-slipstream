@@ -272,6 +272,14 @@ impl UiaaResponse {
 	}
 }
 
+impl crate::endpoint::OutgoingResponse for UiaaResponse {
+	fn try_into_http_response<B: Default + BufMut>(
+		self,
+	) -> Result<http::Response<B>, IntoHttpError> {
+		Self::try_into_http_response(self)
+	}
+}
+
 impl<T> Raw<T> {
 	/// Parses the raw JSON value without deserializing it into `T`.
 	///
