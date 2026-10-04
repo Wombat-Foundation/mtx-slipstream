@@ -141,6 +141,9 @@ impl Serialize for RoomMemberEventContent {
 	fn to_json(&self) -> Value {
 		let mut o = Object::new();
 		insert(&mut o, "membership", &self.membership);
+		if let Some(server) = &self.join_authorized_via_users_server {
+			insert(&mut o, "join_authorized_via_users_server", server);
+		}
 		Value::Object(o)
 	}
 }
@@ -150,6 +153,7 @@ impl Deserialize for RoomMemberEventContent {
 			.ok_or_else(|| DeError::expected("membership"))?;
 		Ok(Self {
 			membership,
+			join_authorized_via_users_server: field(object(value)?, "join_authorized_via_users_server")?,
 		})
 	}
 }

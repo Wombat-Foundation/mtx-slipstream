@@ -13,6 +13,9 @@ pub mod antispam;
 pub mod appservice;
 pub mod canonical_json;
 pub mod codec;
+pub mod filter;
+pub mod backup;
+pub mod device;
 mod uiaa;
 pub use antispam::{draupnir as draupnir_antispam, meowlnir as meowlnir_antispam};
 pub mod directory;
@@ -93,6 +96,11 @@ macro_rules! matrix_id {
 		impl From<&str> for $owned {
 			fn from(value: &str) -> Self {
 				Self(value.to_owned())
+			}
+		}
+		impl From<&$owned> for $owned {
+			fn from(value: &$owned) -> Self {
+				value.clone()
 			}
 		}
 		impl AsRef<$owned> for $owned {
@@ -446,28 +454,30 @@ pub mod api {
 		pub mod appservice {
 			pub use crate::appservice::request_ping;
 		}
+		pub use crate::{
+			backup::{
+				add_backup_keys, add_backup_keys_for_room, add_backup_keys_for_session,
+				create_backup_version, delete_backup_keys, delete_backup_keys_for_room,
+				delete_backup_keys_for_session, delete_backup_version, get_backup_info, get_backup_keys,
+				get_backup_keys_for_room, get_backup_keys_for_session, get_latest_backup_info,
+				update_backup_version,
+			},
+			device::{dehydrated_device, delete_device, delete_devices, get_device, get_devices, update_device},
+		};
+		pub mod backup {
+			pub use crate::backup::*;
+		}
+		pub mod device {
+			pub use crate::device::{
+				DehydratedDeviceData, Device, delete_device, delete_devices, get_device, get_devices,
+				update_device,
+			};
+		}
 		pub mod filter {
-			#[derive(Clone, Debug, Default)]
-			pub struct RoomEventFilter {
-				pub not_rooms: alloc::vec::Vec<crate::OwnedRoomId>,
-				pub rooms: Option<alloc::vec::Vec<crate::OwnedRoomId>>,
-				pub not_senders: alloc::vec::Vec<crate::OwnedUserId>,
-				pub senders: Option<alloc::vec::Vec<crate::OwnedUserId>>,
-				pub types: Option<alloc::vec::Vec<alloc::string::String>>,
-				pub not_types: alloc::vec::Vec<alloc::string::String>,
-				pub contains_url: Option<bool>,
-				pub not_rooms_or_senders: alloc::vec::Vec<alloc::string::String>,
-				pub not_types_or_rel_types: alloc::vec::Vec<alloc::string::String>,
-				pub lazy_load_options: Option<()>,
-				pub rel_types: Option<alloc::vec::Vec<alloc::string::String>>,
-				pub not_rel_types: alloc::vec::Vec<alloc::string::String>,
-				pub url_filter: Option<UrlFilter>,
-			}
-			#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-			pub enum UrlFilter {
-				EventsWithUrl,
-				EventsWithoutUrl,
-			}
+			pub use crate::filter::{
+				EventFormat, Filter, FilterDefinition, LazyLoadOptions, RoomEventFilter,
+				RoomFilter, UrlFilter, create_filter, get_filter,
+			};
 		}
 		pub mod discovery {
 			pub mod discover_homeserver {
@@ -750,6 +760,7 @@ pub mod events {
 			#[derive(Clone, Debug, Default)]
 			pub struct RoomMemberEventContent {
 				pub membership: MembershipState,
+				pub join_authorized_via_users_server: Option<crate::OwnedUserId>,
 			}
 			#[derive(Clone, Debug, Default, PartialEq, Eq)]
 			pub enum MembershipState {
