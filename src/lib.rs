@@ -183,6 +183,10 @@ impl RoomVersionId {
 	}
 }
 
+impl core::fmt::Display for RoomVersionId {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result { f.write_str(self.as_str()) }
+}
+
 impl codec::Serialize for RoomVersionId {
 	fn to_json(&self) -> json::Value {
 		json::Value::String(self.as_str().to_owned())
@@ -255,6 +259,10 @@ pub mod http_headers {
 }
 
 pub mod api {
+	pub mod error {
+		#[derive(Clone, Debug)]
+		pub struct IntoHttpError;
+	}
 	#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 	pub enum Direction {
 		Forward,
@@ -382,8 +390,10 @@ pub mod events {
 		RoomThirdPartyInvite => "m.room.third_party_invite",
 		RoomTopic => "m.room.topic",
 	});
-	pub type StateEventType = TimelineEventType;
-	pub type MessageLikeEventType = TimelineEventType;
+	#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, ::serde::Serialize, ::serde::Deserialize)]
+	pub enum StateEventType { RoomAliases, RoomCreate, RoomJoinRules, RoomMember, RoomPowerLevels, RoomRedaction, RoomThirdPartyInvite, RoomTopic }
+	#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, ::serde::Serialize, ::serde::Deserialize)]
+	pub enum MessageLikeEventType { RoomMessage }
 	pub trait EventContent {
 		type EventType;
 		fn event_type(&self) -> Self::EventType;
@@ -546,6 +556,12 @@ pub mod serde {
 
 	#[derive(Clone, Debug, Default)]
 	pub struct Base64;
+	pub fn deserialize_v1_powerlevel<'de, D>(deserializer: D) -> Result<crate::Int, D::Error>
+	where D: ::serde::Deserializer<'de> { ::serde::Deserialize::deserialize(deserializer) }
+	pub fn vec_deserialize_int_powerlevel_values<'de, D>(deserializer: D) -> Result<alloc::collections::BTreeMap<alloc::string::String, crate::Int>, D::Error>
+	where D: ::serde::Deserializer<'de> { ::serde::Deserialize::deserialize(deserializer) }
+	pub fn vec_deserialize_v1_powerlevel_values<'de, D>(deserializer: D) -> Result<alloc::vec::Vec<crate::Int>, D::Error>
+	where D: ::serde::Deserializer<'de> { ::serde::Deserialize::deserialize(deserializer) }
 }
 
 #[derive(Clone, Debug)]
@@ -564,6 +580,10 @@ pub struct IdParseError;
 pub type CanonicalJsonObject = canonical_json::Object;
 pub type CanonicalJsonValue = canonical_json::Value;
 pub type CanonicalJsonArray = canonical_json::Array;
+#[derive(Debug)]
+pub enum CanonicalJsonError { SerDe(serde_json::Error) }
+impl core::fmt::Display for CanonicalJsonError { fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result { match self { Self::SerDe(error) => error.fmt(f) } } }
+impl core::error::Error for CanonicalJsonError {}
 
 #[cfg(test)]
 mod codec_tests {
