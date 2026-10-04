@@ -565,6 +565,9 @@ pub mod api {
 			}
 		}
 	}
+
+	/// Compatibility path for application-service types and endpoints.
+	pub use client::appservice;
 	pub use crate::{
 		endpoint::{
 			EndpointError, FromHttpRequestError, FromHttpResponseError, IncomingRequest,
