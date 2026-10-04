@@ -153,7 +153,7 @@ macro_rules! int_impl {
 		}
 	)*};
 }
-int_impl!(i64 => as_i64, u64 => as_u64, i32 => as_i64, u32 => as_u64);
+int_impl!(i64 => as_i64, u64 => as_u64, i32 => as_i64, u32 => as_u64, u16 => as_u64, i16 => as_i64, u8 => as_u64);
 
 impl Serialize for f64 {
 	fn to_json(&self) -> Value {
@@ -187,6 +187,22 @@ impl<T: Serialize> Serialize for Vec<T> {
 	}
 }
 impl<T: Deserialize> Deserialize for Vec<T> {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		value
+			.as_array()
+			.ok_or_else(|| DeError::expected("array"))?
+			.iter()
+			.map(T::from_json)
+			.collect()
+	}
+}
+
+impl<T: Serialize> Serialize for alloc::collections::BTreeSet<T> {
+	fn to_json(&self) -> Value {
+		Value::Array(self.iter().map(T::to_json).collect())
+	}
+}
+impl<T: Deserialize + Ord> Deserialize for alloc::collections::BTreeSet<T> {
 	fn from_json(value: &Value) -> Result<Self, DeError> {
 		value
 			.as_array()

@@ -58,6 +58,11 @@ impl Serialize for RoomCreateEventContent {
 		if let Some(predecessor) = &self.predecessor {
 			object.insert("predecessor".into(), predecessor.to_json());
 		}
+		if let Some(room_type) = &self.room_type
+			&& !room_type.as_str().is_empty()
+		{
+			object.insert("type".into(), Value::String(room_type.as_str().into()));
+		}
 		Value::Object(object)
 	}
 }
@@ -132,6 +137,8 @@ impl ErrorKind {
 			Self::InvalidParam => "M_INVALID_PARAM",
 			Self::TooLarge => "M_TOO_LARGE",
 			Self::Unrecognized => "M_UNRECOGNIZED",
+			Self::Exclusive => "M_EXCLUSIVE",
+			Self::BadAlias => "M_BAD_ALIAS",
 			Self::Unauthorized => "M_UNAUTHORIZED",
 			Self::UserDeactivated => "M_USER_DEACTIVATED",
 			Self::UserLocked => "M_USER_LOCKED",
@@ -170,6 +177,8 @@ impl ErrorKind {
 			"M_INVALID_PARAM" => Self::InvalidParam,
 			"M_TOO_LARGE" => Self::TooLarge,
 			"M_UNRECOGNIZED" => Self::Unrecognized,
+			"M_EXCLUSIVE" => Self::Exclusive,
+			"M_BAD_ALIAS" => Self::BadAlias,
 			"M_UNAUTHORIZED" => Self::Unauthorized,
 			"M_USER_DEACTIVATED" => Self::UserDeactivated,
 			"M_USER_LOCKED" => Self::UserLocked,

@@ -109,6 +109,8 @@ event_type!(StateEventType {
 event_type!(MessageLikeEventType {
 	RoomMessage => "m.room.message",
 	RoomRedaction => "m.room.redaction",
+	RoomEncrypted => "m.room.encrypted",
+	CallInvite => "m.call.invite",
 });
 
 macro_rules! convert {

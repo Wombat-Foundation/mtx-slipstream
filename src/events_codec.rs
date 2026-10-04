@@ -3,15 +3,19 @@
 use crate::{
 	codec::{DeError, Deserialize, Serialize, from_value},
 	events::room::{
+		avatar::RoomAvatarEventContent,
 		canonical_alias::RoomCanonicalAliasEventContent,
+		encryption::RoomEncryptionEventContent,
 		guest_access::RoomGuestAccessEventContent,
 		history_visibility::RoomHistoryVisibilityEventContent,
 		join_rules::{JoinRule, RestrictedRule, RoomJoinRulesEventContent},
 		member::{RoomMemberEventContent, ThirdPartyInvite},
 		name::RoomNameEventContent,
+		policy::RoomPolicyEventContent,
 		power_levels::RoomPowerLevelsEventContent,
 		preview_url::RoomPreviewUrlsEventContent,
 		redaction::RoomRedactionEventContent,
+		server_acl::RoomServerAclEventContent,
 		third_party_invite::RoomThirdPartyInviteEventContent,
 		topic::RoomTopicEventContent,
 	},
@@ -51,6 +55,98 @@ impl Serialize for RoomNameEventContent {
 			object.insert("name".into(), Value::String(name.clone()));
 		}
 		Value::Object(object)
+	}
+}
+impl Deserialize for RoomNameEventContent {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		Ok(Self {
+			name: field(object(value)?, "name")?,
+		})
+	}
+}
+impl Deserialize for RoomTopicEventContent {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		Ok(Self {
+			topic: field(object(value)?, "topic")?.unwrap_or_default(),
+		})
+	}
+}
+impl Serialize for RoomAvatarEventContent {
+	fn to_json(&self) -> Value {
+		let mut object = Object::new();
+		if let Some(url) = &self.url {
+			insert(&mut object, "url", url);
+		}
+		Value::Object(object)
+	}
+}
+impl Deserialize for RoomAvatarEventContent {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		Ok(Self {
+			url: field(object(value)?, "url")?,
+		})
+	}
+}
+impl Serialize for RoomEncryptionEventContent {
+	fn to_json(&self) -> Value {
+		Value::Object(
+			[(String::from("algorithm"), self.algorithm.to_json())].into_iter().collect(),
+		)
+	}
+}
+impl Deserialize for RoomEncryptionEventContent {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		Ok(Self {
+			algorithm: field(object(value)?, "algorithm")?
+				.ok_or_else(|| DeError::expected("algorithm"))?,
+		})
+	}
+}
+impl Deserialize for RoomGuestAccessEventContent {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		Ok(Self {
+			guest_access: field(object(value)?, "guest_access")?.unwrap_or_default(),
+		})
+	}
+}
+impl Serialize for RoomServerAclEventContent {
+	fn to_json(&self) -> Value {
+		let mut object = Object::new();
+		insert(&mut object, "allow_ip_literals", &self.allow_ip_literals);
+		insert(&mut object, "allow", &self.allow);
+		insert(&mut object, "deny", &self.deny);
+		Value::Object(object)
+	}
+}
+impl Deserialize for RoomServerAclEventContent {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		let object = object(value)?;
+		Ok(Self {
+			allow_ip_literals: field(object, "allow_ip_literals")?.unwrap_or(true),
+			allow: field(object, "allow")?.unwrap_or_default(),
+			deny: field(object, "deny")?.unwrap_or_default(),
+		})
+	}
+}
+impl Serialize for RoomPolicyEventContent {
+	fn to_json(&self) -> Value {
+		let mut object = Object::new();
+		if let Some(via) = &self.via {
+			insert(&mut object, "via", via);
+		}
+		if let Some(public_key) = &self.public_key {
+			insert(&mut object, "public_key", public_key);
+		}
+		Value::Object(object)
+	}
+}
+impl Deserialize for RoomPolicyEventContent {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		let object = object(value)?;
+		Ok(Self {
+			via: field(object, "via")?,
+			public_key: field(object, "public_key")?,
+		})
 	}
 }
 impl Serialize for RoomTopicEventContent {

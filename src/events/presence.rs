@@ -8,6 +8,22 @@ pub enum PresenceState {
 	Offline,
 	Busy,
 }
+impl PresenceState {
+	#[must_use]
+	pub fn as_str(&self) -> &'static str {
+		match self {
+			Self::Online => "online",
+			Self::Unavailable => "unavailable",
+			Self::Offline => "offline",
+			Self::Busy => "busy",
+		}
+	}
+}
+impl core::fmt::Display for PresenceState {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+		f.write_str(self.as_str())
+	}
+}
 crate::impl_codec_enum!(PresenceState {
 	Online => "online", Unavailable => "unavailable", Offline => "offline", Busy => "busy",
 });
@@ -19,6 +35,7 @@ pub struct PresenceEventContent {
 	pub last_active_ago: Option<u64>,
 	pub currently_active: Option<bool>,
 	pub presence: PresenceState,
+	pub status_msg: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -26,4 +43,50 @@ pub struct PresenceEvent {
 	pub sender: OwnedUserId,
 	pub content: PresenceEventContent,
 	pub origin_server_ts: Option<MilliSecondsSinceUnixEpoch>,
+}
+
+impl crate::codec::Serialize for PresenceEventContent {
+	fn to_json(&self) -> crate::json::Value {
+		let mut object = crate::json::Object::new();
+		object.insert("presence".into(), self.presence.to_json());
+		if let Some(v) = &self.avatar_url {
+			object.insert("avatar_url".into(), v.to_json());
+		}
+		if let Some(v) = &self.displayname {
+			object.insert("displayname".into(), v.to_json());
+		}
+		if let Some(v) = &self.last_active_ago {
+			object.insert("last_active_ago".into(), v.to_json());
+		}
+		if let Some(v) = &self.currently_active {
+			object.insert("currently_active".into(), v.to_json());
+		}
+		if let Some(v) = &self.status_msg {
+			object.insert("status_msg".into(), v.to_json());
+		}
+		crate::json::Value::Object(object)
+	}
+}
+impl crate::codec::Deserialize for PresenceEventContent {
+	fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+		use crate::codec::{DeError, from_value};
+		let object = value.as_object().ok_or_else(|| DeError::expected("object"))?;
+		let get = |name: &str| object.get(name).filter(|v| !v.is_null());
+		Ok(Self {
+			avatar_url: get("avatar_url").map(from_value).transpose()?,
+			displayname: get("displayname").map(from_value).transpose()?,
+			last_active_ago: get("last_active_ago").map(from_value).transpose()?,
+			currently_active: get("currently_active").map(from_value).transpose()?,
+			presence: get("presence").map(from_value).transpose()?.unwrap_or_default(),
+			status_msg: get("status_msg").map(from_value).transpose()?,
+		})
+	}
+}
+impl crate::codec::Serialize for PresenceEvent {
+	fn to_json(&self) -> crate::json::Value {
+		let mut object = crate::json::Object::new();
+		object.insert("sender".into(), self.sender.to_json());
+		object.insert("content".into(), self.content.to_json());
+		crate::json::Value::Object(object)
+	}
 }

@@ -113,6 +113,18 @@ impl OwnedRoomId {
 	}
 }
 impl OwnedRoomOrAliasId {
+	/// Whether this is a room ID (`!`-prefixed) rather than an alias.
+	#[must_use]
+	pub fn is_room_id(&self) -> bool {
+		self.as_str().starts_with('!')
+	}
+
+	/// Whether this is a room alias (`#`-prefixed).
+	#[must_use]
+	pub fn is_room_alias_id(&self) -> bool {
+		self.as_str().starts_with('#')
+	}
+
 	#[must_use]
 	pub fn server_name(&self) -> Option<OwnedServerName> {
 		crate::server_part(self.as_str())
@@ -162,15 +174,21 @@ fn id_localpart(value: &str) -> &str {
 impl OwnedRoomAliasId {
 	/// The alias part, without the `#` sigil or server name.
 	#[must_use]
-	pub fn alias(&self) -> &str { id_localpart(self.as_str()) }
+	pub fn alias(&self) -> &str {
+		id_localpart(self.as_str())
+	}
 }
 impl OwnedRoomId {
 	#[must_use]
-	pub fn localpart(&self) -> &str { id_localpart(self.as_str()) }
+	pub fn localpart(&self) -> &str {
+		id_localpart(self.as_str())
+	}
 }
 impl OwnedEventId {
 	#[must_use]
-	pub fn localpart(&self) -> &str { id_localpart(self.as_str()) }
+	pub fn localpart(&self) -> &str {
+		id_localpart(self.as_str())
+	}
 }
 impl OwnedServerName {
 	/// The host, without any port, and with IPv6 brackets kept.
@@ -187,7 +205,11 @@ impl OwnedServerName {
 	#[must_use]
 	pub fn port(&self) -> Option<u16> {
 		let name = self.as_str();
-		let rest = if name.starts_with('[') { name.split_once(']')?.1 } else { name };
+		let rest = if name.starts_with('[') {
+			name.split_once(']')?.1
+		} else {
+			name
+		};
 		rest.rsplit_once(':')?.1.parse().ok()
 	}
 

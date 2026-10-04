@@ -742,6 +742,8 @@ pub mod api {
 				NotFound,
 				TooLarge,
 				Unrecognized,
+				Exclusive,
+				BadAlias,
 				CannotOverwriteMedia,
 				NotYetUploaded,
 				GuestAccessForbidden,
@@ -952,6 +954,7 @@ pub mod events {
 				pub additional_creators: Option<alloc::vec::Vec<crate::OwnedUserId>>,
 				pub federate: bool,
 				pub predecessor: Option<PreviousRoom>,
+				pub room_type: Option<crate::room::RoomType>,
 			}
 			/// The room this room replaces.
 			#[derive(Clone, Debug, Eq, PartialEq)]
@@ -1048,6 +1051,13 @@ pub mod events {
 						predecessor: get("predecessor")
 							.map(crate::codec::from_value)
 							.transpose()?,
+						room_type: get("type").and_then(crate::json::Value::as_str).map(|t| {
+							if t == "m.space" {
+								crate::room::RoomType::Space
+							} else {
+								crate::room::RoomType::Room
+							}
+						}),
 					})
 				}
 			}
@@ -1165,7 +1175,7 @@ pub mod events {
 			}
 		}
 		pub mod join_rules {
-			#[derive(Clone, Debug, Default)]
+			#[derive(Clone, Debug, Default, PartialEq, Eq)]
 			pub enum JoinRule {
 				#[default]
 				Public,
@@ -1175,7 +1185,7 @@ pub mod events {
 				Restricted(RestrictedRule),
 				KnockRestricted(RestrictedRule),
 			}
-			#[derive(Clone, Debug, Default)]
+			#[derive(Clone, Debug, Default, PartialEq, Eq)]
 			pub struct RestrictedRule {
 				pub allow: alloc::vec::Vec<crate::json::Value>,
 			}
@@ -1358,6 +1368,12 @@ pub mod serde {
 		#[must_use]
 		pub fn from_value<U: crate::codec::Serialize + ?Sized>(value: &U) -> Self {
 			Self(crate::codec::to_string(value), PhantomData)
+		}
+
+		/// Reinterprets the raw JSON as another event type.
+		#[must_use]
+		pub fn cast<U>(&self) -> Raw<U> {
+			Raw(self.0.clone(), PhantomData)
 		}
 
 		/// Raw JSON for an empty object, `{}`.

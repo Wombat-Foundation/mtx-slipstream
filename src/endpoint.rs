@@ -74,7 +74,7 @@ pub struct Metadata {
 }
 
 /// An error returned by the remote endpoint, parsed from an HTTP response.
-pub trait EndpointError: Sized + fmt::Debug {
+pub trait EndpointError: Sized + fmt::Debug + fmt::Display {
 	fn from_http_response<T: AsRef<[u8]>>(response: http::Response<T>) -> Self;
 }
 
