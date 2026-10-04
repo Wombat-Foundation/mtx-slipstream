@@ -112,3 +112,37 @@ fn id_accessors() {
 	let v4: OwnedServerName = "10.0.0.1:1".into();
 	assert!(v4.is_ip_literal());
 }
+
+#[derive(Debug, PartialEq)]
+struct Sample {
+	kind: String,
+	sender: mtx_slipstream::OwnedUserId,
+	redacts: Option<mtx_slipstream::OwnedEventId>,
+	tags: Vec<String>,
+}
+
+mtx_slipstream::codec_struct!(Sample {
+	kind: String = ("type"),
+	sender: mtx_slipstream::OwnedUserId = ("sender"),
+	redacts: Option<mtx_slipstream::OwnedEventId> = ("redacts", omit),
+	tags: Vec<String> = ("tags", omit),
+});
+
+#[test]
+fn codec_struct_renames_omits_and_ignores_unknown_keys() {
+	use mtx_slipstream::codec::{from_str, to_string};
+	let sample = Sample {
+		kind: "m.room.message".into(),
+		sender: "@a:example.org".into(),
+		redacts: None,
+		tags: vec![],
+	};
+	assert_eq!(
+		to_string(&sample),
+		r#"{"sender":"@a:example.org","tags":[],"type":"m.room.message"}"#
+	);
+	let parsed: Sample =
+		from_str(r#"{"type":"m.room.message","sender":"@a:example.org","extra":1}"#).unwrap();
+	assert_eq!(parsed, sample);
+	assert!(from_str::<Sample>(r#"{"sender":"@a:example.org"}"#).is_err());
+}

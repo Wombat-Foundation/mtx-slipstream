@@ -293,6 +293,51 @@ macro_rules! impl_codec_struct {
 	};
 }
 
+/// Implements the codec traits for a struct with explicit JSON keys.
+///
+/// Each field names its key: `field: Type = ("key")`. A field written
+/// `("key", omit)` is left out when it encodes to `null` and takes its
+/// `Default` when absent or null; other fields are required. Unknown keys are
+/// ignored on decoding.
+///
+/// ```text
+/// codec_struct!(Pdu {
+///     kind: TimelineEventType = ("type"),
+///     redacts: Option<OwnedEventId> = ("redacts", omit),
+/// });
+/// ```
+#[macro_export]
+macro_rules! codec_struct {
+	($t:ident { $($field:ident : $ty:ty = $spec:tt),* $(,)? }) => {
+		impl $crate::codec::Serialize for $t {
+			fn to_json(&self) -> $crate::json::Value {
+				let mut object = $crate::json::Object::new();
+				$($crate::codec_struct!(@put object, &self.$field, $spec);)*
+				$crate::json::Value::Object(object)
+			}
+		}
+		impl $crate::codec::Deserialize for $t {
+			fn from_json(value: &$crate::json::Value) -> Result<Self, $crate::codec::DeError> {
+				let input = $crate::endpoint::Input::new(&[], &[], Some(value));
+				Ok(Self {
+					$($field: $crate::codec_struct!(@get input, $ty, $spec),)*
+				})
+			}
+		}
+	};
+	(@put $object:ident, $value:expr, ($key:literal)) => {
+		$object.insert($crate::alloc_string($key), $crate::codec::Serialize::to_json($value));
+	};
+	(@put $object:ident, $value:expr, ($key:literal, omit)) => {
+		let encoded = $crate::codec::Serialize::to_json($value);
+		if !encoded.is_null() {
+			$object.insert($crate::alloc_string($key), encoded);
+		}
+	};
+	(@get $input:ident, $ty:ty, ($key:literal)) => { $input.body::<$ty>($key)? };
+	(@get $input:ident, $ty:ty, ($key:literal, omit)) => { $input.body_or_default::<$ty>($key)? };
+}
+
 impl<A: Serialize, B: Serialize, C: Serialize> Serialize for (A, B, C) {
 	fn to_json(&self) -> Value {
 		Value::Array(alloc::vec![self.0.to_json(), self.1.to_json(), self.2.to_json()])
