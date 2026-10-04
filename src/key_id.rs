@@ -274,6 +274,20 @@ key_name!(
 	ServerSigningKeyVersion
 );
 
+impl crate::codec::Serialize for OneTimeKeyAlgorithm {
+	fn to_json(&self) -> crate::json::Value {
+		crate::json::Value::String(self.as_str().into())
+	}
+}
+impl crate::codec::Deserialize for OneTimeKeyAlgorithm {
+	fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+		value
+			.as_str()
+			.map(Self::from)
+			.ok_or_else(|| crate::codec::DeError::expected("algorithm string"))
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;

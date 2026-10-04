@@ -276,3 +276,17 @@ macro_rules! impl_codec_struct {
 		}
 	};
 }
+
+impl<A: Serialize, B: Serialize> Serialize for (A, B) {
+	fn to_json(&self) -> Value {
+		Value::Array(alloc::vec![self.0.to_json(), self.1.to_json()])
+	}
+}
+impl<A: Deserialize, B: Deserialize> Deserialize for (A, B) {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		match value.as_array().map(Vec::as_slice) {
+			Some([a, b]) => Ok((A::from_json(a)?, B::from_json(b)?)),
+			_ => Err(DeError::expected("two-element array")),
+		}
+	}
+}

@@ -38,9 +38,11 @@ mod event_type;
 mod events_codec;
 pub mod federation;
 pub mod federation_api;
+pub mod js_option;
 pub mod push;
 pub mod push_rules;
 pub mod pusher;
+pub mod sync_events;
 pub mod sync;
 pub mod writer;
 
@@ -247,8 +249,8 @@ pub mod media {
 		Scale,
 	}
 }
-pub type JsOption<T> = Option<T>;
 pub use events::room::encryption::EventEncryptionAlgorithm;
+pub use js_option::JsOption;
 
 pub mod space {
 	pub use crate::federation_api::space::SpaceRoomJoinRule;
@@ -467,6 +469,9 @@ pub mod api {
 	}
 
 	pub mod client {
+		pub mod sync {
+			pub use crate::sync_events::{self, DeviceLists, UnreadNotificationsCount};
+		}
 		pub mod push {
 			pub use crate::push_rules::{
 				PushRule, delete_pushrule, get_pushrule, get_pushrule_actions,
