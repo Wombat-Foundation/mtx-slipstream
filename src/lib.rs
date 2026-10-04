@@ -19,6 +19,11 @@ pub mod federation;
 pub mod sync;
 pub mod writer;
 
+/// Compatibility namespace for the legacy `uint!(...)` macro.
+pub mod uint {
+	pub use crate::uint;
+}
+
 /// Canonical JSON substrate supplied by Rezzy.
 pub use rezzy::json;
 
@@ -154,6 +159,20 @@ impl MilliSecondsSinceUnixEpoch {
 macro_rules! int {
 	($value:expr) => {
 		$crate::Int::from($value)
+	};
+}
+
+#[macro_export]
+macro_rules! uint {
+	($value:expr) => {
+		$crate::UInt::from($value)
+	};
+}
+
+#[macro_export]
+macro_rules! event_id {
+	($value:expr) => {
+		$crate::OwnedEventId::from($value)
 	};
 }
 
@@ -416,6 +435,8 @@ pub mod api {
 
 pub mod events {
 	pub use crate::event_type::{MessageLikeEventType, StateEventType, TimelineEventType};
+	pub mod presence;
+	pub mod receipt;
 	pub trait EventContent {
 		type EventType;
 		fn event_type(&self) -> Self::EventType;
