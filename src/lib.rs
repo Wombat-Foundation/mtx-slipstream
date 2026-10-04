@@ -260,8 +260,25 @@ pub mod http_headers {
 
 pub mod api {
 	pub mod error {
-		#[derive(Clone, Debug)]
-		pub struct IntoHttpError;
+		use core::fmt;
+
+		/// Error converting a request or response to or from HTTP.
+		#[derive(Clone, Debug, Eq, PartialEq)]
+		pub struct IntoHttpError(pub alloc::string::String);
+
+		impl fmt::Display for IntoHttpError {
+			fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str(&self.0) }
+		}
+		impl core::error::Error for IntoHttpError {}
+		impl From<crate::codec::DeError> for IntoHttpError {
+			fn from(e: crate::codec::DeError) -> Self { Self(e.0) }
+		}
+		impl From<crate::CanonicalJsonError> for IntoHttpError {
+			fn from(e: crate::CanonicalJsonError) -> Self { Self(alloc::string::ToString::to_string(&e)) }
+		}
+		impl From<crate::json::Error> for IntoHttpError {
+			fn from(e: crate::json::Error) -> Self { Self(alloc::string::ToString::to_string(&e)) }
+		}
 	}
 	#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 	pub enum Direction {
@@ -390,10 +407,32 @@ pub mod events {
 		RoomThirdPartyInvite => "m.room.third_party_invite",
 		RoomTopic => "m.room.topic",
 	});
-	#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, ::serde::Serialize, ::serde::Deserialize)]
-	pub enum StateEventType { RoomAliases, RoomCreate, RoomJoinRules, RoomMember, RoomPowerLevels, RoomRedaction, RoomThirdPartyInvite, RoomTopic }
-	#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, ::serde::Serialize, ::serde::Deserialize)]
-	pub enum MessageLikeEventType { RoomMessage }
+	#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+	pub enum StateEventType {
+		RoomAliases,
+		RoomCreate,
+		RoomJoinRules,
+		RoomMember,
+		RoomPowerLevels,
+		RoomRedaction,
+		RoomThirdPartyInvite,
+		RoomTopic,
+	}
+	crate::impl_codec_enum!(StateEventType {
+		RoomAliases => "m.room.aliases",
+		RoomCreate => "m.room.create",
+		RoomJoinRules => "m.room.join_rules",
+		RoomMember => "m.room.member",
+		RoomPowerLevels => "m.room.power_levels",
+		RoomRedaction => "m.room.redaction",
+		RoomThirdPartyInvite => "m.room.third_party_invite",
+		RoomTopic => "m.room.topic",
+	});
+	#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+	pub enum MessageLikeEventType {
+		RoomMessage,
+	}
+	crate::impl_codec_enum!(MessageLikeEventType { RoomMessage => "m.room.message" });
 	pub trait EventContent {
 		type EventType;
 		fn event_type(&self) -> Self::EventType;
@@ -552,16 +591,67 @@ pub mod serde {
 		pub fn get(&self) -> &str {
 			&self.0
 		}
+		/// Deserializes the raw JSON into `U`.
+		///
+		/// # Errors
+		///
+		/// Returns an error if the JSON is invalid or does not match `U`.
+		pub fn deserialize_as<U: crate::codec::Deserialize>(&self) -> Result<U, crate::codec::DeError> {
+			crate::codec::from_str(&self.0)
+		}
 	}
 
 	#[derive(Clone, Debug, Default)]
 	pub struct Base64;
-	pub fn deserialize_v1_powerlevel<'de, D>(deserializer: D) -> Result<crate::Int, D::Error>
-	where D: ::serde::Deserializer<'de> { ::serde::Deserialize::deserialize(deserializer) }
-	pub fn vec_deserialize_int_powerlevel_values<'de, D>(deserializer: D) -> Result<alloc::collections::BTreeMap<alloc::string::String, crate::Int>, D::Error>
-	where D: ::serde::Deserializer<'de> { ::serde::Deserialize::deserialize(deserializer) }
-	pub fn vec_deserialize_v1_powerlevel_values<'de, D>(deserializer: D) -> Result<alloc::vec::Vec<crate::Int>, D::Error>
-	where D: ::serde::Deserializer<'de> { ::serde::Deserialize::deserialize(deserializer) }
+	use crate::{
+		Int,
+		codec::DeError,
+		json::Value,
+	};
+
+	/// Reads a power level that v1 rooms may spell as a string or integer.
+	///
+	/// # Errors
+	///
+	/// Returns an error if the value is neither an integer nor a numeric string.
+	pub fn deserialize_v1_powerlevel(value: &Value) -> Result<Int, DeError> {
+		value
+			.as_i64()
+			.or_else(|| value.as_str().and_then(|s| s.parse().ok()))
+			.ok_or_else(|| DeError::expected("power level"))
+	}
+
+	/// Reads a map of power levels in either v1 or integer form.
+	///
+	/// # Errors
+	///
+	/// Returns an error if `value` is not an object of power levels.
+	pub fn vec_deserialize_int_powerlevel_values(
+		value: &Value,
+	) -> Result<alloc::collections::BTreeMap<alloc::string::String, Int>, DeError> {
+		value
+			.as_object()
+			.ok_or_else(|| DeError::expected("object"))?
+			.iter()
+			.map(|(k, v)| Ok((k.clone(), deserialize_v1_powerlevel(v)?)))
+			.collect()
+	}
+
+	/// Reads an array of power levels in either v1 or integer form.
+	///
+	/// # Errors
+	///
+	/// Returns an error if `value` is not an array of power levels.
+	pub fn vec_deserialize_v1_powerlevel_values(
+		value: &Value,
+	) -> Result<alloc::vec::Vec<Int>, DeError> {
+		value
+			.as_array()
+			.ok_or_else(|| DeError::expected("array"))?
+			.iter()
+			.map(deserialize_v1_powerlevel)
+			.collect()
+	}
 }
 
 #[derive(Clone, Debug)]
@@ -580,9 +670,19 @@ pub struct IdParseError;
 pub type CanonicalJsonObject = canonical_json::Object;
 pub type CanonicalJsonValue = canonical_json::Value;
 pub type CanonicalJsonArray = canonical_json::Array;
-#[derive(Debug)]
-pub enum CanonicalJsonError { SerDe(serde_json::Error) }
-impl core::fmt::Display for CanonicalJsonError { fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result { match self { Self::SerDe(error) => error.fmt(f) } } }
+/// Error converting or validating canonical JSON.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum CanonicalJsonError {
+	SerDe(alloc::string::String),
+}
+
+impl fmt::Display for CanonicalJsonError {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		match self {
+			Self::SerDe(error) => f.write_str(error),
+		}
+	}
+}
 impl core::error::Error for CanonicalJsonError {}
 
 #[cfg(test)]
