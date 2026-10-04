@@ -481,9 +481,35 @@ pub mod events {
 				Ban => "ban",
 				Knock => "knock",
 			});
-			#[derive(Clone, Debug, Default)]
+			#[derive(Clone, Debug)]
+			pub struct ThirdPartyInviteSigned {
+				pub mxid: crate::OwnedUserId,
+				pub token: alloc::string::String,
+			}
+			#[derive(Clone, Debug)]
 			pub struct ThirdPartyInvite {
-				pub signed: crate::json::Object,
+				pub signed: ThirdPartyInviteSigned,
+			}
+			impl crate::codec::Deserialize for ThirdPartyInvite {
+				fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+					let signed = value
+						.get("signed")
+						.ok_or_else(|| crate::codec::DeError::expected("signed"))?;
+					Ok(Self {
+						signed: ThirdPartyInviteSigned {
+							mxid: crate::codec::from_value(
+								signed
+									.get("mxid")
+									.ok_or_else(|| crate::codec::DeError::expected("mxid"))?,
+							)?,
+							token: crate::codec::from_value(
+								signed
+									.get("token")
+									.ok_or_else(|| crate::codec::DeError::expected("token"))?,
+							)?,
+						},
+					})
+				}
 			}
 		}
 		pub mod power_levels {
