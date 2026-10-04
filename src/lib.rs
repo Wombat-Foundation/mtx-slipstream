@@ -14,6 +14,7 @@ pub mod appservice;
 pub mod backup;
 pub mod canonical_json;
 pub mod codec;
+pub mod id_validation;
 pub mod device;
 pub mod filter;
 pub mod room_api;
@@ -156,20 +157,29 @@ impl core::error::Error for MatrixIdParseError {}
 
 macro_rules! matrix_id {
 	($borrowed:ident, $owned:ident) => {
+		matrix_id!($borrowed, $owned, $crate::id_validation::any);
+	};
+	($borrowed:ident, $owned:ident, $validate:path) => {
 		#[derive(Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 		pub struct $owned(alloc::string::String);
 
 		pub type $borrowed = $owned;
 
 		impl $owned {
-			/// Parses a Matrix identifier.
+			/// Parses a Matrix identifier, checking its grammar.
 			///
 			/// # Errors
 			///
-			/// This compatibility parser currently accepts every input and never
-			/// returns an error.
+			/// Returns [`MatrixIdParseError`] if `value` does not match the
+			/// identifier's grammar. `From<&str>` skips this check and is meant for
+			/// values already known to be well formed, such as database rows.
 			pub fn parse(value: impl AsRef<str>) -> Result<Self, MatrixIdParseError> {
-				Ok(Self(value.as_ref().to_owned()))
+				let value = value.as_ref();
+				if $validate(value) {
+					Ok(Self(value.to_owned()))
+				} else {
+					Err(MatrixIdParseError)
+				}
 			}
 			pub fn as_str(&self) -> &str {
 				&self.0
@@ -257,7 +267,7 @@ macro_rules! matrix_id {
 			fn from_json(value: &json::Value) -> Result<Self, codec::DeError> {
 				value
 					.as_str()
-					.map(Self::from)
+					.and_then(|text| Self::parse(text).ok())
 					.ok_or_else(|| codec::DeError::expected(stringify!($owned)))
 			}
 		}
@@ -274,19 +284,19 @@ pub(crate) fn server_part(id: &str) -> Option<OwnedServerName> {
 	id.rsplit_once(':').map(|(_, server)| OwnedServerName::from(server))
 }
 
-matrix_id!(EventId, OwnedEventId);
-matrix_id!(RoomId, OwnedRoomId);
-matrix_id!(RoomAliasId, OwnedRoomAliasId);
-matrix_id!(ServerName, OwnedServerName);
-matrix_id!(UserId, OwnedUserId);
-matrix_id!(RoomOrAliasId, OwnedRoomOrAliasId);
+matrix_id!(EventId, OwnedEventId, crate::id_validation::event_id);
+matrix_id!(RoomId, OwnedRoomId, crate::id_validation::room_id);
+matrix_id!(RoomAliasId, OwnedRoomAliasId, crate::id_validation::room_alias_id);
+matrix_id!(ServerName, OwnedServerName, crate::id_validation::server_name);
+matrix_id!(UserId, OwnedUserId, crate::id_validation::user_id);
+matrix_id!(RoomOrAliasId, OwnedRoomOrAliasId, crate::id_validation::room_or_alias_id);
 matrix_id!(ServerSigningKeyId, OwnedServerSigningKeyId);
 matrix_id!(SigningKeyId, OwnedSigningKeyId);
 matrix_id!(DeviceId, OwnedDeviceId);
 matrix_id!(TransactionId, OwnedTransactionId);
 matrix_id!(ClientSecret, OwnedClientSecret);
 matrix_id!(SessionId, OwnedSessionId);
-matrix_id!(MxcUri, OwnedMxcUri);
+matrix_id!(MxcUri, OwnedMxcUri, crate::id_validation::mxc_uri);
 
 /// Borrowed MXC URI components used by media services.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -338,12 +348,13 @@ pub mod identifiers_validation {
 		///
 		/// # Errors
 		///
-		/// Returns an error if `value` is empty.
+		/// Returns an error if `value` is not `host[:port]` with a DNS name,
+		/// IPv4 address or bracketed IPv6 address.
 		pub fn validate(value: &str) -> Result<(), crate::MatrixIdParseError> {
-			if value.is_empty() {
-				Err(crate::MatrixIdParseError)
-			} else {
+			if crate::id_validation::server_name(value) {
 				Ok(())
+			} else {
+				Err(crate::MatrixIdParseError)
 			}
 		}
 	}
