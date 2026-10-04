@@ -368,7 +368,7 @@ pub fn verify_event(
 	let signer = expected_signer(&value, version)
 		.ok_or_else(|| Error::Json("cannot determine the signing server".into()))?;
 	let message = rezzy::try_canonical_redacted_json(&value, version.as_str())
-		.map_err(|e| Error::Json(e.to_string()))?;
+		.map_err(|e| Error::Json(e.clone()))?;
 	let signatures = value
 		.get("signatures")
 		.and_then(|signatures| signatures.get(signer))

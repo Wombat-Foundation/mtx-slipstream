@@ -12,6 +12,7 @@ pub struct RoomHistoryVisibilityEventContent {
 	pub history_visibility: HistoryVisibility,
 }
 impl RoomHistoryVisibilityEventContent {
+	#[must_use]
 	pub fn new(history_visibility: HistoryVisibility) -> Self {
 		Self {
 			history_visibility,

@@ -10,6 +10,7 @@ pub struct RoomGuestAccessEventContent {
 	pub guest_access: GuestAccess,
 }
 impl RoomGuestAccessEventContent {
+	#[must_use]
 	pub fn new(guest_access: GuestAccess) -> Self {
 		Self {
 			guest_access,
