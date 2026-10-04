@@ -352,6 +352,7 @@ dependencies = [
 name = "mtx-slipstream"
 version = "0.1.0"
 dependencies = [
+ "base64",
  "bytes",
  "http",
  "mimalloc",

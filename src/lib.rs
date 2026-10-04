@@ -12,6 +12,7 @@ extern crate alloc;
 pub mod canonical_json;
 pub mod codec;
 mod compat;
+mod content;
 mod event_type;
 pub mod federation;
 pub mod sync;
@@ -325,11 +326,11 @@ pub mod api {
 		pub mod discovery {
 			pub mod discover_homeserver {
 				#[derive(Clone, Debug, Default)]
-				pub struct RtcFocusInfo;
+				pub struct RtcFocusInfo(pub crate::json::Value);
 			}
 			pub mod discover_support {
 				#[derive(Clone, Debug, Default)]
-				pub struct ContactRole;
+				pub struct ContactRole(pub crate::json::Value);
 			}
 			pub mod get_capabilities {
 				#[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -393,9 +394,12 @@ pub mod api {
 		}
 		pub mod uiaa {
 			#[derive(Clone, Debug, Default)]
-			pub struct UiaaInfo;
+			pub struct UiaaInfo(pub crate::json::Value);
 			#[derive(Clone, Debug)]
-			pub struct UiaaResponse;
+			pub enum UiaaResponse {
+				AuthResponse(UiaaInfo),
+				MatrixError(crate::api::client::error::Error),
+			}
 		}
 	}
 	pub trait OutgoingResponse {}
@@ -437,6 +441,23 @@ pub mod events {
 				pub creator: Option<crate::OwnedUserId>,
 				pub room_version: Option<crate::RoomVersionId>,
 				pub additional_creators: Option<alloc::vec::Vec<crate::OwnedUserId>>,
+			}
+			impl crate::codec::Deserialize for RoomCreateEventContent {
+				fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+					let object = value
+						.as_object()
+						.ok_or_else(|| crate::codec::DeError::expected("object"))?;
+					let get = |name: &str| object.get(name).filter(|value| !value.is_null());
+					Ok(Self {
+						creator: get("creator").map(crate::codec::from_value).transpose()?,
+						room_version: get("room_version")
+							.map(crate::codec::from_value)
+							.transpose()?,
+						additional_creators: get("additional_creators")
+							.map(crate::codec::from_value)
+							.transpose()?,
+					})
+				}
 			}
 		}
 		pub mod member {
@@ -626,8 +647,8 @@ pub mod serde {
 		}
 	}
 
-	#[derive(Clone, Debug, Default)]
-	pub struct Base64;
+	#[derive(Clone, Debug, Default, Eq, PartialEq)]
+	pub struct Base64(pub alloc::vec::Vec<u8>);
 	use crate::{Int, codec::DeError, json::Value};
 
 	/// Reads a power level that v1 rooms may spell as a string or integer.
