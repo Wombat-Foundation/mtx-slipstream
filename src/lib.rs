@@ -808,6 +808,11 @@ pub mod events {
 				pub membership: MembershipState,
 				pub join_authorized_via_users_server: Option<crate::OwnedUserId>,
 			}
+			impl RoomMemberEventContent {
+				pub fn new(membership: MembershipState) -> Self {
+					Self { membership, join_authorized_via_users_server: None }
+				}
+			}
 			#[derive(Clone, Debug, Default, PartialEq, Eq)]
 			pub enum MembershipState {
 				Join,
@@ -909,6 +914,9 @@ pub mod events {
 			#[derive(Clone, Debug, Default)]
 			pub struct RoomJoinRulesEventContent {
 				pub join_rule: JoinRule,
+			}
+			impl RoomJoinRulesEventContent {
+				pub fn new(join_rule: JoinRule) -> Self { Self { join_rule } }
 			}
 		}
 		pub mod third_party_invite {

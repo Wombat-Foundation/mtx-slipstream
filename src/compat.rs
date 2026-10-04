@@ -125,6 +125,10 @@ impl OwnedServerName {
 	}
 }
 impl OwnedUserId {
+	#[must_use]
+	pub fn localpart(&self) -> &str {
+		self.as_str().strip_prefix('@').unwrap_or(self.as_str()).split_once(':').map_or(self.as_str(), |(local, _)| local)
+	}
 	/// Builds a user ID from a localpart and an explicit server name.
 	///
 	/// # Errors

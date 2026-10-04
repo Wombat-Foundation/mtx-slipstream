@@ -102,7 +102,6 @@ impl Deserialize for RoomCanonicalAliasEventContent {
 impl Serialize for RoomPreviewUrlsEventContent {
 	fn to_json(&self) -> Value {
 		let mut object = Object::new();
-		insert(&mut object, "url_previews", &self.url_preview);
 		insert(&mut object, "disabled", &self.disabled);
 		Value::Object(object)
 	}
@@ -111,7 +110,6 @@ impl Deserialize for RoomPreviewUrlsEventContent {
 	fn from_json(value: &Value) -> Result<Self, DeError> {
 		let object = object(value)?;
 		Ok(Self {
-			url_preview: field(object, "url_previews")?.unwrap_or(false),
 			disabled: field(object, "disabled")?.unwrap_or(false),
 		})
 	}
