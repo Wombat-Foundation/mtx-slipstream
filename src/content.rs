@@ -9,7 +9,7 @@ use crate::{
 	MilliSecondsSinceUnixEpoch,
 	api::client::{
 		discovery::{discover_homeserver::RtcFocusInfo, discover_support::ContactRole},
-		error::{Error, ErrorBody, ErrorKind},
+		error::{Error, ErrorBody, ErrorKind, RetryAfter},
 		uiaa::UiaaResponse,
 	},
 	api::error::IntoHttpError,
@@ -51,6 +51,12 @@ impl Serialize for RoomCreateEventContent {
 		object.insert("room_version".into(), self.room_version.to_json());
 		if let Some(creators) = &self.additional_creators {
 			object.insert("additional_creators".into(), creators.to_json());
+		}
+		if !self.federate {
+			object.insert("m.federate".into(), Value::Bool(false));
+		}
+		if let Some(predecessor) = &self.predecessor {
+			object.insert("predecessor".into(), predecessor.to_json());
 		}
 		Value::Object(object)
 	}
@@ -150,7 +156,7 @@ impl ErrorKind {
 	pub fn from_errcode(errcode: &str) -> Self {
 		match errcode {
 			"M_LIMIT_EXCEEDED" => Self::LimitExceeded {
-				retry_after_ms: None,
+				retry_after: None,
 			},
 			"M_FORBIDDEN" => Self::Forbidden {
 				_value: (),
@@ -185,10 +191,10 @@ impl Error {
 			object.insert("errcode".into(), Value::String(kind.errcode().into()));
 			object.insert("error".into(), Value::String(message.clone()));
 			if let ErrorKind::LimitExceeded {
-				retry_after_ms: Some(ms),
+				retry_after: Some(RetryAfter::Delay(delay)),
 			} = kind
 			{
-				object.insert("retry_after_ms".into(), ms.to_json());
+				object.insert("retry_after_ms".into(), delay.to_json());
 			}
 		}
 		Value::Object(object)

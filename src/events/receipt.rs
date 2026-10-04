@@ -23,6 +23,18 @@ pub enum ReceiptThread {
 	Thread(OwnedEventId),
 }
 
+impl ReceiptThread {
+	/// The `thread_id` value: `None` for unthreaded receipts.
+	#[must_use]
+	pub fn as_str(&self) -> Option<&str> {
+		match self {
+			Self::Unthreaded => None,
+			Self::Main => Some("main"),
+			Self::Thread(root) => Some(root.as_str()),
+		}
+	}
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct Receipt {
 	pub ts: Option<UInt>,
@@ -32,6 +44,32 @@ pub struct Receipt {
 pub struct ReceiptEventContent(
 	pub BTreeMap<OwnedEventId, BTreeMap<ReceiptType, BTreeMap<OwnedUserId, Receipt>>>,
 );
+impl core::ops::Deref for ReceiptEventContent {
+	type Target = BTreeMap<OwnedEventId, BTreeMap<ReceiptType, BTreeMap<OwnedUserId, Receipt>>>;
+
+	fn deref(&self) -> &Self::Target {
+		&self.0
+	}
+}
+
+impl core::ops::DerefMut for ReceiptEventContent {
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		&mut self.0
+	}
+}
+
+impl IntoIterator for ReceiptEventContent {
+	type IntoIter = alloc::collections::btree_map::IntoIter<
+		OwnedEventId,
+		BTreeMap<ReceiptType, BTreeMap<OwnedUserId, Receipt>>,
+	>;
+	type Item = (OwnedEventId, BTreeMap<ReceiptType, BTreeMap<OwnedUserId, Receipt>>);
+
+	fn into_iter(self) -> Self::IntoIter {
+		self.0.into_iter()
+	}
+}
+
 impl FromIterator<(OwnedEventId, BTreeMap<ReceiptType, BTreeMap<OwnedUserId, Receipt>>)>
 	for ReceiptEventContent
 {
@@ -59,13 +97,13 @@ impl Serialize for Receipt {
 			object.insert("ts".into(), ts.to_json());
 		}
 		match &self.thread {
-			ReceiptThread::Unthreaded => {},
+			ReceiptThread::Unthreaded => {}
 			ReceiptThread::Main => {
 				object.insert("thread_id".into(), Value::String("main".into()));
-			},
+			}
 			ReceiptThread::Thread(root) => {
 				object.insert("thread_id".into(), root.to_json());
-			},
+			}
 		}
 		Value::Object(object)
 	}

@@ -71,3 +71,40 @@ mod tests {
 		assert_eq!(from_str::<SpaceChildEventContent>(&to_string(&content)).unwrap(), content);
 	}
 }
+
+/// An `m.space.child` event as carried in a federation hierarchy response.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HierarchySpaceChildEvent {
+	pub content: SpaceChildEventContent,
+	pub sender: crate::OwnedUserId,
+	/// The child room.
+	pub state_key: crate::OwnedRoomId,
+	pub origin_server_ts: crate::MilliSecondsSinceUnixEpoch,
+}
+
+impl Serialize for HierarchySpaceChildEvent {
+	fn to_json(&self) -> Value {
+		Value::Object(crate::endpoint::object_from(alloc::vec![
+			("type", Value::String("m.space.child".into())),
+			("content", self.content.to_json()),
+			("sender", self.sender.to_json()),
+			("state_key", self.state_key.to_json()),
+			("origin_server_ts", self.origin_server_ts.to_json()),
+		]))
+	}
+}
+
+impl Deserialize for HierarchySpaceChildEvent {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		let object = value.as_object().ok_or_else(|| DeError::expected("event object"))?;
+		let get = |name: &str| {
+			object.get(name).ok_or_else(|| DeError(alloc::format!("missing `{name}`")))
+		};
+		Ok(Self {
+			content: SpaceChildEventContent::from_json(get("content")?)?,
+			sender: crate::codec::from_value(get("sender")?)?,
+			state_key: crate::codec::from_value(get("state_key")?)?,
+			origin_server_ts: crate::codec::from_value(get("origin_server_ts")?)?,
+		})
+	}
+}

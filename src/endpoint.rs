@@ -40,6 +40,8 @@ pub enum MatrixVersion {
 	V1_11,
 	V1_12,
 	V1_13,
+	V1_14,
+	V1_15,
 }
 
 /// How an access token is attached to an outgoing request.

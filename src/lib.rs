@@ -87,11 +87,15 @@ macro_rules! matrix_id {
 			///
 			/// This compatibility parser currently accepts every input and never
 			/// returns an error.
-			pub fn parse(value: &str) -> Result<Self, MatrixIdParseError> {
-				Ok(Self(value.to_owned()))
+			pub fn parse(value: impl AsRef<str>) -> Result<Self, MatrixIdParseError> {
+				Ok(Self(value.as_ref().to_owned()))
 			}
 			pub fn as_str(&self) -> &str {
 				&self.0
+			}
+			#[must_use]
+			pub fn as_bytes(&self) -> &[u8] {
+				self.0.as_bytes()
 			}
 		}
 
@@ -108,6 +112,11 @@ macro_rules! matrix_id {
 		impl From<&$owned> for $owned {
 			fn from(value: &$owned) -> Self {
 				value.clone()
+			}
+		}
+		impl AsRef<[u8]> for $owned {
+			fn as_ref(&self) -> &[u8] {
+				self.0.as_bytes()
 			}
 		}
 		impl AsRef<str> for $owned {
@@ -294,7 +303,7 @@ macro_rules! int {
 #[macro_export]
 macro_rules! uint {
 	($value:expr) => {
-		$crate::UInt::from($value)
+		(($value) as $crate::UInt)
 	};
 }
 
@@ -348,6 +357,20 @@ impl RoomVersionId {
 			Self::V12 => "12",
 			Self::Custom(value) => value,
 		}
+	}
+}
+
+impl AsRef<[u8]> for RoomVersionId {
+	fn as_ref(&self) -> &[u8] {
+		self.as_str().as_bytes()
+	}
+}
+
+impl core::str::FromStr for RoomVersionId {
+	type Err = IdParseError;
+
+	fn from_str(value: &str) -> Result<Self, Self::Err> {
+		Self::try_from(value).map_err(|()| IdParseError)
 	}
 }
 
@@ -549,10 +572,15 @@ pub mod api {
 		}
 		pub mod error {
 			pub use crate::uiaa::StandardErrorBody;
+			/// When a rate-limited client may retry.
+			#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+			pub enum RetryAfter {
+				Delay(core::time::Duration),
+			}
 			#[derive(Clone, Debug)]
 			pub enum ErrorKind {
 				LimitExceeded {
-					retry_after_ms: Option<crate::UInt>,
+					retry_after: Option<RetryAfter>,
 				},
 				SenderIgnored {
 					room_id: Option<crate::OwnedRoomId>,
@@ -640,32 +668,23 @@ pub mod events {
 	}
 	#[derive(Clone, Debug, Default)]
 	pub struct AnyRoomAccountDataEvent;
-	#[derive(Clone, Debug, Default)]
-	pub struct AnySyncEphemeralRoomEvent;
+	mod ephemeral;
+	pub use ephemeral::{AnySyncEphemeralRoomEvent, SyncReceiptEvent, SyncTypingEvent};
 	#[derive(Clone, Debug, Default)]
 	pub struct AnyToDeviceEvent;
-	#[derive(Clone, Debug, Default)]
-	pub struct Mentions {
-		pub room: bool,
-	}
-	impl Mentions {
-		#[must_use]
-		pub fn with_room_mention() -> Self {
-			Self {
-				room: true,
-			}
-		}
-	}
+	pub use mentions::Mentions;
 	pub mod direct;
 	pub mod ignored_user_list;
 	pub mod invite_permission_config;
+	mod mentions;
 	pub mod presence;
 	pub mod receipt;
 	pub mod tag;
 	pub mod typing;
 	mod wrappers;
 	pub use wrappers::{
-		EphemeralRoomEvent, GlobalAccountDataEvent, RoomAccountDataEvent, SyncEphemeralRoomEvent,
+		EphemeralRoomEvent, GlobalAccountDataEvent, RoomAccountDataEvent, StaticEventContent,
+		SyncEphemeralRoomEvent,
 	};
 	pub trait EventContent {
 		type EventType;
@@ -789,7 +808,48 @@ pub mod events {
 				pub room_version: crate::RoomVersionId,
 				pub additional_creators: Option<alloc::vec::Vec<crate::OwnedUserId>>,
 				pub federate: bool,
-				pub predecessor: Option<crate::json::Value>,
+				pub predecessor: Option<PreviousRoom>,
+			}
+			/// The room this room replaces.
+			#[derive(Clone, Debug, Eq, PartialEq)]
+			pub struct PreviousRoom {
+				pub room_id: crate::OwnedRoomId,
+				pub event_id: Option<crate::OwnedEventId>,
+			}
+			impl PreviousRoom {
+				#[must_use]
+				pub fn new(room_id: crate::OwnedRoomId) -> Self {
+					Self {
+						room_id,
+						event_id: None,
+					}
+				}
+			}
+			impl crate::codec::Serialize for PreviousRoom {
+				fn to_json(&self) -> crate::json::Value {
+					crate::json::Value::Object(crate::endpoint::object_from(alloc::vec![
+						("room_id", self.room_id.to_json()),
+						("event_id", self.event_id.to_json()),
+					]))
+				}
+			}
+			impl crate::codec::Deserialize for PreviousRoom {
+				fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+					let object = value
+						.as_object()
+						.ok_or_else(|| crate::codec::DeError::expected("predecessor object"))?;
+					let room_id = object
+						.get("room_id")
+						.ok_or_else(|| crate::codec::DeError::expected("predecessor room_id"))?;
+					Ok(Self {
+						room_id: crate::codec::from_value(room_id)?,
+						event_id: object
+							.get("event_id")
+							.filter(|v| !v.is_null())
+							.map(crate::codec::from_value)
+							.transpose()?,
+					})
+				}
 			}
 			impl RoomCreateEventContent {
 				#[must_use]
@@ -842,7 +902,9 @@ pub mod events {
 						federate: get("m.federate")
 							.and_then(crate::json::Value::as_bool)
 							.unwrap_or(true),
-						predecessor: get("predecessor").cloned(),
+						predecessor: get("predecessor")
+							.map(crate::codec::from_value)
+							.transpose()?,
 					})
 				}
 			}
@@ -1010,7 +1072,7 @@ pub mod events {
 				RedactedSpaceChildEventContent, RoomSpaceChildEventContent,
 				SpaceChildEventContent,
 			};
-			pub type HierarchySpaceChildEvent = RoomSpaceChildEventContent;
+			pub use crate::space_child::HierarchySpaceChildEvent;
 		}
 	}
 	#[derive(Clone, Debug, Default)]
@@ -1039,6 +1101,16 @@ pub mod room {
 		#[default]
 		Room,
 		Space,
+	}
+	impl RoomType {
+		/// The `m.room.create` `type` value; empty for ordinary rooms.
+		#[must_use]
+		pub fn as_str(&self) -> &'static str {
+			match self {
+				Self::Room => "",
+				Self::Space => "m.space",
+			}
+		}
 	}
 	pub mod federation {
 		pub use crate::federation_api::*;

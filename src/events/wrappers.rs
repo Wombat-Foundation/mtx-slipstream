@@ -7,6 +7,28 @@ use crate::{
 	json::{Object, Value},
 };
 
+/// Event content with a fixed `type`, written alongside it in the envelope.
+pub trait StaticEventContent {
+	const TYPE: &'static str;
+}
+
+macro_rules! static_content {
+	($($t:ty => $name:literal),* $(,)?) => {$(
+		impl StaticEventContent for $t {
+			const TYPE: &'static str = $name;
+		}
+	)*};
+}
+
+static_content! {
+	crate::events::typing::TypingEventContent => "m.typing",
+	crate::events::receipt::ReceiptEventContent => "m.receipt",
+	crate::events::push_rules::PushRulesEventContent => "m.push_rules",
+	crate::events::direct::DirectEventContent => "m.direct",
+	crate::events::ignored_user_list::IgnoredUserListEventContent => "m.ignored_user_list",
+	crate::events::tag::TagEventContent => "m.tag",
+}
+
 macro_rules! content_event {
 	($(#[$doc:meta])* $name:ident) => {
 		$(#[$doc])*
@@ -15,9 +37,10 @@ macro_rules! content_event {
 			pub content: T,
 		}
 
-		impl<T: Serialize> Serialize for $name<T> {
+		impl<T: Serialize + StaticEventContent> Serialize for $name<T> {
 			fn to_json(&self) -> Value {
 				let mut object = Object::new();
+				object.insert("type".into(), Value::String(T::TYPE.into()));
 				object.insert("content".into(), self.content.to_json());
 				Value::Object(object)
 			}
@@ -54,9 +77,10 @@ pub struct EphemeralRoomEvent<T> {
 	pub room_id: OwnedRoomId,
 }
 
-impl<T: Serialize> Serialize for EphemeralRoomEvent<T> {
+impl<T: Serialize + StaticEventContent> Serialize for EphemeralRoomEvent<T> {
 	fn to_json(&self) -> Value {
 		let mut object = Object::new();
+		object.insert("type".into(), Value::String(T::TYPE.into()));
 		object.insert("content".into(), self.content.to_json());
 		object.insert("room_id".into(), self.room_id.to_json());
 		Value::Object(object)

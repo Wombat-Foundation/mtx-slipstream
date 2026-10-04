@@ -224,11 +224,11 @@ pub struct PatternedPushRule {
 
 /// Rule keyed by room or sender ID.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct SimplePushRule {
+pub struct SimplePushRule<T> {
 	pub actions: Vec<Action>,
 	pub default: bool,
 	pub enabled: bool,
-	pub rule_id: String,
+	pub rule_id: T,
 }
 
 fn rule_base(
@@ -311,12 +311,18 @@ impl Deserialize for PatternedPushRule {
 	}
 }
 
-impl Serialize for SimplePushRule {
+impl<T: Serialize> Serialize for SimplePushRule<T> {
 	fn to_json(&self) -> Value {
-		rule_base(&self.actions, self.default, self.enabled, &self.rule_id, Vec::new())
+		rule_base(
+			&self.actions,
+			self.default,
+			self.enabled,
+			self.rule_id.to_json().as_str().unwrap_or_default(),
+			Vec::new(),
+		)
 	}
 }
-impl Deserialize for SimplePushRule {
+impl<T: Deserialize> Deserialize for SimplePushRule<T> {
 	fn from_json(value: &Value) -> Result<Self, DeError> {
 		let object = value.as_object().ok_or_else(|| DeError::expected("rule object"))?;
 		let (default, enabled) = rule_flags(object);
@@ -324,7 +330,9 @@ impl Deserialize for SimplePushRule {
 			actions: rule_actions(object)?,
 			default,
 			enabled,
-			rule_id: text_field(object, "rule_id")?,
+			rule_id: T::from_json(
+				object.get("rule_id").ok_or_else(|| DeError::expected("rule_id"))?,
+			)?,
 		})
 	}
 }
@@ -334,8 +342,8 @@ impl Deserialize for SimplePushRule {
 pub enum AnyPushRule {
 	Override(ConditionalPushRule),
 	Content(PatternedPushRule),
-	Room(SimplePushRule),
-	Sender(SimplePushRule),
+	Room(SimplePushRule<OwnedRoomId>),
+	Sender(SimplePushRule<OwnedUserId>),
 	Underride(ConditionalPushRule),
 }
 
@@ -344,8 +352,8 @@ pub enum AnyPushRule {
 pub enum AnyPushRuleRef<'a> {
 	Override(&'a ConditionalPushRule),
 	Content(&'a PatternedPushRule),
-	Room(&'a SimplePushRule),
-	Sender(&'a SimplePushRule),
+	Room(&'a SimplePushRule<OwnedRoomId>),
+	Sender(&'a SimplePushRule<OwnedUserId>),
 	Underride(&'a ConditionalPushRule),
 }
 
@@ -355,7 +363,8 @@ impl AnyPushRuleRef<'_> {
 		match self {
 			Self::Override(r) | Self::Underride(r) => &r.actions,
 			Self::Content(r) => &r.actions,
-			Self::Room(r) | Self::Sender(r) => &r.actions,
+			Self::Room(r) => &r.actions,
+			Self::Sender(r) => &r.actions,
 		}
 	}
 
@@ -364,7 +373,8 @@ impl AnyPushRuleRef<'_> {
 		match self {
 			Self::Override(r) | Self::Underride(r) => r.enabled,
 			Self::Content(r) => r.enabled,
-			Self::Room(r) | Self::Sender(r) => r.enabled,
+			Self::Room(r) => r.enabled,
+			Self::Sender(r) => r.enabled,
 		}
 	}
 
@@ -373,7 +383,8 @@ impl AnyPushRuleRef<'_> {
 		match self {
 			Self::Override(r) | Self::Underride(r) => &r.rule_id,
 			Self::Content(r) => &r.rule_id,
-			Self::Room(r) | Self::Sender(r) => &r.rule_id,
+			Self::Room(r) => r.rule_id.as_str(),
+			Self::Sender(r) => r.rule_id.as_str(),
 		}
 	}
 }
@@ -395,7 +406,8 @@ impl Serialize for AnyPushRule {
 		match self {
 			Self::Override(r) | Self::Underride(r) => r.to_json(),
 			Self::Content(r) => r.to_json(),
-			Self::Room(r) | Self::Sender(r) => r.to_json(),
+			Self::Room(r) => r.to_json(),
+			Self::Sender(r) => r.to_json(),
 		}
 	}
 }
@@ -408,8 +420,8 @@ pub type PushRule = AnyPushRule;
 pub enum NewPushRule {
 	Override(NewConditionalPushRule),
 	Content(NewPatternedPushRule),
-	Room(NewSimplePushRule),
-	Sender(NewSimplePushRule),
+	Room(NewSimplePushRule<OwnedRoomId>),
+	Sender(NewSimplePushRule<OwnedUserId>),
 	Underride(NewConditionalPushRule),
 }
 
@@ -428,8 +440,8 @@ pub struct NewPatternedPushRule {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct NewSimplePushRule {
-	pub rule_id: String,
+pub struct NewSimplePushRule<T> {
+	pub rule_id: T,
 	pub actions: Vec<Action>,
 }
 
@@ -450,7 +462,8 @@ impl NewPushRule {
 		match self {
 			Self::Override(r) | Self::Underride(r) => &r.rule_id,
 			Self::Content(r) => &r.rule_id,
-			Self::Room(r) | Self::Sender(r) => &r.rule_id,
+			Self::Room(r) => r.rule_id.as_str(),
+			Self::Sender(r) => r.rule_id.as_str(),
 		}
 	}
 
@@ -462,7 +475,8 @@ impl NewPushRule {
 				(&r.actions, vec![("conditions", r.conditions.to_json())])
 			}
 			Self::Content(r) => (&r.actions, vec![("pattern", Value::String(r.pattern.clone()))]),
-			Self::Room(r) | Self::Sender(r) => (&r.actions, Vec::new()),
+			Self::Room(r) => (&r.actions, Vec::new()),
+			Self::Sender(r) => (&r.actions, Vec::new()),
 		};
 		let mut fields = vec![("actions", actions.to_json())];
 		fields.extend(extra);
@@ -499,11 +513,11 @@ impl NewPushRule {
 				actions,
 			}),
 			RuleKind::Room => Self::Room(NewSimplePushRule {
-				rule_id,
+				rule_id: OwnedRoomId::from(rule_id),
 				actions,
 			}),
 			RuleKind::Sender => Self::Sender(NewSimplePushRule {
-				rule_id,
+				rule_id: OwnedUserId::from(rule_id),
 				actions,
 			}),
 		})
@@ -549,8 +563,8 @@ error_display! {
 pub struct Ruleset {
 	pub override_: RuleList<ConditionalPushRule>,
 	pub content: RuleList<PatternedPushRule>,
-	pub room: RuleList<SimplePushRule>,
-	pub sender: RuleList<SimplePushRule>,
+	pub room: RuleList<SimplePushRule<OwnedRoomId>>,
+	pub sender: RuleList<SimplePushRule<OwnedUserId>>,
 	pub underride: RuleList<ConditionalPushRule>,
 }
 
@@ -568,9 +582,9 @@ impl HasRuleId for PatternedPushRule {
 		&self.rule_id
 	}
 }
-impl HasRuleId for SimplePushRule {
+impl<T: AsRef<str>> HasRuleId for SimplePushRule<T> {
 	fn rule_id(&self) -> &str {
-		&self.rule_id
+		self.rule_id.as_ref()
 	}
 }
 
@@ -942,8 +956,10 @@ impl Ruleset {
 			RuleKind::Override => self.override_.iter().map(|r| r.rule_id.clone()).collect(),
 			RuleKind::Underride => self.underride.iter().map(|r| r.rule_id.clone()).collect(),
 			RuleKind::Content => self.content.iter().map(|r| r.rule_id.clone()).collect(),
-			RuleKind::Room => self.room.iter().map(|r| r.rule_id.clone()).collect(),
-			RuleKind::Sender => self.sender.iter().map(|r| r.rule_id.clone()).collect(),
+			RuleKind::Room => self.room.iter().map(|r| r.rule_id.as_str().to_owned()).collect(),
+			RuleKind::Sender => {
+				self.sender.iter().map(|r| r.rule_id.as_str().to_owned()).collect()
+			}
 		}
 	}
 
@@ -952,8 +968,8 @@ impl Ruleset {
 			RuleKind::Override => self.override_.retain(|r| r.rule_id != id),
 			RuleKind::Underride => self.underride.retain(|r| r.rule_id != id),
 			RuleKind::Content => self.content.retain(|r| r.rule_id != id),
-			RuleKind::Room => self.room.retain(|r| r.rule_id != id),
-			RuleKind::Sender => self.sender.retain(|r| r.rule_id != id),
+			RuleKind::Room => self.room.retain(|r| r.rule_id.as_str() != id),
+			RuleKind::Sender => self.sender.retain(|r| r.rule_id.as_str() != id),
 		}
 	}
 
@@ -1109,7 +1125,8 @@ fn is_default(rule: AnyPushRuleRef<'_>) -> bool {
 	match rule {
 		AnyPushRuleRef::Override(r) | AnyPushRuleRef::Underride(r) => r.default,
 		AnyPushRuleRef::Content(r) => r.default,
-		AnyPushRuleRef::Room(r) | AnyPushRuleRef::Sender(r) => r.default,
+		AnyPushRuleRef::Room(r) => r.default,
+		AnyPushRuleRef::Sender(r) => r.default,
 	}
 }
 
@@ -1123,7 +1140,7 @@ fn new_conditional(rule: NewConditionalPushRule) -> ConditionalPushRule {
 	}
 }
 
-fn new_simple(rule: NewSimplePushRule) -> SimplePushRule {
+fn new_simple<T>(rule: NewSimplePushRule<T>) -> SimplePushRule<T> {
 	SimplePushRule {
 		actions: rule.actions,
 		default: false,

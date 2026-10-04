@@ -15,10 +15,7 @@ pub mod edu {
 		OwnedDeviceId, OwnedEventId, OwnedRoomId, OwnedTransactionId, OwnedUserId, UInt,
 		codec::{DeError, Deserialize, Serialize},
 		endpoint::Input,
-		events::{
-			presence::PresenceState,
-			receipt::Receipt,
-		},
+		events::{presence::PresenceState, receipt::Receipt},
 		json::{Object, Value},
 		serde::Raw,
 	};

@@ -742,21 +742,19 @@ pub mod v5 {
 	pub mod response {
 		use alloc::{collections::BTreeMap, string::String, vec::Vec};
 
+		pub use crate::events::{SyncReceiptEvent, SyncTypingEvent};
 		use super::{DeviceLists, UnreadNotificationsCount};
 		use crate::{
 			OwnedMxcUri, OwnedRoomId, OwnedUserId, UInt,
 			events::{
 				AnyGlobalAccountDataEvent, AnyRoomAccountDataEvent, AnyStrippedStateEvent,
 				AnySyncStateEvent, AnySyncTimelineEvent, AnyToDeviceEvent,
-				SyncEphemeralRoomEvent, receipt::ReceiptEventContent, typing::TypingEventContent,
 			},
 			js_option::JsOption,
 			key_id::OneTimeKeyAlgorithm,
 			serde::Raw,
 		};
 
-		pub type SyncTypingEvent = SyncEphemeralRoomEvent<TypingEventContent>;
-		pub type SyncReceiptEvent = SyncEphemeralRoomEvent<ReceiptEventContent>;
 
 		sync_struct! {
 			pub struct List {
