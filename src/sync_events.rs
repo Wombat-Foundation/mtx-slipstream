@@ -89,6 +89,7 @@ macro_rules! sync_get {
 /// Each field names its key and whether it is omitted when empty (`skip`) or
 /// always written (`keep`); `flatten` merges a nested struct into the parent.
 /// Absent fields decode to their `Default`.
+#[macro_export]
 macro_rules! sync_struct {
 	(
 		$(#[$meta:meta])*
@@ -130,6 +131,9 @@ macro_rules! sync_struct {
 		}
 	};
 }
+
+/// Declares a struct together with its Slipstream JSON codec.
+pub use crate::sync_struct as codec_struct;
 
 /// Adds `new` and `is_empty` to a struct made by `sync_struct!`.
 macro_rules! sync_basics {

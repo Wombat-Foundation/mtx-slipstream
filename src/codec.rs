@@ -62,6 +62,12 @@ pub fn to_string<T: Serialize + ?Sized>(value: &T) -> String {
 	crate::json::write_string_value(&value.to_json()).unwrap_or_default()
 }
 
+/// Serializes `value` to UTF-8 JSON bytes.
+#[must_use]
+pub fn to_vec<T: Serialize + ?Sized>(value: &T) -> Vec<u8> {
+	to_string(value).into_bytes()
+}
+
 /// Parses `input` and deserializes a `T` from it.
 ///
 /// # Errors
@@ -70,6 +76,16 @@ pub fn to_string<T: Serialize + ?Sized>(value: &T) -> String {
 pub fn from_str<T: Deserialize>(input: &str) -> Result<T, DeError> {
 	let value = Value::parse(input).map_err(|e| DeError(e.to_string()))?;
 	T::from_json(&value)
+}
+
+/// Parses UTF-8 JSON bytes and deserializes a `T` from them.
+///
+/// # Errors
+///
+/// Returns [`DeError`] on invalid UTF-8, JSON, or type mismatch.
+pub fn from_slice<T: Deserialize>(input: &[u8]) -> Result<T, DeError> {
+	let input = core::str::from_utf8(input).map_err(|e| DeError(e.to_string()))?;
+	from_str(input)
 }
 
 impl<T: Serialize + ?Sized> Serialize for &T {
