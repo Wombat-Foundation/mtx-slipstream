@@ -1292,6 +1292,9 @@ pub mod serde {
 	#[derive(Clone, Debug, Default)]
 	pub struct Raw<T>(pub alloc::string::String, pub PhantomData<T>);
 
+	/// Raw JSON text backed by Slipstream's JSON codec.
+	pub type RawJsonValue = Raw<crate::json::Value>;
+
 	impl<T> crate::codec::Serialize for Raw<T> {
 		fn to_json(&self) -> crate::json::Value {
 			crate::json::Value::parse(&self.0).unwrap_or_default()
@@ -1300,6 +1303,23 @@ pub mod serde {
 	impl<T> crate::codec::Deserialize for Raw<T> {
 		fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
 			Ok(Self(crate::codec::to_string(value), PhantomData))
+		}
+	}
+
+	impl<T> PartialEq for Raw<T> {
+		fn eq(&self, other: &Self) -> bool {
+			self.0 == other.0
+		}
+	}
+	impl<T> Eq for Raw<T> {}
+	impl<T> core::fmt::Display for Raw<T> {
+		fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+			f.write_str(&self.0)
+		}
+	}
+	impl<T> AsRef<str> for Raw<T> {
+		fn as_ref(&self) -> &str {
+			&self.0
 		}
 	}
 
@@ -1332,6 +1352,18 @@ pub mod serde {
 		#[must_use]
 		pub fn get(&self) -> &str {
 			&self.0
+		}
+
+		/// Serializes any codec value into raw JSON, regardless of `T`.
+		#[must_use]
+		pub fn from_value<U: crate::codec::Serialize + ?Sized>(value: &U) -> Self {
+			Self(crate::codec::to_string(value), PhantomData)
+		}
+
+		/// Raw JSON for an empty object, `{}`.
+		#[must_use]
+		pub fn empty_object() -> Self {
+			Self(alloc::string::String::from("{}"), PhantomData)
 		}
 		/// Deserializes the raw JSON into `U`.
 		///
