@@ -152,26 +152,48 @@ impl fmt::Display for Mxc<'_> {
 
 impl OwnedMxcUri {
 	#[must_use]
-	pub fn is_valid(&self) -> bool { self.as_str().starts_with("mxc://") }
+	pub fn is_valid(&self) -> bool {
+		self.as_str().starts_with("mxc://")
+	}
 	pub fn server_name(&self) -> Result<OwnedServerName, MatrixIdParseError> {
-		self.as_str().strip_prefix("mxc://")
-			.and_then(|value| value.split_once('/').map(|(server, _)| OwnedServerName::from(server)))
+		self.as_str()
+			.strip_prefix("mxc://")
+			.and_then(|value| {
+				value.split_once('/').map(|(server, _)| OwnedServerName::from(server))
+			})
 			.ok_or(MatrixIdParseError)
 	}
 	pub fn media_id(&self) -> Result<&str, MatrixIdParseError> {
-		self.as_str().strip_prefix("mxc://").and_then(|value| value.split_once('/').map(|(_, media)| media)).ok_or(MatrixIdParseError)
+		self.as_str()
+			.strip_prefix("mxc://")
+			.and_then(|value| value.split_once('/').map(|(_, media)| media))
+			.ok_or(MatrixIdParseError)
 	}
 }
 
 pub mod identifiers_validation {
 	pub mod server_name {
 		pub fn validate(value: &str) -> Result<(), ()> {
-			if value.is_empty() { Err(()) } else { Ok(()) }
+			if value.is_empty() {
+				Err(())
+			} else {
+				Ok(())
+			}
 		}
 	}
 }
 
-pub mod presence { pub use crate::events::presence::PresenceState; }
+pub mod media {
+	#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+	pub enum Method {
+		Crop,
+		Scale,
+	}
+}
+
+pub mod presence {
+	pub use crate::events::presence::PresenceState;
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct MilliSecondsSinceUnixEpoch(pub UInt);
