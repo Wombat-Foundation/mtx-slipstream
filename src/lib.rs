@@ -137,6 +137,8 @@ matrix_id!(TransactionId, OwnedTransactionId);
 matrix_id!(ClientSecret, OwnedClientSecret);
 matrix_id!(SessionId, OwnedSessionId);
 matrix_id!(MxcUri, OwnedMxcUri);
+matrix_id!(KeyId, OwnedKeyId);
+matrix_id!(OneTimeKeyId, OwnedOneTimeKeyId);
 
 /// Borrowed MXC URI components used by media services.
 pub struct Mxc<'a> {
@@ -190,6 +192,8 @@ pub mod media {
 		Scale,
 	}
 }
+pub type JsOption<T> = Option<T>;
+pub use events::room::encryption::EventEncryptionAlgorithm;
 
 pub mod presence {
 	pub use crate::events::presence::PresenceState;
@@ -492,6 +496,9 @@ pub mod api {
 
 pub mod events {
 	pub use crate::event_type::{MessageLikeEventType, StateEventType, TimelineEventType};
+	#[derive(Clone, Debug, Default)]
+	pub struct Mentions { pub room: bool }
+	impl Mentions { pub fn with_room_mention() -> Self { Self { room: true } } }
 	pub mod presence;
 	pub mod receipt;
 	pub trait EventContent {
@@ -516,6 +523,19 @@ pub mod events {
 		});
 	}
 	pub mod room {
+		pub mod avatar;
+		pub mod canonical_alias;
+		pub mod encrypted;
+		pub mod encryption;
+		pub mod guest_access;
+		pub mod history_visibility;
+		pub mod message;
+		pub mod name;
+		pub mod preview_url;
+		pub mod policy;
+		pub mod server_acl;
+		pub mod tombstone;
+		pub mod topic;
 		pub mod redaction {
 			#[derive(Clone, Debug, Default)]
 			pub struct RoomRedactionEventContent {
@@ -682,6 +702,10 @@ pub mod events {
 	pub struct AnyStrippedStateEvent;
 	#[derive(Clone, Debug, Default)]
 	pub struct StateEvent<T>(pub core::marker::PhantomData<T>);
+}
+
+pub mod room {
+	#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)] pub enum RoomType { #[default] Room, Space }
 }
 
 pub mod power_levels {
