@@ -310,9 +310,15 @@ pub mod api {
 				pub not_rooms_or_senders: alloc::vec::Vec<alloc::string::String>,
 				pub not_types_or_rel_types: alloc::vec::Vec<alloc::string::String>,
 				pub lazy_load_options: Option<()>,
+				pub rel_types: Option<alloc::vec::Vec<alloc::string::String>>,
+				pub not_rel_types: alloc::vec::Vec<alloc::string::String>,
+				pub url_filter: Option<UrlFilter>,
 			}
-			#[derive(Clone, Debug, Default)]
-			pub struct UrlFilter;
+			#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+			pub enum UrlFilter {
+				EventsWithUrl,
+				EventsWithoutUrl,
+			}
 		}
 		pub mod discovery {
 			pub mod discover_homeserver {
@@ -473,15 +479,22 @@ pub mod events {
 		}
 		pub mod create {
 			#[derive(Clone, Debug, Default)]
-			pub struct RoomCreateEventContent;
+			pub struct RoomCreateEventContent {
+				pub creator: Option<crate::OwnedUserId>,
+				pub room_version: Option<crate::RoomVersionId>,
+				pub additional_creators: Option<alloc::vec::Vec<crate::OwnedUserId>>,
+			}
 		}
 		pub mod member {
 			#[derive(Clone, Debug, Default)]
-			pub struct RoomMemberEventContent;
-			#[derive(Clone, Debug, PartialEq, Eq)]
+			pub struct RoomMemberEventContent {
+				pub membership: MembershipState,
+			}
+			#[derive(Clone, Debug, Default, PartialEq, Eq)]
 			pub enum MembershipState {
 				Join,
 				Invite,
+				#[default]
 				Leave,
 				Ban,
 				Knock,
@@ -494,11 +507,38 @@ pub mod events {
 				Knock => "knock",
 			});
 			#[derive(Clone, Debug, Default)]
-			pub struct ThirdPartyInvite;
+			pub struct ThirdPartyInvite {
+				pub signed: crate::json::Object,
+			}
 		}
 		pub mod power_levels {
 			#[derive(Clone, Debug, Default)]
-			pub struct RoomPowerLevelsEventContent;
+			pub struct RoomPowerLevelsEventContent {
+				pub ban: crate::Int,
+				pub events:
+					alloc::collections::BTreeMap<crate::events::TimelineEventType, crate::Int>,
+				pub events_default: crate::Int,
+				pub invite: crate::Int,
+				pub kick: crate::Int,
+				pub redact: crate::Int,
+				pub state_default: crate::Int,
+				pub users: alloc::collections::BTreeMap<crate::OwnedUserId, crate::Int>,
+				pub users_default: crate::Int,
+				pub notifications: crate::power_levels::NotificationPowerLevels,
+			}
+			impl RoomPowerLevelsEventContent {
+				#[must_use]
+				pub fn new() -> Self {
+					Self {
+						ban: 50,
+						invite: 0,
+						kick: 50,
+						redact: 50,
+						state_default: 50,
+						..Self::default()
+					}
+				}
+			}
 		}
 		pub mod join_rules {
 			#[derive(Clone, Debug, Default)]
@@ -508,6 +548,12 @@ pub mod events {
 				Knock,
 				Invite,
 				Private,
+				Restricted(RestrictedRule),
+				KnockRestricted(RestrictedRule),
+			}
+			#[derive(Clone, Debug, Default)]
+			pub struct RestrictedRule {
+				pub allow: alloc::vec::Vec<crate::json::Value>,
 			}
 			#[derive(Clone, Debug, Default)]
 			pub struct RoomJoinRulesEventContent {
@@ -516,7 +562,10 @@ pub mod events {
 		}
 		pub mod third_party_invite {
 			#[derive(Clone, Debug, Default)]
-			pub struct RoomThirdPartyInviteEventContent;
+			pub struct RoomThirdPartyInviteEventContent {
+				pub public_key: Option<alloc::string::String>,
+				pub public_keys: Option<alloc::vec::Vec<crate::json::Value>>,
+			}
 		}
 		pub mod space {
 			pub mod child {
@@ -549,7 +598,17 @@ pub mod events {
 
 pub mod power_levels {
 	#[derive(Clone, Debug, Default)]
-	pub struct NotificationPowerLevels;
+	pub struct NotificationPowerLevels {
+		pub room: crate::Int,
+	}
+	impl NotificationPowerLevels {
+		#[must_use]
+		pub fn new() -> Self {
+			Self {
+				room: 50,
+			}
+		}
+	}
 	#[must_use]
 	pub fn default_power_level() -> crate::Int {
 		0
