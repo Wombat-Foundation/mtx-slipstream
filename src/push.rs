@@ -11,11 +11,15 @@ impl Ruleset {
 }
 
 impl crate::codec::Serialize for Ruleset {
-	fn to_json(&self) -> crate::json::Value { crate::json::Value::Object(crate::json::Object::new()) }
+	fn to_json(&self) -> crate::json::Value {
+		crate::json::Value::Object(crate::json::Object::new())
+	}
 }
 
 impl crate::codec::Deserialize for Ruleset {
-	fn from_json(_: &crate::json::Value) -> Result<Self, crate::codec::DeError> { Ok(Self) }
+	fn from_json(_: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+		Ok(Self)
+	}
 }
 #[derive(Clone, Debug, Default)]
 pub struct Action;

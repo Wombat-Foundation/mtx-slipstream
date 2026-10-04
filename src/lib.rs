@@ -13,6 +13,7 @@ pub mod antispam;
 pub mod appservice;
 pub mod canonical_json;
 pub mod codec;
+mod uiaa;
 pub use antispam::{draupnir as draupnir_antispam, meowlnir as meowlnir_antispam};
 pub mod directory;
 pub mod encryption;
@@ -486,6 +487,7 @@ pub mod api {
 			}
 		}
 		pub mod error {
+			pub use crate::uiaa::StandardErrorBody;
 			#[derive(Clone, Debug)]
 			pub enum ErrorKind {
 				LimitExceeded {
@@ -538,8 +540,11 @@ pub mod api {
 			}
 		}
 		pub mod uiaa {
-			#[derive(Clone, Debug, Default)]
-			pub struct UiaaInfo(pub crate::json::Value);
+			pub use crate::uiaa::{
+				AuthData, AuthFlow, AuthType, Dummy, EmailIdentity, FallbackAcknowledgement,
+				Password, ReCaptcha, RegistrationToken, Terms, ThirdpartyIdCredentials, UiaaInfo,
+				UserIdentifier,
+			};
 			#[derive(Clone, Debug)]
 			pub enum UiaaResponse {
 				AuthResponse(UiaaInfo),
@@ -624,7 +629,9 @@ pub mod events {
 		});
 	}
 	pub mod push_rules {
-		pub use crate::push::{Action, PushConditionPowerLevelsCtx, PushConditionRoomCtx, PushFormat, Ruleset, Tweak};
+		pub use crate::push::{
+			Action, PushConditionPowerLevelsCtx, PushConditionRoomCtx, PushFormat, Ruleset, Tweak,
+		};
 		pub type PushRulesEvent = crate::events::GlobalAccountDataEvent<PushRulesEventContent>;
 		#[derive(Clone, Debug, Default, Eq, PartialEq)]
 		pub struct PushRulesEventContent {
@@ -640,10 +647,16 @@ pub mod events {
 		impl crate::codec::Deserialize for PushRulesEventContent {
 			fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
 				let global = match value {
-					crate::json::Value::Object(object) => object.get("global").map(crate::codec::Deserialize::from_json).transpose()?.unwrap_or_default(),
+					crate::json::Value::Object(object) => object
+						.get("global")
+						.map(crate::codec::Deserialize::from_json)
+						.transpose()?
+						.unwrap_or_default(),
 					_ => crate::push::Ruleset,
 				};
-				Ok(Self { global })
+				Ok(Self {
+					global,
+				})
 			}
 		}
 	}

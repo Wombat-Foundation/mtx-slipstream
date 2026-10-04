@@ -10,7 +10,7 @@ use crate::{
 	api::client::{
 		discovery::{discover_homeserver::RtcFocusInfo, discover_support::ContactRole},
 		error::{Error, ErrorBody, ErrorKind},
-		uiaa::{UiaaInfo, UiaaResponse},
+		uiaa::UiaaResponse,
 	},
 	api::error::IntoHttpError,
 	codec::{DeError, Deserialize, Serialize, from_value},
@@ -40,7 +40,7 @@ macro_rules! transparent_value {
 		}
 	)*};
 }
-transparent_value!(RtcFocusInfo, ContactRole, UiaaInfo);
+transparent_value!(RtcFocusInfo, ContactRole);
 
 impl Serialize for RoomCreateEventContent {
 	fn to_json(&self) -> Value {
@@ -205,7 +205,7 @@ impl UiaaResponse {
 		self,
 	) -> Result<http::Response<B>, IntoHttpError> {
 		let (status, body) = match self {
-			Self::AuthResponse(info) => (http::StatusCode::UNAUTHORIZED, info.0),
+			Self::AuthResponse(info) => (http::StatusCode::UNAUTHORIZED, info.to_json()),
 			Self::MatrixError(error) => (error.status_code, error.body_json()),
 		};
 		let json = crate::codec::to_string(&body);

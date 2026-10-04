@@ -90,7 +90,9 @@ pub mod event {
 		pub mod v1 {
 			use alloc::vec::Vec;
 
-			use crate::{OwnedTransactionId, appservice::EphemeralData, federation_api::RawPdu};
+			use crate::{OwnedTransactionId, federation_api::RawPdu};
+
+			pub use crate::appservice::EphemeralData;
 
 			crate::endpoint! {
 				method: "PUT", path: "/_matrix/app/v1/transactions/{txn_id}",
@@ -192,7 +194,9 @@ pub mod request_ping {
 			fn from_body(body: &Value) -> Result<Self, DeError> {
 				let input = Input::new(&[], &[], Some(body));
 				let millis: u64 = input.body("duration_ms")?;
-				Ok(Self { duration: Duration::from_millis(millis) })
+				Ok(Self {
+					duration: Duration::from_millis(millis),
+				})
 			}
 		}
 	}
