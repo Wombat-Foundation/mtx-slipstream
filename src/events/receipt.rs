@@ -22,8 +22,23 @@ pub struct Receipt {
 	pub ts: Option<UInt>,
 	pub thread: ReceiptThread,
 }
-pub type ReceiptEventContent =
-	BTreeMap<OwnedEventId, BTreeMap<ReceiptType, BTreeMap<OwnedUserId, Receipt>>>;
+#[derive(Clone, Debug, Default)]
+pub struct ReceiptEventContent(
+	pub BTreeMap<OwnedEventId, BTreeMap<ReceiptType, BTreeMap<OwnedUserId, Receipt>>>,
+);
+impl FromIterator<(OwnedEventId, BTreeMap<ReceiptType, BTreeMap<OwnedUserId, Receipt>>)>
+	for ReceiptEventContent
+{
+	fn from_iter<
+		I: IntoIterator<
+			Item = (OwnedEventId, BTreeMap<ReceiptType, BTreeMap<OwnedUserId, Receipt>>),
+		>,
+	>(
+		iter: I,
+	) -> Self {
+		Self(iter.into_iter().collect())
+	}
+}
 
 #[derive(Clone, Debug)]
 pub struct ReceiptEvent {

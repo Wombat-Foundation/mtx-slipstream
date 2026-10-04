@@ -13,9 +13,11 @@ pub mod canonical_json;
 pub mod codec;
 mod compat;
 mod content;
+pub mod endpoint;
 mod event_type;
 mod events_codec;
 pub mod federation;
+pub mod federation_api;
 pub mod push;
 pub mod sync;
 pub mod writer;
@@ -507,7 +509,14 @@ pub mod api {
 			}
 		}
 	}
-	pub trait OutgoingResponse {}
+	pub use crate::{
+		endpoint::{
+			EndpointError, FromHttpRequestError, FromHttpResponseError, IncomingRequest,
+			IncomingResponse, MatrixVersion, Metadata, OutgoingRequest, OutgoingResponse,
+			SendAccessToken,
+		},
+		federation_api as federation,
+	};
 }
 
 pub mod events {
