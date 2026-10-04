@@ -11,6 +11,10 @@ extern crate alloc;
 
 pub mod canonical_json;
 pub mod codec;
+mod key_id;
+pub use key_id::{
+	KeyId, OneTimeKeyAlgorithm, OneTimeKeyId, OneTimeKeyName, OwnedKeyId, OwnedOneTimeKeyId,
+};
 mod compat;
 mod content;
 pub mod endpoint;
@@ -141,10 +145,9 @@ matrix_id!(TransactionId, OwnedTransactionId);
 matrix_id!(ClientSecret, OwnedClientSecret);
 matrix_id!(SessionId, OwnedSessionId);
 matrix_id!(MxcUri, OwnedMxcUri);
-matrix_id!(KeyId, OwnedKeyId);
-matrix_id!(OneTimeKeyId, OwnedOneTimeKeyId);
 
 /// Borrowed MXC URI components used by media services.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Mxc<'a> {
 	pub server_name: &'a OwnedServerName,
 	pub media_id: &'a str,
@@ -270,8 +273,9 @@ macro_rules! device_id {
 	};
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum RoomVersionId {
+	#[default]
 	V1,
 	V2,
 	V3,
@@ -710,7 +714,8 @@ pub mod events {
 						creator: get("creator").map(crate::codec::from_value).transpose()?,
 						room_version: get("room_version")
 							.map(crate::codec::from_value)
-							.transpose()?,
+							.transpose()?
+							.unwrap_or_default(),
 						additional_creators: get("additional_creators")
 							.map(crate::codec::from_value)
 							.transpose()?,

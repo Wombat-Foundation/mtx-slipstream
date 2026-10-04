@@ -8,7 +8,7 @@ use crate::{
 	OwnedRoomAliasId, OwnedRoomId, OwnedRoomOrAliasId, OwnedServerName, OwnedUserId,
 	api::client::error::{Error, ErrorKind},
 	events::room::member::MembershipState,
-	http_headers::ContentDispositionParseError,
+	http_headers::{ContentDisposition, ContentDispositionParseError, ContentDispositionType},
 };
 
 macro_rules! simple_error {
@@ -134,5 +134,74 @@ impl OwnedRoomAliasId {
 	#[must_use]
 	pub fn server_name(&self) -> OwnedServerName {
 		crate::server_part(self.as_str()).unwrap_or_else(|| OwnedServerName::from(""))
+	}
+}
+
+impl fmt::Display for ContentDispositionType {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.write_str(match self {
+			Self::Inline => "inline",
+			Self::Attachment => "attachment",
+		})
+	}
+}
+
+impl fmt::Display for ContentDisposition {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		write!(f, "{}", self.disposition)?;
+		if let Some(filename) = &self.filename {
+			write!(f, "; filename=\"{}\"", filename.replace('\\', "\\\\").replace('"', "\\\""))?;
+		}
+		Ok(())
+	}
+}
+
+impl core::str::FromStr for ContentDisposition {
+	type Err = ContentDispositionParseError;
+
+	fn from_str(value: &str) -> Result<Self, Self::Err> {
+		let mut parts = value.split(';');
+		let disposition = match parts.next().map(str::trim) {
+			Some(kind) if kind.eq_ignore_ascii_case("inline") => ContentDispositionType::Inline,
+			Some(kind) if kind.eq_ignore_ascii_case("attachment") => {
+				ContentDispositionType::Attachment
+			}
+			_ => return Err(ContentDispositionParseError),
+		};
+		let filename = parts.find_map(|part| {
+			let (key, value) = part.split_once('=')?;
+			key.trim().eq_ignore_ascii_case("filename").then(|| {
+				let value = value.trim();
+				value
+					.strip_prefix('"')
+					.and_then(|rest| rest.strip_suffix('"'))
+					.unwrap_or(value)
+					.replace("\\\"", "\"")
+					.replace("\\\\", "\\")
+			})
+		});
+		Ok(Self {
+			disposition,
+			filename,
+		})
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use crate::http_headers::{ContentDisposition, ContentDispositionType};
+
+	#[test]
+	fn content_disposition_round_trips() {
+		let value = ContentDisposition::new(ContentDispositionType::Attachment)
+			.with_filename(Some("a \"b\".png".into()));
+		let text = value.to_string();
+		assert_eq!(text, "attachment; filename=\"a \\\"b\\\".png\"");
+		assert_eq!(text.parse::<ContentDisposition>().unwrap(), value);
+		assert_eq!(
+			"INLINE".parse::<ContentDisposition>().unwrap(),
+			ContentDisposition::new(ContentDispositionType::Inline)
+		);
+		assert!("download".parse::<ContentDisposition>().is_err());
 	}
 }

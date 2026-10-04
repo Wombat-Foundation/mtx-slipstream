@@ -48,9 +48,7 @@ impl Serialize for RoomCreateEventContent {
 		if let Some(creator) = &self.creator {
 			object.insert("creator".into(), creator.to_json());
 		}
-		if let Some(version) = &self.room_version {
-			object.insert("room_version".into(), version.to_json());
-		}
+		object.insert("room_version".into(), self.room_version.to_json());
 		if let Some(creators) = &self.additional_creators {
 			object.insert("additional_creators".into(), creators.to_json());
 		}
@@ -275,7 +273,7 @@ mod tests {
 		assert_eq!(from_str::<MilliSecondsSinceUnixEpoch>(&to_string(&ts)).unwrap(), ts);
 		let c = from_str::<RoomCreateEventContent>(r#"{"room_version":"11","creator":"@a:b"}"#)
 			.unwrap();
-		assert_eq!(c.room_version, Some(crate::RoomVersionId::V11));
+		assert_eq!(c.room_version, crate::RoomVersionId::V11);
 		assert!(c.additional_creators.is_none());
 	}
 

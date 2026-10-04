@@ -3,16 +3,53 @@
 use crate::{
 	codec::{DeError, Deserialize, Serialize, from_value},
 	events::room::{
+		guest_access::RoomGuestAccessEventContent,
+		history_visibility::RoomHistoryVisibilityEventContent,
 		join_rules::{JoinRule, RestrictedRule, RoomJoinRulesEventContent},
 		member::RoomMemberEventContent,
+		name::RoomNameEventContent,
 		power_levels::RoomPowerLevelsEventContent,
 		redaction::RoomRedactionEventContent,
 		third_party_invite::RoomThirdPartyInviteEventContent,
+		topic::RoomTopicEventContent,
 	},
 	json::{Object, Value},
 	power_levels::NotificationPowerLevels,
 	serde::deserialize_v1_powerlevel,
 };
+
+impl Serialize for RoomGuestAccessEventContent {
+	fn to_json(&self) -> Value {
+		Value::Object(
+			[(String::from("guest_access"), self.guest_access.to_json())].into_iter().collect(),
+		)
+	}
+}
+impl Serialize for RoomHistoryVisibilityEventContent {
+	fn to_json(&self) -> Value {
+		Value::Object(
+			[(String::from("history_visibility"), self.history_visibility.to_json())]
+				.into_iter()
+				.collect(),
+		)
+	}
+}
+impl Serialize for RoomNameEventContent {
+	fn to_json(&self) -> Value {
+		let mut object = Object::new();
+		if let Some(name) = &self.name {
+			object.insert("name".into(), Value::String(name.clone()));
+		}
+		Value::Object(object)
+	}
+}
+impl Serialize for RoomTopicEventContent {
+	fn to_json(&self) -> Value {
+		Value::Object(
+			[(String::from("topic"), Value::String(self.topic.clone()))].into_iter().collect(),
+		)
+	}
+}
 
 fn object(value: &Value) -> Result<&Object, DeError> {
 	value.as_object().ok_or_else(|| DeError::expected("object"))
