@@ -44,14 +44,14 @@ pub fn try_from_json_map(map: JsonMap) -> Result<Object, crate::CanonicalJsonErr
 pub fn redact_content_in_place(
 	content: &mut Object,
 	version: &crate::RoomVersionId,
-	event_type: String,
+	event_type: impl AsRef<str>,
 ) -> Result<(), RedactionError> {
 	if matches!(version, crate::RoomVersionId::Custom(_)) {
 		return Err(RedactionError::UnsupportedRoomVersion(version.as_str().into()));
 	}
 	let (redacted, _) = rezzy::split_redaction_content(
 		&Value::Object(core::mem::take(content)),
-		&event_type,
+		event_type.as_ref(),
 		version.as_str(),
 	);
 	if let Value::Object(object) = redacted {
@@ -72,8 +72,7 @@ mod tests {
 		else {
 			panic!("not an object");
 		};
-		redact_content_in_place(&mut content, &RoomVersionId::V11, "m.room.member".into())
-			.unwrap();
+		redact_content_in_place(&mut content, &RoomVersionId::V11, "m.room.member").unwrap();
 		assert!(content.contains_key("membership"));
 		assert!(!content.contains_key("displayname"));
 	}
@@ -82,12 +81,8 @@ mod tests {
 	fn rejects_custom_room_version() {
 		let mut content = Object::new();
 		assert!(
-			redact_content_in_place(
-				&mut content,
-				&RoomVersionId::Custom("x".into()),
-				"m.x".into()
-			)
-			.is_err()
+			redact_content_in_place(&mut content, &RoomVersionId::Custom("x".into()), "m.x")
+				.is_err()
 		);
 	}
 }
