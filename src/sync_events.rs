@@ -229,7 +229,8 @@ pub mod v3 {
 		fn from_json(value: &Value) -> Result<Self, DeError> {
 			let text = value.as_str().ok_or_else(|| DeError::expected("filter string"))?;
 			if text.starts_with('{') {
-				crate::codec::from_str(text).map(|definition| Self::FilterDefinition(alloc::boxed::Box::new(definition)))
+				crate::codec::from_str(text)
+					.map(|definition| Self::FilterDefinition(alloc::boxed::Box::new(definition)))
 			} else {
 				Ok(Self::FilterId(text.into()))
 			}

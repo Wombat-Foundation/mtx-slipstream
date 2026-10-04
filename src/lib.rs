@@ -42,8 +42,8 @@ pub mod js_option;
 pub mod push;
 pub mod push_rules;
 pub mod pusher;
-pub mod sync_events;
 pub mod sync;
+pub mod sync_events;
 pub mod writer;
 
 /// Compatibility namespace for the legacy `uint!(...)` macro.

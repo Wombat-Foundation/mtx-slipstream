@@ -17,7 +17,7 @@ pub mod edu {
 		endpoint::Input,
 		events::{
 			presence::PresenceState,
-			receipt::{Receipt, ReceiptThread},
+			receipt::Receipt,
 		},
 		json::{Object, Value},
 		serde::Raw,
@@ -54,37 +54,6 @@ pub mod edu {
 	pub struct ReceiptData {
 		pub data: Receipt,
 		pub event_ids: Vec<OwnedEventId>,
-	}
-
-	impl Serialize for Receipt {
-		fn to_json(&self) -> Value {
-			let mut object = Object::new();
-			if let Some(ts) = self.ts {
-				object.insert("ts".into(), ts.to_json());
-			}
-			if let ReceiptThread::Thread(id) = &self.thread {
-				object.insert("thread_id".into(), id.to_json());
-			} else {
-				object.insert("thread_id".into(), Value::String("main".into()));
-			}
-			Value::Object(object)
-		}
-	}
-
-	impl Deserialize for Receipt {
-		fn from_json(value: &Value) -> Result<Self, DeError> {
-			let input = Input::new(&[], &[], Some(value));
-			let ts: Option<UInt> = input.body("ts")?;
-			let thread: Option<String> = input.body("thread_id")?;
-			let thread = match thread.as_deref() {
-				None | Some("main") => ReceiptThread::Unthreaded,
-				Some(id) => ReceiptThread::Thread(OwnedEventId::from(id)),
-			};
-			Ok(Self {
-				ts,
-				thread,
-			})
-		}
 	}
 
 	crate::impl_codec_struct!(ReceiptData { data: Receipt, event_ids: Vec<OwnedEventId> });
