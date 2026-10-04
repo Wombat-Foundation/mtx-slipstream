@@ -38,12 +38,15 @@ mod event_type;
 mod events_codec;
 pub mod federation;
 pub mod federation_api;
+pub mod delayed_events;
 pub mod js_option;
 #[macro_use]
 pub mod media_api;
 pub mod push;
 pub mod push_rules;
 pub mod pusher;
+pub mod state_hashes;
+pub mod user_models;
 pub mod sync;
 pub mod sync_events;
 pub mod writer;
@@ -508,7 +511,7 @@ pub mod api {
 			};
 		}
 		pub mod sync {
-			pub use crate::sync_events::{self, DeviceLists, UnreadNotificationsCount};
+			pub use crate::sync_events::{self, CompatListFilters, DeviceLists, UnreadNotificationsCount};
 		}
 		pub mod push {
 			pub use crate::push_rules::{

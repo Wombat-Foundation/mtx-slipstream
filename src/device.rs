@@ -191,3 +191,17 @@ pub mod dehydrated_device {
 		}
 	}
 }
+
+/// A user's stored dehydrated device.
+#[derive(Clone, Debug)]
+pub struct DehydratedDevice {
+	/// Unique ID of the device.
+	pub device_id: OwnedDeviceId,
+	/// Serialized and encrypted private data.
+	pub device_data: crate::serde::Raw<DehydratedDeviceData>,
+}
+
+impl_codec_struct!(DehydratedDevice {
+	device_id: OwnedDeviceId,
+	device_data: crate::serde::Raw<DehydratedDeviceData>,
+});

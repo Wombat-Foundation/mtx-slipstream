@@ -177,6 +177,56 @@ sync_struct! {
 }
 sync_basics!(DeviceLists);
 
+/// Sticky list filters for simplified sliding sync, kept alongside a
+/// connection's other sticky parameters. `is_invited` is accepted as an alias
+/// of `is_invite`.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct CompatListFilters {
+	pub is_dm: Option<bool>,
+	pub is_encrypted: Option<bool>,
+	pub is_invite: Option<bool>,
+	pub room_types: Vec<crate::directory::RoomTypeFilter>,
+	pub not_room_types: Vec<crate::directory::RoomTypeFilter>,
+	pub tags: Vec<String>,
+	pub not_tags: Vec<String>,
+	pub spaces: Vec<crate::OwnedRoomId>,
+}
+
+impl Serialize for CompatListFilters {
+	fn to_json(&self) -> Value {
+		let mut object = crate::json::Object::new();
+		sync_put!(object, &self.is_dm, ("is_dm", skip));
+		sync_put!(object, &self.is_encrypted, ("is_encrypted", skip));
+		sync_put!(object, &self.is_invite, ("is_invite", skip));
+		sync_put!(object, &self.room_types, ("room_types", skip));
+		sync_put!(object, &self.not_room_types, ("not_room_types", skip));
+		sync_put!(object, &self.tags, ("tags", skip));
+		sync_put!(object, &self.not_tags, ("not_tags", skip));
+		sync_put!(object, &self.spaces, ("spaces", skip));
+		Value::Object(object)
+	}
+}
+
+impl Deserialize for CompatListFilters {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		let object = value.as_object().ok_or_else(|| DeError::expected("filters object"))?;
+		let invite = object.get("is_invite").or_else(|| object.get("is_invited"));
+		Ok(Self {
+			is_dm: sync_get!(object, value, ("is_dm", skip)),
+			is_encrypted: sync_get!(object, value, ("is_encrypted", skip)),
+			is_invite: match invite {
+				Some(found) => Deserialize::from_json(found)?,
+				None => None,
+			},
+			room_types: sync_get!(object, value, ("room_types", skip)),
+			not_room_types: sync_get!(object, value, ("not_room_types", skip)),
+			tags: sync_get!(object, value, ("tags", skip)),
+			not_tags: sync_get!(object, value, ("not_tags", skip)),
+			spaces: sync_get!(object, value, ("spaces", skip)),
+		})
+	}
+}
+
 pub mod v3 {
 	use alloc::{collections::BTreeMap, string::String, vec::Vec};
 	use core::time::Duration;
@@ -1165,5 +1215,19 @@ mod tests {
 		assert_eq!(config.e2ee.enabled, Some(true));
 		assert!(config.account_data.is_empty() && !config.is_empty());
 		assert_eq!(config, config.clone());
+	}
+}
+
+#[cfg(test)]
+mod compat_tests {
+	use super::*;
+	use crate::codec::{from_str, to_string};
+
+	#[test]
+	fn compat_filters_accept_is_invited_alias_and_skip_empty() {
+		let parsed = from_str::<CompatListFilters>(r#"{"is_invited":true,"tags":["a"]}"#).unwrap();
+		assert_eq!(parsed.is_invite, Some(true));
+		assert_eq!(to_string(&parsed), r#"{"is_invite":true,"tags":["a"]}"#);
+		assert_eq!(to_string(&CompatListFilters::default()), "{}");
 	}
 }
