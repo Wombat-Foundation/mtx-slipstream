@@ -190,6 +190,76 @@ pub type OwnedOneTimeKeyId = OwnedKeyId<OneTimeKeyAlgorithm, OneTimeKeyName>;
 /// Borrowed form of [`OwnedOneTimeKeyId`].
 pub type OneTimeKeyId = OwnedOneTimeKeyId;
 
+/// An algorithm for signing keys.
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum SigningKeyAlgorithm {
+	Ed25519,
+	/// Any other algorithm.
+	Custom(String),
+}
+
+impl SigningKeyAlgorithm {
+	#[must_use]
+	pub fn as_str(&self) -> &str {
+		match self {
+			Self::Ed25519 => "ed25519",
+			Self::Custom(other) => other,
+		}
+	}
+}
+
+impl AsRef<str> for SigningKeyAlgorithm {
+	fn as_ref(&self) -> &str {
+		self.as_str()
+	}
+}
+impl fmt::Display for SigningKeyAlgorithm {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.write_str(self.as_str())
+	}
+}
+impl From<&str> for SigningKeyAlgorithm {
+	fn from(value: &str) -> Self {
+		match value {
+			"ed25519" => Self::Ed25519,
+			other => Self::Custom(other.to_string()),
+		}
+	}
+}
+
+macro_rules! key_name {
+	($(#[$doc:meta])* $name:ident) => {
+		$(#[$doc])*
+		#[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
+		pub struct $name(pub String);
+
+		impl AsRef<str> for $name {
+			fn as_ref(&self) -> &str {
+				&self.0
+			}
+		}
+		impl fmt::Display for $name {
+			fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+				f.write_str(&self.0)
+			}
+		}
+		impl From<&str> for $name {
+			fn from(value: &str) -> Self {
+				Self(value.to_string())
+			}
+		}
+	};
+}
+
+key_name!(
+	/// The name part of a key ID that is a base64 public key.
+	Base64PublicKey
+);
+key_name!(
+	/// The version part of a server signing key ID.
+	ServerSigningKeyVersion
+);
+
 #[cfg(test)]
 mod tests {
 	use super::*;

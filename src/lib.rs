@@ -12,9 +12,11 @@ extern crate alloc;
 pub mod canonical_json;
 pub mod codec;
 pub mod directory;
+pub mod encryption;
 mod key_id;
 pub use key_id::{
-	KeyId, OneTimeKeyAlgorithm, OneTimeKeyId, OneTimeKeyName, OwnedKeyId, OwnedOneTimeKeyId,
+	Base64PublicKey, KeyId, OneTimeKeyAlgorithm, OneTimeKeyId, OneTimeKeyName, OwnedKeyId,
+	OwnedOneTimeKeyId, ServerSigningKeyVersion, SigningKeyAlgorithm,
 };
 mod compat;
 mod content;
