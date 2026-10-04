@@ -772,6 +772,12 @@ pub mod events {
 					}
 				}
 			}
+			impl crate::events::EventContent for RoomPowerLevelsEventContent {
+				type EventType = crate::events::StateEventType;
+				fn event_type(&self) -> Self::EventType {
+					crate::events::StateEventType::RoomPowerLevels
+				}
+			}
 		}
 		pub mod join_rules {
 			#[derive(Clone, Debug, Default)]

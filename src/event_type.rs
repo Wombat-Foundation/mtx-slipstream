@@ -73,6 +73,12 @@ event_type!(TimelineEventType {
 	RoomRedaction => "m.room.redaction",
 	RoomThirdPartyInvite => "m.room.third_party_invite",
 	RoomTopic => "m.room.topic",
+	RoomEncrypted => "m.room.encrypted",
+	RoomEncryption => "m.room.encryption",
+	RoomName => "m.room.name",
+	RoomServerAcl => "m.room.server_acl",
+	RoomTombstone => "m.room.tombstone",
+	SpaceChild => "m.space.child",
 });
 
 event_type!(StateEventType {
@@ -84,6 +90,16 @@ event_type!(StateEventType {
 	RoomRedaction => "m.room.redaction",
 	RoomThirdPartyInvite => "m.room.third_party_invite",
 	RoomTopic => "m.room.topic",
+	RoomEncrypted => "m.room.encrypted",
+	RoomEncryption => "m.room.encryption",
+	RoomName => "m.room.name",
+	RoomAvatar => "m.room.avatar",
+	RoomCanonicalAlias => "m.room.canonical_alias",
+	RoomGuestAccess => "m.room.guest_access",
+	RoomHistoryVisibility => "m.room.history_visibility",
+	RoomServerAcl => "m.room.server_acl",
+	RoomPolicy => "m.policy.rule.room",
+	SpaceChild => "m.space.child",
 });
 
 event_type!(MessageLikeEventType {

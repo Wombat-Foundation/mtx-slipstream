@@ -9,3 +9,16 @@ crate::impl_codec_enum!(GuestAccess { Forbidden => "forbidden", CanJoin => "can_
 pub struct RoomGuestAccessEventContent {
 	pub guest_access: GuestAccess,
 }
+impl RoomGuestAccessEventContent {
+	pub fn new(guest_access: GuestAccess) -> Self {
+		Self {
+			guest_access,
+		}
+	}
+}
+impl crate::events::EventContent for RoomGuestAccessEventContent {
+	type EventType = crate::events::StateEventType;
+	fn event_type(&self) -> Self::EventType {
+		crate::events::StateEventType::RoomGuestAccess
+	}
+}

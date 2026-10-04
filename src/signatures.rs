@@ -1,4 +1,5 @@
-//! Event and JSON signing and verification, backed by Rezzy and Ed25519.
+//! Event and JSON signing and verification, backed by Rezzy and
+//! consensus-compatible Ed25519 (`ed25519-consensus`).
 
 use alloc::{
 	collections::BTreeMap,
@@ -8,11 +9,7 @@ use alloc::{
 use core::fmt;
 
 use base64::{Engine as _, engine::general_purpose::STANDARD_NO_PAD};
-use ed25519_dalek::{
-	Signer as _, SigningKey,
-	pkcs8::{DecodePrivateKey, EncodePrivateKey},
-};
-use rezzy::signing::{DalekVerifier, SignatureVerifier, verify_event_signatures};
+use ed25519_consensus::{Signature as RawSignature, SigningKey, VerificationKey};
 
 use crate::{
 	CanonicalJsonObject, OwnedServerName, OwnedServerSigningKeyId, RoomVersionId,
@@ -92,21 +89,19 @@ impl Ed25519KeyPair {
 	///
 	/// # Errors
 	///
-	/// Returns an error if the key cannot be encoded.
+	/// Currently infallible; the `Result` mirrors ruma's signature.
 	pub fn generate() -> Result<Vec<u8>, Error> {
-		let key = SigningKey::generate(&mut rand_core::OsRng);
-		key.to_pkcs8_der()
-			.map(|der| der.as_bytes().to_vec())
-			.map_err(|e| Error::Key(e.to_string()))
+		let key = SigningKey::new(rand_core::OsRng);
+		Ok(encode_pkcs8(&key.to_bytes()))
 	}
 
-	/// Loads a key from PKCS#8 DER.
+	/// Loads a key from PKCS#8 DER (version 1 or 2).
 	///
 	/// # Errors
 	///
 	/// Returns an error if `der` is not a valid Ed25519 private key.
 	pub fn from_der(der: &[u8], version: String) -> Result<Self, Error> {
-		let key = SigningKey::from_pkcs8_der(der).map_err(|e| Error::Key(e.to_string()))?;
+		let key = SigningKey::from(parse_pkcs8_seed(der)?);
 		Ok(Self {
 			key,
 			version,
@@ -115,7 +110,7 @@ impl Ed25519KeyPair {
 
 	#[must_use]
 	pub fn public_key(&self) -> [u8; 32] {
-		self.key.verifying_key().to_bytes()
+		self.key.verification_key().to_bytes()
 	}
 
 	#[must_use]
@@ -127,6 +122,63 @@ impl Ed25519KeyPair {
 	pub fn sign(&self, message: &[u8]) -> Signature {
 		Signature(self.key.sign(message).to_bytes().to_vec())
 	}
+}
+
+/// PKCS#8 (RFC 8410) prefix for an Ed25519 private key; the 32-byte seed follows.
+const PKCS8_PREFIX: [u8; 16] = [
+	0x30, 0x2e, 0x02, 0x01, 0x00, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x04, 0x22, 0x04,
+	0x20,
+];
+
+/// DER encoding of the Ed25519 algorithm OID (1.3.101.112).
+const ED25519_OID: [u8; 3] = [0x2b, 0x65, 0x70];
+
+fn encode_pkcs8(seed: &[u8; 32]) -> Vec<u8> {
+	let mut der = PKCS8_PREFIX.to_vec();
+	der.extend_from_slice(seed);
+	der
+}
+
+/// Splits one DER element into its tag, content and the remaining bytes.
+fn read_tlv(input: &[u8]) -> Option<(u8, &[u8], &[u8])> {
+	let (&tag, rest) = input.split_first()?;
+	let (&first, rest) = rest.split_first()?;
+	let (len, rest) = if first < 0x80 {
+		(usize::from(first), rest)
+	} else {
+		let count = usize::from(first & 0x7f);
+		if count == 0 || count > 2 || rest.len() < count {
+			return None;
+		}
+		let (len_bytes, rest) = rest.split_at(count);
+		(len_bytes.iter().fold(0_usize, |acc, &b| (acc << 8) | usize::from(b)), rest)
+	};
+	if rest.len() < len {
+		return None;
+	}
+	let (content, rest) = rest.split_at(len);
+	Some((tag, content, rest))
+}
+
+/// Extracts the Ed25519 seed from PKCS#8 DER, ignoring any trailing attributes.
+fn parse_pkcs8_seed(der: &[u8]) -> Result<[u8; 32], Error> {
+	let bad = || Error::Key("not a PKCS#8 Ed25519 private key".into());
+	let (tag, body, _) = read_tlv(der).ok_or_else(bad)?;
+	if tag != 0x30 {
+		return Err(bad());
+	}
+	let (version_tag, _, body) = read_tlv(body).ok_or_else(bad)?;
+	let (alg_tag, alg, body) = read_tlv(body).ok_or_else(bad)?;
+	let (oid_tag, oid, _) = read_tlv(alg).ok_or_else(bad)?;
+	if version_tag != 0x02 || alg_tag != 0x30 || oid_tag != 0x06 || oid != ED25519_OID {
+		return Err(bad());
+	}
+	let (key_tag, key, _) = read_tlv(body).ok_or_else(bad)?;
+	let (seed_tag, seed, _) = read_tlv(key).ok_or_else(bad)?;
+	if key_tag != 0x04 || seed_tag != 0x04 {
+		return Err(bad());
+	}
+	<[u8; 32]>::try_from(seed).map_err(|_| bad())
 }
 
 fn to_value(object: &CanonicalJsonObject) -> Value {
@@ -141,16 +193,48 @@ fn signing_bytes(object: &CanonicalJsonObject) -> Result<String, Error> {
 	json::write_string_value(&Value::Object(stripped)).map_err(|e| Error::Json(e.to_string()))
 }
 
-fn verifier(keys: &PublicKeyMap) -> Result<DalekVerifier, Error> {
-	let mut verifier = DalekVerifier::new();
-	for (server, set) in keys {
-		for (key_id, key) in set {
-			verifier
-				.insert_public_key(server.as_str(), key_id.as_str(), key.as_bytes())
-				.map_err(Error::Key)?;
+/// Known public keys, by server name and key ID.
+struct KeyRing(BTreeMap<(String, String), VerificationKey>);
+
+impl KeyRing {
+	fn new(keys: &PublicKeyMap) -> Result<Self, Error> {
+		let mut ring = BTreeMap::new();
+		for (server, set) in keys {
+			for (key_id, key) in set {
+				let key = VerificationKey::try_from(key.as_bytes())
+					.map_err(|e| Error::Key(e.to_string()))?;
+				ring.insert((server.as_str().to_string(), key_id.as_str().to_string()), key);
+			}
 		}
+		Ok(Self(ring))
 	}
-	Ok(verifier)
+
+	fn has_key(&self, server: &str, key_id: &str) -> bool {
+		self.0.contains_key(&(server.to_string(), key_id.to_string()))
+	}
+
+	/// Verifies a base64 signature by `(server, key_id)` over `message`.
+	fn verify(
+		&self,
+		server: &str,
+		key_id: &str,
+		message: &[u8],
+		signature: &Value,
+	) -> Result<(), Error> {
+		let key = self
+			.0
+			.get(&(server.to_string(), key_id.to_string()))
+			.ok_or_else(|| Error::Verification(alloc::format!("no key {key_id} for {server}")))?;
+		let signature =
+			signature.as_str().ok_or_else(|| Error::Json("signature is not a string".into()))?;
+		let bytes = STANDARD_NO_PAD
+			.decode(signature.trim_end_matches('='))
+			.map_err(|e| Error::Json(e.to_string()))?;
+		let signature =
+			RawSignature::try_from(bytes.as_slice()).map_err(|e| Error::Json(e.to_string()))?;
+		key.verify(&signature, message)
+			.map_err(|e| Error::Verification(alloc::format!("{server} {key_id}: {e}")))
+	}
 }
 
 fn insert_signature(
@@ -231,7 +315,7 @@ pub fn verify_json(
 	object: impl core::borrow::Borrow<CanonicalJsonObject>,
 ) -> Result<(), Error> {
 	let object = object.borrow();
-	let verifier = verifier(keys)?;
+	let ring = KeyRing::new(keys)?;
 	let message = signing_bytes(object)?;
 	let signatures = object
 		.get("signatures")
@@ -244,19 +328,10 @@ pub fn verify_json(
 			continue;
 		};
 		for (key_id, signature) in entry {
-			if !verifier.has_key(server, key_id) {
-				continue;
+			if ring.has_key(server, key_id) {
+				ring.verify(server, key_id, message.as_bytes(), signature)?;
+				checked = true;
 			}
-			let signature = signature
-				.as_str()
-				.ok_or_else(|| Error::Json("signature is not a string".into()))?;
-			let bytes = STANDARD_NO_PAD
-				.decode(signature.trim_end_matches('='))
-				.map_err(|e| Error::Json(e.to_string()))?;
-			verifier
-				.verify(server, key_id, message.as_bytes(), &bytes)
-				.map_err(Error::Verification)?;
-			checked = true;
 		}
 	}
 	if checked {
@@ -264,6 +339,18 @@ pub fn verify_json(
 	} else {
 		Err(Error::Verification("no signature matched a known key".into()))
 	}
+}
+
+/// The server expected to have signed an event: the event ID's domain in room
+/// versions 1 and 2, and the sender's domain after that.
+fn expected_signer<'a>(value: &'a Value, version: &RoomVersionId) -> Option<&'a str> {
+	let (field, sigil) = if matches!(version, RoomVersionId::V1 | RoomVersionId::V2) {
+		("event_id", '$')
+	} else {
+		("sender", '@')
+	};
+	let id = value.get(field).and_then(Value::as_str)?;
+	id.strip_prefix(sigil).unwrap_or(id).split_once(':').map(|(_, server)| server)
 }
 
 /// Verifies an event's signatures and content hash.
@@ -276,9 +363,28 @@ pub fn verify_event(
 	object: &CanonicalJsonObject,
 	version: &RoomVersionId,
 ) -> Result<Verified, Error> {
-	let verifier = verifier(keys)?;
+	let ring = KeyRing::new(keys)?;
 	let value = to_value(object);
-	verify_event_signatures(&value, version.as_str(), &verifier).map_err(Error::Verification)?;
+	let signer = expected_signer(&value, version)
+		.ok_or_else(|| Error::Json("cannot determine the signing server".into()))?;
+	let message = rezzy::try_canonical_redacted_json(&value, version.as_str())
+		.map_err(|e| Error::Json(e.to_string()))?;
+	let signatures = value
+		.get("signatures")
+		.and_then(|signatures| signatures.get(signer))
+		.and_then(Value::as_object)
+		.ok_or_else(|| Error::Verification(alloc::format!("no signature from {signer}")))?;
+
+	let mut verified = false;
+	for (key_id, signature) in signatures {
+		if key_id.starts_with("ed25519:") && ring.has_key(signer, key_id) {
+			ring.verify(signer, key_id, message.as_bytes(), signature)?;
+			verified = true;
+		}
+	}
+	if !verified {
+		return Err(Error::Verification(alloc::format!("no known key signed for {signer}")));
+	}
 	Ok(match rezzy::verify_content_hash(&value, version.as_str()) {
 		Ok(()) => Verified::All,
 		Err(_) => Verified::Signatures,
@@ -345,6 +451,53 @@ mod tests {
 
 	fn pair() -> Ed25519KeyPair {
 		Ed25519KeyPair::from_der(&Ed25519KeyPair::generate().unwrap(), "v1".into()).unwrap()
+	}
+
+	#[test]
+	fn der_round_trips_and_accepts_version_two_keys() {
+		let seed = [7_u8; 32];
+		let v1 = encode_pkcs8(&seed);
+		assert_eq!(v1.len(), 48);
+		assert_eq!(parse_pkcs8_seed(&v1).unwrap(), seed);
+
+		// Version 2 (as written by ring): attributes and the public key follow the seed.
+		let mut v2 = alloc::vec![0x30, 0x53, 0x02, 0x01, 0x01];
+		v2.extend_from_slice(&v1[5..]);
+		v2.extend_from_slice(&[0xa1, 0x23, 0x03, 0x21, 0x00]);
+		v2.extend_from_slice(&[9_u8; 32]);
+		assert_eq!(parse_pkcs8_seed(&v2).unwrap(), seed);
+
+		assert!(parse_pkcs8_seed(&v1[..40]).is_err());
+		assert!(parse_pkcs8_seed(&[]).is_err());
+	}
+
+	#[test]
+	fn rfc8032_test_vector_signs_and_verifies() {
+		let seed: [u8; 32] = [
+			0x9d, 0x61, 0xb1, 0x9d, 0xef, 0xfd, 0x5a, 0x60, 0xba, 0x84, 0x4a, 0xf4, 0x92, 0xec,
+			0x2c, 0xc4, 0x44, 0x49, 0xc5, 0x69, 0x7b, 0x32, 0x69, 0x19, 0x70, 0x3b, 0xac, 0x03,
+			0x1c, 0xae, 0x7f, 0x60,
+		];
+		let pair = Ed25519KeyPair::from_der(&encode_pkcs8(&seed), "t".into()).unwrap();
+		assert_eq!(pair.public_key()[..4], [0xd7, 0x5a, 0x98, 0x01]);
+		// RFC 8032 test 1: the empty message.
+		assert_eq!(pair.sign(b"").as_bytes()[..4], [0xe5, 0x56, 0x43, 0x00]);
+	}
+
+	#[test]
+	fn event_signed_by_another_server_is_rejected() {
+		let pair = pair();
+		let Value::Object(mut event) = Value::parse(
+			r#"{"type":"m.room.message","sender":"@a:example.org","room_id":"!r:example.org","origin_server_ts":1,"depth":1,"content":{"body":"hi"},"prev_events":[],"auth_events":[]}"#,
+		)
+		.unwrap() else {
+			panic!("object")
+		};
+		let version = RoomVersionId::V11;
+		hash_and_sign_event("other.org", &pair, &mut event, &version).unwrap();
+		let keys = keys_for("other.org", &pair);
+		// The sender is on example.org, so a signature from other.org does not count.
+		assert!(verify_event(&keys, &event, &version).is_err());
 	}
 
 	#[test]
