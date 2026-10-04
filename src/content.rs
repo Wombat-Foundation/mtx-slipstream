@@ -138,6 +138,36 @@ impl ErrorKind {
 	}
 }
 
+impl ErrorKind {
+	/// The kind for a Matrix `errcode`; unknown codes map to `Unknown`.
+	#[must_use]
+	pub fn from_errcode(errcode: &str) -> Self {
+		match errcode {
+			"M_LIMIT_EXCEEDED" => Self::LimitExceeded {
+				retry_after_ms: None,
+			},
+			"M_FORBIDDEN" => Self::Forbidden {
+				_value: (),
+			},
+			"M_UNKNOWN_TOKEN" => Self::UnknownToken {
+				soft_logout: false,
+			},
+			"M_MISSING_TOKEN" => Self::MissingToken,
+			"M_NOT_FOUND" => Self::NotFound,
+			"M_BAD_JSON" => Self::BadJson,
+			"M_INVALID_PARAM" => Self::InvalidParam,
+			"M_TOO_LARGE" => Self::TooLarge,
+			"M_UNRECOGNIZED" => Self::Unrecognized,
+			"M_UNAUTHORIZED" => Self::Unauthorized,
+			"M_USER_DEACTIVATED" => Self::UserDeactivated,
+			"M_USER_LOCKED" => Self::UserLocked,
+			"M_USER_SUSPENDED" => Self::UserSuspended,
+			"M_GUEST_ACCESS_FORBIDDEN" => Self::GuestAccessForbidden,
+			_ => Self::Unknown,
+		}
+	}
+}
+
 impl Error {
 	fn body_json(&self) -> Value {
 		let mut object = crate::json::Object::new();

@@ -51,7 +51,7 @@ impl core::error::Error for MatrixIdParseError {}
 
 macro_rules! matrix_id {
 	($borrowed:ident, $owned:ident) => {
-		#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+		#[derive(Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 		pub struct $owned(alloc::string::String);
 
 		pub type $borrowed = $owned;
@@ -217,7 +217,7 @@ pub mod presence {
 	pub use crate::events::presence::PresenceState;
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct MilliSecondsSinceUnixEpoch(pub UInt);
 
 impl MilliSecondsSinceUnixEpoch {

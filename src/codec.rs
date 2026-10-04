@@ -223,3 +223,25 @@ macro_rules! impl_codec_enum {
 		}
 	};
 }
+
+/// Implements the codec traits for a struct of named fields.
+#[macro_export]
+macro_rules! impl_codec_struct {
+	($t:ident { $($field:ident : $ty:ty),* $(,)? }) => {
+		impl $crate::codec::Serialize for $t {
+			fn to_json(&self) -> $crate::json::Value {
+				#[allow(unused_mut)]
+				let mut object = $crate::json::Object::new();
+				$($crate::endpoint::put_field(&mut object, stringify!($field), &self.$field);)*
+				$crate::json::Value::Object(object)
+			}
+		}
+		impl $crate::codec::Deserialize for $t {
+			fn from_json(value: &$crate::json::Value) -> Result<Self, $crate::codec::DeError> {
+				Ok(Self {
+					$($field: $crate::endpoint::body_field::<$ty>(Some(value), stringify!($field))?,)*
+				})
+			}
+		}
+	};
+}

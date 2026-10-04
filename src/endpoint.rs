@@ -55,8 +55,8 @@ impl<'a> SendAccessToken<'a> {
 	#[must_use]
 	pub fn get_required_for_endpoint(self) -> Option<&'a str> {
 		match self {
-			| Self::IfRequired(token) | Self::Always(token) => Some(token),
-			| Self::None => None,
+			Self::IfRequired(token) | Self::Always(token) => Some(token),
+			Self::None => None,
 		}
 	}
 }
@@ -87,7 +87,10 @@ impl EndpointError for Error {
 				message: message.to_string(),
 			}
 		});
-		Self { status_code, body }
+		Self {
+			status_code,
+			body,
+		}
 	}
 }
 
@@ -103,15 +106,17 @@ pub enum FromHttpResponseError<E> {
 impl<E: fmt::Display> fmt::Display for FromHttpResponseError<E> {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		match self {
-			| Self::Server(e) => e.fmt(f),
-			| Self::Deserialization(e) => write!(f, "deserialization failed: {e}"),
+			Self::Server(e) => e.fmt(f),
+			Self::Deserialization(e) => write!(f, "deserialization failed: {e}"),
 		}
 	}
 }
 impl<E: fmt::Debug + fmt::Display> core::error::Error for FromHttpResponseError<E> {}
 
 impl<E> From<DeError> for FromHttpResponseError<E> {
-	fn from(e: DeError) -> Self { Self::Deserialization(e) }
+	fn from(e: DeError) -> Self {
+		Self::Deserialization(e)
+	}
 }
 
 /// Error converting an HTTP request into a typed request.
@@ -124,14 +129,16 @@ pub enum FromHttpRequestError {
 impl fmt::Display for FromHttpRequestError {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		match self {
-			| Self::Deserialization(e) => write!(f, "deserialization failed: {e}"),
-			| Self::MethodMismatch => f.write_str("HTTP method mismatch"),
+			Self::Deserialization(e) => write!(f, "deserialization failed: {e}"),
+			Self::MethodMismatch => f.write_str("HTTP method mismatch"),
 		}
 	}
 }
 impl core::error::Error for FromHttpRequestError {}
 impl From<DeError> for FromHttpRequestError {
-	fn from(e: DeError) -> Self { Self::Deserialization(e) }
+	fn from(e: DeError) -> Self {
+		Self::Deserialization(e)
+	}
 }
 
 /// A request that can be sent to a remote server.
@@ -218,9 +225,9 @@ pub trait EndpointResponse: Sized {
 #[must_use]
 pub fn to_param<T: Serialize>(value: &T) -> Option<String> {
 	match value.to_json() {
-		| Value::Null => None,
-		| Value::String(s) => Some(s),
-		| other => crate::json::write_string_value(&other).ok(),
+		Value::Null => None,
+		Value::String(s) => Some(s),
+		other => crate::json::write_string_value(&other).ok(),
 	}
 }
 
@@ -294,7 +301,8 @@ impl<T: EndpointRequest> OutgoingRequest for T {
 		}
 		let mut builder = http::Request::builder().method(T::METADATA.method).uri(url);
 		if let Some(token) = access_token.get_required_for_endpoint() {
-			builder = builder.header(http::header::AUTHORIZATION, alloc::format!("Bearer {token}"));
+			builder =
+				builder.header(http::header::AUTHORIZATION, alloc::format!("Bearer {token}"));
 		}
 		let mut buf = B::default();
 		if let Some(body) = self.body() {
@@ -314,8 +322,8 @@ impl<T: EndpointResponse> IncomingResponse for T {
 		if !response.status().is_success() {
 			return Err(FromHttpResponseError::Server(Error::from_http_response(response)));
 		}
-		let text = core::str::from_utf8(response.body().as_ref())
-			.map_err(|e| DeError(e.to_string()))?;
+		let text =
+			core::str::from_utf8(response.body().as_ref()).map_err(|e| DeError(e.to_string()))?;
 		let value = Value::parse(text).map_err(|e| DeError(e.to_string()))?;
 		Ok(T::from_body(&value)?)
 	}
@@ -412,14 +420,14 @@ macro_rules! endpoint {
 		}
 		response { $($resp_field:ident : $rt:ty),* $(,)? }
 	) => {
-		#[derive(Clone, Debug, Default)]
+		#[derive(Clone, Debug)]
 		pub struct Request {
 			$(pub $path_field: $pt,)*
 			$(pub $query_field: $qt,)*
 			$(pub $body_field_name: $bt,)*
 		}
 
-		#[derive(Clone, Debug, Default)]
+		#[derive(Clone, Debug)]
 		pub struct Response {
 			$(pub $resp_field: $rt,)*
 		}
