@@ -9,11 +9,16 @@
 
 extern crate alloc;
 
+pub mod antispam;
 pub mod canonical_json;
 pub mod codec;
+pub use antispam::{draupnir as draupnir_antispam, meowlnir as meowlnir_antispam};
 pub mod directory;
 pub mod encryption;
 mod key_id;
+mod relation_types;
+mod room_power_levels;
+mod space_child;
 pub use key_id::{
 	Base64PublicKey, KeyId, OneTimeKeyAlgorithm, OneTimeKeyId, OneTimeKeyName, OwnedKeyId,
 	OwnedOneTimeKeyId, ServerSigningKeyVersion, SigningKeyAlgorithm,
@@ -613,6 +618,10 @@ pub mod events {
 		fn event_type(&self) -> Self::EventType;
 	}
 	pub mod relation {
+		pub use crate::relation_types::{
+			Annotation, BundledMessageLikeRelations, BundledReference, BundledThread,
+			CustomRelation, InReplyTo, Reference, ReferenceChunk, Relation, Replacement, Thread,
+		};
 		#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 		pub enum RelationType {
 			Reply,
@@ -768,6 +777,7 @@ pub mod events {
 			}
 		}
 		pub mod power_levels {
+			pub use crate::room_power_levels::RoomPowerLevels;
 			#[derive(Clone, Debug, Default)]
 			pub struct RoomPowerLevelsEventContent {
 				pub ban: crate::Int,
@@ -831,14 +841,20 @@ pub mod events {
 		}
 		pub mod space {
 			pub mod child {
-				#[derive(Clone, Debug, Default)]
-				pub struct RoomSpaceChildEventContent;
+				pub use crate::space_child::{
+					RedactedSpaceChildEventContent, SpaceChildEventContent,
+				};
+				/// Alias kept for the federation hierarchy types.
+				pub type RoomSpaceChildEventContent = SpaceChildEventContent;
 			}
 		}
 	}
 	pub mod space {
 		pub mod child {
-			pub use super::super::room::space::child::RoomSpaceChildEventContent;
+			pub use super::super::room::space::child::{
+				RedactedSpaceChildEventContent, RoomSpaceChildEventContent,
+				SpaceChildEventContent,
+			};
 			pub type HierarchySpaceChildEvent = RoomSpaceChildEventContent;
 		}
 	}
@@ -848,6 +864,10 @@ pub mod events {
 	pub struct AnySyncTimelineEvent;
 	#[derive(Clone, Debug, Default)]
 	pub struct AnyMessageLikeEvent;
+	#[derive(Clone, Debug, Default)]
+	pub struct AnyMessageLikeEventContent;
+	#[derive(Clone, Debug, Default)]
+	pub struct AnyStateEventContent;
 	#[derive(Clone, Debug, Default)]
 	pub struct AnyStateEvent;
 	#[derive(Clone, Debug, Default)]
@@ -923,6 +943,20 @@ pub mod serde {
 			crate::json::Value::parse(input)
 				.map(|_| Self(input.to_owned(), PhantomData))
 				.map_err(|error| crate::codec::DeError(error.to_string()))
+		}
+
+		/// Wraps already-serialized JSON text, validating that it parses.
+		///
+		/// # Errors
+		///
+		/// Returns an error if `input` is not valid JSON.
+		pub fn from_json_string(
+			input: alloc::string::String,
+		) -> Result<Self, crate::codec::DeError> {
+			match crate::json::Value::parse(&input) {
+				Ok(_) => Ok(Self(input, PhantomData)),
+				Err(error) => Err(crate::codec::DeError(error.to_string())),
+			}
 		}
 
 		#[must_use]

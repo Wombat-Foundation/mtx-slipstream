@@ -31,7 +31,4 @@ pub struct FileMessageEventContent {
 	pub source: MediaSource,
 	pub info: Option<FileInfo>,
 }
-#[derive(Clone, Debug)]
-pub enum Relation {
-	None,
-}
+pub use crate::relation_types::Relation;

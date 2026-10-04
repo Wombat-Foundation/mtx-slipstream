@@ -29,6 +29,9 @@ macro_rules! event_type {
 			pub fn to_cow_str(&self) -> Cow<'_, str> { Cow::Borrowed(self.as_str()) }
 		}
 
+		impl AsRef<str> for $name {
+			fn as_ref(&self) -> &str { self.as_str() }
+		}
 		impl From<&str> for $name {
 			fn from(value: &str) -> Self {
 				match value {
