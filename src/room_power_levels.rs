@@ -65,6 +65,7 @@ impl RoomPowerLevels {
 	#[must_use]
 	pub fn user_can_redact_event_of_other(&self, user_id: &UserId) -> bool {
 		self.for_user(user_id) >= self.redact
+			&& self.user_can_send_message(user_id, TimelineEventType::RoomRedaction)
 	}
 
 	/// Whether `user_id` may redact events they sent themselves.
