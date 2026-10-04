@@ -11,7 +11,9 @@ const MAX_BYTES: usize = 255;
 
 /// Accepts any string; used for identifiers that are opaque to the server.
 #[must_use]
-pub const fn any(_: &str) -> bool { true }
+pub const fn any(_: &str) -> bool {
+	true
+}
 
 /// `host[:port]` with a DNS name, IPv4 address or bracketed IPv6 address.
 #[must_use]
@@ -27,8 +29,8 @@ pub fn server_name(value: &str) -> bool {
 			&& (tail.is_empty() || tail.strip_prefix(':').is_some_and(port));
 	}
 	let (host, port_part) = match value.split_once(':') {
-		| Some((host, port_part)) => (host, Some(port_part)),
-		| None => (value, None),
+		Some((host, port_part)) => (host, Some(port_part)),
+		None => (value, None),
 	};
 	port_part.is_none_or(port) && (host.parse::<Ipv4Addr>().is_ok() || dns_name(host))
 }
@@ -43,9 +45,7 @@ fn port(value: &str) -> bool {
 fn dns_name(value: &str) -> bool {
 	!value.is_empty()
 		&& !value.starts_with('.')
-		&& value
-			.bytes()
-			.all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'.')
+		&& value.bytes().all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'.')
 }
 
 /// `@localpart:server`.
@@ -63,8 +63,8 @@ pub fn user_id(value: &str) -> bool {
 pub fn room_id(value: &str) -> bool {
 	value.len() <= MAX_BYTES
 		&& value.strip_prefix('!').is_some_and(|rest| match rest.split_once(':') {
-			| Some((opaque, server)) => !opaque.is_empty() && server_name(server),
-			| None => !rest.is_empty(),
+			Some((opaque, server)) => !opaque.is_empty() && server_name(server),
+			None => !rest.is_empty(),
 		})
 }
 
@@ -73,8 +73,8 @@ pub fn room_id(value: &str) -> bool {
 pub fn event_id(value: &str) -> bool {
 	value.len() <= MAX_BYTES
 		&& value.strip_prefix('$').is_some_and(|rest| match rest.split_once(':') {
-			| Some((opaque, server)) => !opaque.is_empty() && server_name(server),
-			| None => !rest.is_empty(),
+			Some((opaque, server)) => !opaque.is_empty() && server_name(server),
+			None => !rest.is_empty(),
 		})
 }
 
@@ -90,7 +90,9 @@ pub fn room_alias_id(value: &str) -> bool {
 
 /// A room ID or a room alias.
 #[must_use]
-pub fn room_or_alias_id(value: &str) -> bool { room_id(value) || room_alias_id(value) }
+pub fn room_or_alias_id(value: &str) -> bool {
+	room_id(value) || room_alias_id(value)
+}
 
 /// `mxc://server/media_id`.
 #[must_use]
@@ -176,7 +178,9 @@ mod tests {
 	#[test]
 	fn mxc_uris() {
 		assert!(mxc_uri("mxc://example.org/abcDEF123"));
-		for bad in ["mxc://example.org", "mxc://example.org/", "mxc:///id", "http://a/b", "mxc://a/b/c"] {
+		for bad in
+			["mxc://example.org", "mxc://example.org/", "mxc:///id", "http://a/b", "mxc://a/b/c"]
+		{
 			assert!(!mxc_uri(bad), "{bad}");
 		}
 	}

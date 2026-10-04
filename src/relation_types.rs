@@ -127,9 +127,10 @@ impl Serialize for Relation {
 		};
 		let mut object = body.as_object().cloned().unwrap_or_default();
 		object.insert("rel_type".into(), Value::String(rel_type.into()));
-		if let Some(Value::Object(reply)) = object.get("in_reply_to").cloned() {
-			object.insert("m.in_reply_to".into(), Value::Object(reply));
-			object.remove("in_reply_to");
+		if matches!(self, Self::Thread(_)) {
+			if let Some(Value::Object(reply)) = object.remove("in_reply_to") {
+				object.insert("m.in_reply_to".into(), Value::Object(reply));
+			}
 		}
 		Value::Object(object)
 	}

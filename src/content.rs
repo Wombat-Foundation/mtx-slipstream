@@ -90,8 +90,20 @@ impl Base64 {
 	///
 	/// Returns an error if the input is not valid base64.
 	pub fn parse(input: impl AsRef<[u8]>) -> Result<Self, Base64DecodeError> {
-		let trimmed: Vec<u8> = input.as_ref().iter().copied().filter(|&b| b != b'=').collect();
-		STANDARD_NO_PAD.decode(trimmed).map(Self).map_err(|_| Base64DecodeError)
+		let input = input.as_ref();
+		let padding = input.iter().rev().take_while(|&&b| b == b'=').count();
+		let unpadded_len = input.len() - padding;
+		let expected_padding = match unpadded_len % 4 {
+			0 => 0,
+			2 => 2,
+			3 => 1,
+			_ => return Err(Base64DecodeError),
+		};
+		if input[..unpadded_len].contains(&b'=') || (padding != 0 && padding != expected_padding)
+		{
+			return Err(Base64DecodeError);
+		}
+		STANDARD_NO_PAD.decode(&input[..unpadded_len]).map(Self).map_err(|_| Base64DecodeError)
 	}
 
 	#[must_use]

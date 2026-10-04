@@ -24,7 +24,7 @@ impl Serialize for IgnoredUser {
 impl Deserialize for IgnoredUser {
 	fn from_json(value: &Value) -> Result<Self, DeError> {
 		Ok(Self {
-			extra: value.as_object().cloned().unwrap_or_default(),
+			extra: value.as_object().cloned().ok_or_else(|| DeError::expected("object"))?,
 		})
 	}
 }
