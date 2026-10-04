@@ -481,6 +481,11 @@ pub mod api {
 		pub mod room {
 			pub use crate::room_api::*;
 		}
+		pub mod space {
+			pub use crate::federation_api::space::{
+				SpaceHierarchyRoomsChunk, client::get_hierarchy,
+			};
+		}
 		pub mod search {
 			pub use crate::search::search_events;
 		}
@@ -644,6 +649,18 @@ pub mod events {
 		type EventType = MessageLikeEventType;
 		fn event_type(&self) -> Self::EventType {
 			MessageLikeEventType::RoomMessage
+		}
+	}
+	impl EventContent for room::canonical_alias::RoomCanonicalAliasEventContent {
+		type EventType = StateEventType;
+		fn event_type(&self) -> Self::EventType {
+			StateEventType::RoomCanonicalAlias
+		}
+	}
+	impl EventContent for room::preview_url::RoomPreviewUrlsEventContent {
+		type EventType = StateEventType;
+		fn event_type(&self) -> Self::EventType {
+			StateEventType::from("m.room.preview_urls")
 		}
 	}
 	pub mod relation {
@@ -1096,10 +1113,11 @@ pub struct MxcUriError;
 pub struct IdParseError;
 
 /// Signatures by entity and key ID, as found in signed JSON.
-pub type Signatures = alloc::collections::BTreeMap<
-	OwnedServerName,
-	alloc::collections::BTreeMap<OwnedServerSigningKeyId, alloc::string::String>,
->;
+pub type Signatures<E = OwnedServerName, K = ServerSigningKeyVersion> =
+	alloc::collections::BTreeMap<
+		E,
+		alloc::collections::BTreeMap<OwnedKeyId<SigningKeyAlgorithm, K>, alloc::string::String>,
+	>;
 
 /// Matrix-facing names shared by the server and the serialization layer.
 ///

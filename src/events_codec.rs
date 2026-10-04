@@ -3,6 +3,7 @@
 use crate::{
 	codec::{DeError, Deserialize, Serialize, from_value},
 	events::room::{
+		canonical_alias::RoomCanonicalAliasEventContent,
 		guest_access::RoomGuestAccessEventContent,
 		history_visibility::RoomHistoryVisibilityEventContent,
 		join_rules::{JoinRule, RestrictedRule, RoomJoinRulesEventContent},
@@ -10,6 +11,7 @@ use crate::{
 		message::RoomMessageEventContent,
 		name::RoomNameEventContent,
 		power_levels::RoomPowerLevelsEventContent,
+		preview_url::RoomPreviewUrlsEventContent,
 		redaction::RoomRedactionEventContent,
 		third_party_invite::RoomThirdPartyInviteEventContent,
 		topic::RoomTopicEventContent,
@@ -73,6 +75,47 @@ impl Serialize for RoomMessageEventContent {
 		let mut object = Object::new();
 		object.insert("body".into(), Value::String(self.body.clone()));
 		Value::Object(object)
+	}
+}
+
+impl Serialize for RoomCanonicalAliasEventContent {
+	fn to_json(&self) -> Value {
+		let mut object = Object::new();
+		if let Some(alias) = &self.alias {
+			insert(&mut object, "alias", alias);
+		}
+		if !self.alt_aliases.is_empty() {
+			insert(&mut object, "alt_aliases", &self.alt_aliases);
+		}
+		Value::Object(object)
+	}
+}
+impl Deserialize for RoomCanonicalAliasEventContent {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		let object = object(value)?;
+		Ok(Self {
+			alias: field(object, "alias")?,
+			alt_aliases: field(object, "alt_aliases")?.unwrap_or_default(),
+		})
+	}
+}
+impl Serialize for RoomPreviewUrlsEventContent {
+	fn to_json(&self) -> Value {
+		let mut object = Object::new();
+		insert(&mut object, "url_previews", &self.url_preview);
+		if let Some(disabled) = self.disabled {
+			insert(&mut object, "disabled", &disabled);
+		}
+		Value::Object(object)
+	}
+}
+impl Deserialize for RoomPreviewUrlsEventContent {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		let object = object(value)?;
+		Ok(Self {
+			url_preview: field(object, "url_previews")?.unwrap_or(false),
+			disabled: field(object, "disabled")?,
+		})
 	}
 }
 

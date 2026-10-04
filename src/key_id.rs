@@ -16,6 +16,20 @@ pub struct OwnedKeyId<A, K>(String, PhantomData<fn() -> (A, K)>);
 pub type KeyId<A, K> = OwnedKeyId<A, K>;
 
 impl<A, K> OwnedKeyId<A, K> {
+	/// Parses a key ID, which must contain a `:` between algorithm and name.
+	///
+	/// # Errors
+	///
+	/// Returns an error if `value` has no `:`.
+	pub fn parse(value: impl AsRef<str>) -> Result<Self, crate::MatrixIdParseError> {
+		let value = value.as_ref();
+		if value.contains(':') {
+			Ok(Self(value.to_string(), PhantomData))
+		} else {
+			Err(crate::MatrixIdParseError)
+		}
+	}
+
 	/// The full `<algorithm>:<name>` string.
 	#[must_use]
 	pub fn as_str(&self) -> &str {

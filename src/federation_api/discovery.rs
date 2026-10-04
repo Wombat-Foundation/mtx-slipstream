@@ -252,7 +252,7 @@ mod tests {
 			OldVerifyKey::new(MilliSecondsSinceUnixEpoch(5), Base64::new(alloc::vec![4])),
 		);
 		let mut inner = BTreeMap::new();
-		inner.insert(OwnedServerSigningKeyId::from("ed25519:a"), String::from("sig"));
+		inner.insert(crate::OwnedKeyId::from("ed25519:a"), String::from("sig"));
 		keys.signatures.insert(OwnedServerName::from("example.org"), inner);
 
 		let back: ServerSigningKeys = from_str(&to_string(&keys)).unwrap();

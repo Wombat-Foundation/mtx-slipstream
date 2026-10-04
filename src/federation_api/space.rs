@@ -222,6 +222,60 @@ summary!(
 	SpaceHierarchyChildSummary, SpaceHierarchyChildSummaryInit,
 );
 
+summary!(
+	/// A room in a client-facing hierarchy listing.
+	SpaceHierarchyRoomsChunk, SpaceHierarchyRoomsChunkInit,
+	children_state: Vec<Raw<HierarchySpaceChildEvent>>
+);
+
+impl From<SpaceHierarchyParentSummary> for SpaceHierarchyRoomsChunk {
+	fn from(summary: SpaceHierarchyParentSummary) -> Self {
+		Self {
+			canonical_alias: summary.canonical_alias,
+			name: summary.name,
+			num_joined_members: summary.num_joined_members,
+			room_id: summary.room_id,
+			topic: summary.topic,
+			world_readable: summary.world_readable,
+			guest_can_join: summary.guest_can_join,
+			avatar_url: summary.avatar_url,
+			join_rule: summary.join_rule,
+			room_type: summary.room_type,
+			allowed_room_ids: summary.allowed_room_ids,
+			encryption: summary.encryption,
+			room_version: summary.room_version,
+			children_state: summary.children_state,
+		}
+	}
+}
+
+/// The client-server hierarchy endpoint.
+pub mod client {
+	pub mod get_hierarchy {
+		pub mod v1 {
+			use alloc::{string::String, vec::Vec};
+
+			use super::super::super::SpaceHierarchyRoomsChunk;
+			use crate::{OwnedRoomId, UInt, endpoint};
+
+			endpoint! {
+				method: "GET", path: "/_matrix/client/v1/rooms/{room_id}/hierarchy",
+				request {
+					path { room_id: OwnedRoomId }
+					query {
+						from: Option<String>,
+						limit: Option<UInt>,
+						max_depth: Option<UInt>,
+						suggested_only: bool
+					}
+					body {}
+				}
+				response { next_batch: Option<String>, rooms: Vec<SpaceHierarchyRoomsChunk> }
+			}
+		}
+	}
+}
+
 pub mod get_hierarchy {
 	pub mod v1 {
 		use alloc::vec::Vec;

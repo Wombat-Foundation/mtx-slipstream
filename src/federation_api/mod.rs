@@ -7,6 +7,40 @@ pub type RawPdu = Raw<Value>;
 
 pub use crate::directory::federation as directory;
 
+/// Policy server endpoints (MSC4284).
+pub mod room {
+	pub mod policy_check {
+		pub mod unstable {
+			use alloc::string::String;
+
+			use crate::{OwnedEventId, endpoint, federation_api::RawPdu};
+
+			endpoint! {
+				method: "POST",
+				path: "/_matrix/policy/unstable/org.matrix.msc4284/event/{event_id}/check",
+				request {
+					path { event_id: OwnedEventId }
+					query {}
+					body { pdu: Option<RawPdu> }
+				}
+				response { recommendation: String }
+			}
+		}
+	}
+
+	pub mod policy_sign {
+		pub mod unstable {
+			use crate::{Signatures, endpoint, federation_api::RawPdu};
+
+			endpoint! {
+				method: "POST", path: "/_matrix/policy/unstable/org.matrix.msc4284/sign",
+				request { path {} query {} body { pdu: RawPdu } }
+				response { signatures: Option<Signatures> }
+			}
+		}
+	}
+}
+
 pub mod event {
 	pub mod get_event {
 		pub mod v1 {
@@ -36,6 +70,42 @@ pub mod event {
 						event_id,
 						include_unredacted_content,
 					}
+				}
+			}
+		}
+	}
+
+	/// MSC2836 relationship walking, used as a fallback for missing events.
+	pub mod event_relationships {
+		pub mod unstable {
+			use alloc::{string::String, vec::Vec};
+
+			use crate::{OwnedEventId, OwnedRoomId, UInt, endpoint, federation_api::RawPdu};
+
+			endpoint! {
+				method: "POST", path: "/_matrix/federation/unstable/event_relationships",
+				request {
+					path {}
+					query {}
+					body {
+						event_id: OwnedEventId,
+						room_id: Option<OwnedRoomId>,
+						max_depth: Option<UInt>,
+						max_breadth: Option<UInt>,
+						limit: Option<UInt>,
+						depth_first: Option<bool>,
+						recent_first: Option<bool>,
+						include_parent: Option<bool>,
+						include_children: Option<bool>,
+						direction: Option<String>,
+						batch: Option<String>
+					}
+				}
+				response {
+					events: Vec<RawPdu>,
+					next_batch: Option<String>,
+					limited: Option<bool>,
+					auth_chain: Vec<RawPdu>
 				}
 			}
 		}
