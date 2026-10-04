@@ -194,7 +194,8 @@ fn time_object(secs_name: &str, nanos_name: &str, secs: u64, nanos: u32) -> Valu
 
 impl Serialize for ScheduledDelayedEvent {
 	fn to_json(&self) -> Value {
-		let since_epoch = self.running_since.duration_since(SystemTime::UNIX_EPOCH).unwrap_or_default();
+		let since_epoch =
+			self.running_since.duration_since(SystemTime::UNIX_EPOCH).unwrap_or_default();
 		Value::Object(object_from(alloc::vec![
 			("event_type", self.event_type.to_json()),
 			("state_key", self.state_key.to_json()),
@@ -210,7 +211,10 @@ impl Serialize for ScheduledDelayedEvent {
 					since_epoch.subsec_nanos(),
 				),
 			),
-			("delay", time_object("secs", "nanos", self.delay.as_secs(), self.delay.subsec_nanos())),
+			(
+				"delay",
+				time_object("secs", "nanos", self.delay.as_secs(), self.delay.subsec_nanos())
+			),
 		]))
 	}
 }
@@ -232,7 +236,9 @@ impl Deserialize for ScheduledDelayedEvent {
 			content: Raw::from_json(required(object, "content")?)?,
 			user_id: OwnedUserId::from_json(required(object, "user_id")?)?,
 			room_id: OwnedRoomId::from_json(required(object, "room_id")?)?,
-			running_since: SystemTime::UNIX_EPOCH + Duration::new(since_secs, since_nanos),
+			running_since: SystemTime::UNIX_EPOCH
+				.checked_add(Duration::new(since_secs, since_nanos))
+				.ok_or_else(|| DeError::expected("running_since within the system time range"))?,
 			delay: Duration::new(delay_secs, delay_nanos),
 		})
 	}
@@ -259,7 +265,9 @@ mod tests {
 			delay: Duration::from_millis(1500),
 		};
 		let text = to_string(&event);
-		assert!(text.contains(r#""secs_since_epoch":100"#) && text.contains(r#""nanos":500000000"#));
+		assert!(
+			text.contains(r#""secs_since_epoch":100"#) && text.contains(r#""nanos":500000000"#)
+		);
 		let again = from_str::<ScheduledDelayedEvent>(&text).unwrap();
 		assert_eq!(again.running_since, event.running_since);
 		assert_eq!(again.delay, event.delay);
