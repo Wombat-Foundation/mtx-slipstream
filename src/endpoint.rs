@@ -47,6 +47,7 @@ pub enum MatrixVersion {
 pub enum SendAccessToken<'a> {
 	IfRequired(&'a str),
 	Always(&'a str),
+	Appservice(&'a str),
 	None,
 }
 
@@ -55,7 +56,7 @@ impl<'a> SendAccessToken<'a> {
 	#[must_use]
 	pub fn get_required_for_endpoint(self) -> Option<&'a str> {
 		match self {
-			Self::IfRequired(token) | Self::Always(token) => Some(token),
+			Self::IfRequired(token) | Self::Always(token) | Self::Appservice(token) => Some(token),
 			Self::None => None,
 		}
 	}
