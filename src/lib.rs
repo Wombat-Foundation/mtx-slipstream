@@ -16,6 +16,8 @@ pub mod canonical_json;
 pub mod codec;
 pub mod device;
 pub mod filter;
+pub mod room_api;
+pub mod threads;
 mod uiaa;
 pub use antispam::{draupnir as draupnir_antispam, meowlnir as meowlnir_antispam};
 pub mod directory;
@@ -470,6 +472,12 @@ pub mod api {
 		pub mod backup {
 			pub use crate::backup::*;
 		}
+		pub mod room {
+			pub use crate::room_api::*;
+		}
+		pub mod threads {
+			pub use crate::threads::{IncludeThreads, get_threads};
+		}
 		pub mod device {
 			pub use crate::device::{
 				DehydratedDeviceData, Device, delete_device, delete_devices, get_device,
@@ -619,6 +627,12 @@ pub mod events {
 	pub trait EventContent {
 		type EventType;
 		fn event_type(&self) -> Self::EventType;
+	}
+	impl EventContent for room::message::RoomMessageEventContent {
+		type EventType = MessageLikeEventType;
+		fn event_type(&self) -> Self::EventType {
+			MessageLikeEventType::RoomMessage
+		}
 	}
 	pub mod relation {
 		pub use crate::relation_types::{
