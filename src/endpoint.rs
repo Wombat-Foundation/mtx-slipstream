@@ -745,10 +745,15 @@ macro_rules! endpoint_response_status_array {
 			fn from_body(body: &$crate::json::Value) -> Result<Self, $crate::codec::DeError> {
 				let items =
 					body.as_array().ok_or_else(|| $crate::codec::DeError::expected("array"))?;
+				let status = items
+					.first()
+					.ok_or_else(|| $crate::codec::DeError::expected("[status, body]"))?;
+				if status.as_u64() != Some(200) {
+					return Err($crate::codec::DeError::expected("[200, body]"));
+				}
 				let value = items
 					.get(1)
 					.ok_or_else(|| $crate::codec::DeError::expected("[status, body]"))?;
-				Ok(Self {
 					$field: $crate::codec::Deserialize::from_json(value)?,
 				})
 			}
