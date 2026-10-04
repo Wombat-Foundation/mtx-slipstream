@@ -110,7 +110,7 @@ impl Deserialize for RoomPreviewUrlsEventContent {
 	fn from_json(value: &Value) -> Result<Self, DeError> {
 		let object = object(value)?;
 		Ok(Self {
-			disabled: field(object, "disabled")?.unwrap_or(false),
+			disabled: field(object, "disabled")?.unwrap_or(true),
 		})
 	}
 }
