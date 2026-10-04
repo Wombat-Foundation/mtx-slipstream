@@ -11,11 +11,11 @@ extern crate alloc;
 
 pub mod antispam;
 pub mod appservice;
+pub mod backup;
 pub mod canonical_json;
 pub mod codec;
-pub mod filter;
-pub mod backup;
 pub mod device;
+pub mod filter;
 mod uiaa;
 pub use antispam::{draupnir as draupnir_antispam, meowlnir as meowlnir_antispam};
 pub mod directory;
@@ -458,19 +458,22 @@ pub mod api {
 			backup::{
 				add_backup_keys, add_backup_keys_for_room, add_backup_keys_for_session,
 				create_backup_version, delete_backup_keys, delete_backup_keys_for_room,
-				delete_backup_keys_for_session, delete_backup_version, get_backup_info, get_backup_keys,
-				get_backup_keys_for_room, get_backup_keys_for_session, get_latest_backup_info,
-				update_backup_version,
+				delete_backup_keys_for_session, delete_backup_version, get_backup_info,
+				get_backup_keys, get_backup_keys_for_room, get_backup_keys_for_session,
+				get_latest_backup_info, update_backup_version,
 			},
-			device::{dehydrated_device, delete_device, delete_devices, get_device, get_devices, update_device},
+			device::{
+				dehydrated_device, delete_device, delete_devices, get_device, get_devices,
+				update_device,
+			},
 		};
 		pub mod backup {
 			pub use crate::backup::*;
 		}
 		pub mod device {
 			pub use crate::device::{
-				DehydratedDeviceData, Device, delete_device, delete_devices, get_device, get_devices,
-				update_device,
+				DehydratedDeviceData, Device, delete_device, delete_devices, get_device,
+				get_devices, update_device,
 			};
 		}
 		pub mod filter {

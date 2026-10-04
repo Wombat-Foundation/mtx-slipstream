@@ -153,7 +153,10 @@ impl Deserialize for RoomMemberEventContent {
 			.ok_or_else(|| DeError::expected("membership"))?;
 		Ok(Self {
 			membership,
-			join_authorized_via_users_server: field(object(value)?, "join_authorized_via_users_server")?,
+			join_authorized_via_users_server: field(
+				object(value)?,
+				"join_authorized_via_users_server",
+			)?,
 		})
 	}
 }
