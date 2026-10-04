@@ -28,7 +28,9 @@ pub mod get_threads {
 	pub mod v1 {
 		use alloc::{string::String, vec::Vec};
 
-		use crate::{OwnedRoomId, UInt, federation_api::RawPdu, threads::IncludeThreads};
+		use crate::{OwnedRoomId, UInt, federation_api::RawPdu};
+
+		pub use crate::threads::IncludeThreads;
 
 		crate::endpoint! {
 			method: "GET", path: "/_matrix/client/v1/rooms/{room_id}/threads",
