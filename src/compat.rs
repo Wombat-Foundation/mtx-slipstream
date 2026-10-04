@@ -9,7 +9,6 @@ use crate::{
 	api::client::error::{Error, ErrorKind},
 	events::room::member::MembershipState,
 	http_headers::ContentDispositionParseError,
-	signatures,
 };
 
 macro_rules! simple_error {
@@ -28,13 +27,6 @@ simple_error! {
 	IdParseError => "invalid identifier",
 	ContentDispositionParseError => "invalid Content-Disposition header",
 }
-
-impl fmt::Display for signatures::Error {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		f.write_str(&self.0)
-	}
-}
-impl core::error::Error for signatures::Error {}
 
 impl fmt::Display for ErrorKind {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

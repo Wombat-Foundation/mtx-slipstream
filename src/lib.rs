@@ -61,6 +61,7 @@ macro_rules! matrix_id {
 			pub fn as_str(&self) -> &str {
 				&self.0
 			}
+			#[allow(dead_code, reason = "only some ID types expose server_name")]
 			pub(crate) fn server_part(&self) -> Option<OwnedServerName> {
 				self.as_str().rsplit_once(':').map(|(_, server)| OwnedServerName::from(server))
 			}
@@ -124,6 +125,13 @@ matrix_id!(RoomAliasId, OwnedRoomAliasId);
 matrix_id!(ServerName, OwnedServerName);
 matrix_id!(UserId, OwnedUserId);
 matrix_id!(RoomOrAliasId, OwnedRoomOrAliasId);
+matrix_id!(ServerSigningKeyId, OwnedServerSigningKeyId);
+matrix_id!(SigningKeyId, OwnedSigningKeyId);
+matrix_id!(DeviceId, OwnedDeviceId);
+matrix_id!(TransactionId, OwnedTransactionId);
+matrix_id!(ClientSecret, OwnedClientSecret);
+matrix_id!(SessionId, OwnedSessionId);
+matrix_id!(MxcUri, OwnedMxcUri);
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct MilliSecondsSinceUnixEpoch(pub UInt);
@@ -617,23 +625,7 @@ pub mod power_levels {
 	}
 }
 
-pub mod signatures {
-	#[derive(Clone, Debug)]
-	pub struct Error(pub alloc::string::String);
-	/// Computes the event reference hash via Rezzy.
-	///
-	/// # Errors
-	///
-	/// Returns an error if the room version has no reference hash or the
-	/// canonical JSON writer rejects the object.
-	pub fn reference_hash(
-		object: &crate::CanonicalJsonObject,
-		version: &crate::RoomVersionId,
-	) -> Result<alloc::string::String, Error> {
-		rezzy::reference_hash(&crate::json::Value::Object(object.clone()), version.as_str())
-			.map_err(Error)
-	}
-}
+pub mod signatures;
 
 pub mod serde {
 	use core::marker::PhantomData;
@@ -658,6 +650,11 @@ pub mod serde {
 	}
 
 	impl<T> Raw<T> {
+		/// Wraps already-serialized JSON text, validating that it parses.
+		///
+		/// # Errors
+		///
+		/// Returns an error if `input` is not valid JSON.
 		pub fn from_json_text(input: &str) -> Result<Self, crate::codec::DeError> {
 			crate::json::Value::parse(input)
 				.map(|_| Self(input.to_owned(), PhantomData))

@@ -31,7 +31,9 @@ http = "1.3.1"
 # via `cargo bench --features mimalloc-alloc` -- dev-dependencies can't be
 # optional in Cargo.
 mimalloc = { version = "0.1", optional = true, default-features = false }
-rezzy = { git = "https://gitlab.com/gamesguru/rezzy.git", branch = "alpha" }
+rezzy = { git = "https://gitlab.com/gamesguru/rezzy.git", branch = "alpha", features = ["signing-dalek"] }
+ed25519-dalek = { version = "2", default-features = false, features = ["alloc", "pkcs8", "rand_core"] }
+rand_core = { version = "0.6", features = ["getrandom"] }
 simd-json = { version = "0.18", default-features = false, features = ["runtime-detection", "swar-number-parsing"] }
 
 [lints.rust]
