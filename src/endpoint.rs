@@ -403,13 +403,25 @@ pub fn object_from(fields: Vec<(&str, Value)>) -> Object {
 		.collect()
 }
 
-/// Keeps the query parameters that have a value.
+/// Flattens named values into query pairs: nulls are dropped and arrays repeat the key.
 #[must_use]
-pub fn present_params(params: Vec<(&str, Option<String>)>) -> Vec<(String, String)> {
-	params
-		.into_iter()
-		.filter_map(|(name, value)| value.map(|value| (name.to_string(), value)))
-		.collect()
+pub fn query_pairs(params: Vec<(&str, Value)>) -> Vec<(String, String)> {
+	let mut pairs = Vec::new();
+	for (name, value) in params {
+		let items = match value {
+			Value::Array(items) => items,
+			other => alloc::vec![other],
+		};
+		for item in items {
+			let rendered = match item {
+				Value::Null => continue,
+				Value::String(text) => text,
+				other => crate::json::write_string_value(&other).unwrap_or_default(),
+			};
+			pairs.push((name.to_string(), rendered));
+		}
+	}
+	pairs
 }
 
 /// Reads typed values out of a request or response being decoded.
@@ -452,9 +464,16 @@ impl<'a> Input<'a> {
 	///
 	/// Returns an error if the parameter is malformed or required and absent.
 	pub fn query<T: Deserialize>(&self, name: &str) -> Result<T, DeError> {
-		from_param(
-			self.query.iter().find(|(key, _)| key == name).map(|(_, value)| value.as_str()),
-		)
+		let values: Vec<&str> = self
+			.query
+			.iter()
+			.filter(|(key, _)| key == name)
+			.map(|(_, value)| value.as_str())
+			.collect();
+		from_param::<T>(values.first().copied()).or_else(|single| {
+			let items = values.iter().map(|value| Value::String((*value).to_string())).collect();
+			T::from_json(&Value::Array(items)).map_err(|_| single)
+		})
 	}
 
 	/// The named field of the JSON body.
@@ -520,8 +539,8 @@ macro_rules! endpoint_request {
 			}
 
 			fn query(&self) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)> {
-				$crate::endpoint::present_params(::alloc::vec![
-					$((stringify!($query_field), $crate::endpoint::to_param(&self.$query_field))),*
+				$crate::endpoint::query_pairs(::alloc::vec![
+					$((stringify!($query_field), $crate::codec::Serialize::to_json(&self.$query_field))),*
 				])
 			}
 
@@ -602,5 +621,119 @@ macro_rules! endpoint {
 			}
 		}
 		$crate::endpoint_response! { response { $($resp_field : $rt),* } }
+	};
+}
+
+/// Declares a request whose whole JSON body is a single value.
+///
+/// Used for endpoints such as `send_join`, where the body is the event itself.
+#[macro_export]
+macro_rules! endpoint_request_raw {
+	(
+		method: $method:literal, path: $path:literal,
+		request {
+			path { $($path_field:ident : $pt:ty),* $(,)? }
+			query { $($query_field:ident : $qt:ty),* $(,)? }
+			raw_body { $body_field:ident : $bt:ty }
+		}
+	) => {
+		#[derive(Clone, Debug)]
+		pub struct Request {
+			$(pub $path_field: $pt,)*
+			$(pub $query_field: $qt,)*
+			pub $body_field: $bt,
+		}
+
+		impl $crate::endpoint::EndpointRequest for Request {
+			type Response = Response;
+			const METADATA: $crate::endpoint::Metadata =
+				$crate::endpoint::Metadata { method: $method, path: $path };
+
+			fn path_args(&self) -> ::alloc::vec::Vec<::alloc::string::String> {
+				::alloc::vec![$($crate::endpoint::to_param(&self.$path_field).unwrap_or_default()),*]
+			}
+
+			fn query(&self) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)> {
+				$crate::endpoint::query_pairs(::alloc::vec![
+					$((stringify!($query_field), $crate::codec::Serialize::to_json(&self.$query_field))),*
+				])
+			}
+
+			fn body(&self) -> Option<$crate::json::Value> {
+				Some($crate::codec::Serialize::to_json(&self.$body_field))
+			}
+
+			fn from_parts(
+				path: &[::alloc::string::String],
+				query: &[(::alloc::string::String, ::alloc::string::String)],
+				body: Option<&$crate::json::Value>,
+			) -> Result<Self, $crate::codec::DeError> {
+				let input = $crate::endpoint::Input::new(path, query, body);
+				let value = Self {
+					$($path_field: input.path()?,)*
+					$($query_field: input.query(stringify!($query_field))?,)*
+					$body_field: $crate::codec::Deserialize::from_json(
+						body.ok_or_else(|| $crate::codec::DeError::expected("request body"))?,
+					)?,
+				};
+				input.finish()?;
+				Ok(value)
+			}
+		}
+	};
+}
+
+/// Declares a response whose whole JSON body is a single value.
+#[macro_export]
+macro_rules! endpoint_response_flat {
+	($field:ident : $ty:ty) => {
+		#[derive(Clone, Debug)]
+		pub struct Response {
+			pub $field: $ty,
+		}
+
+		impl $crate::endpoint::EndpointResponse for Response {
+			fn to_body(&self) -> $crate::json::Value {
+				$crate::codec::Serialize::to_json(&self.$field)
+			}
+
+			fn from_body(body: &$crate::json::Value) -> Result<Self, $crate::codec::DeError> {
+				Ok(Self {
+					$field: $crate::codec::Deserialize::from_json(body)?,
+				})
+			}
+		}
+	};
+}
+
+/// Declares a response that is a JSON array `[status, value]`, as in the v1
+/// `send_join` and `send_leave` endpoints.
+#[macro_export]
+macro_rules! endpoint_response_status_array {
+	($field:ident : $ty:ty) => {
+		#[derive(Clone, Debug)]
+		pub struct Response {
+			pub $field: $ty,
+		}
+
+		impl $crate::endpoint::EndpointResponse for Response {
+			fn to_body(&self) -> $crate::json::Value {
+				$crate::json::Value::Array(::alloc::vec![
+					$crate::codec::Serialize::to_json(&200_u64),
+					$crate::codec::Serialize::to_json(&self.$field),
+				])
+			}
+
+			fn from_body(body: &$crate::json::Value) -> Result<Self, $crate::codec::DeError> {
+				let items =
+					body.as_array().ok_or_else(|| $crate::codec::DeError::expected("array"))?;
+				let value = items
+					.get(1)
+					.ok_or_else(|| $crate::codec::DeError::expected("[status, body]"))?;
+				Ok(Self {
+					$field: $crate::codec::Deserialize::from_json(value)?,
+				})
+			}
+		}
 	};
 }

@@ -90,7 +90,11 @@ pub mod event {
 	}
 }
 
+pub mod authorization;
+pub mod backfill;
 pub mod discovery;
+pub mod knock;
+pub mod membership;
 pub mod query;
 pub mod transactions;
 
