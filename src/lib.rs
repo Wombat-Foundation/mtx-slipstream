@@ -93,6 +93,19 @@ macro_rules! matrix_id {
 				f.debug_tuple(stringify!($owned)).field(&self.0).finish()
 			}
 		}
+		impl codec::Serialize for $owned {
+			fn to_json(&self) -> json::Value {
+				json::Value::String(self.0.clone())
+			}
+		}
+		impl codec::Deserialize for $owned {
+			fn from_json(value: &json::Value) -> Result<Self, codec::DeError> {
+				value
+					.as_str()
+					.map(Self::from)
+					.ok_or_else(|| codec::DeError::expected(stringify!($owned)))
+			}
+		}
 		impl fmt::Display for $owned {
 			fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 				f.write_str(self.as_str())
@@ -358,6 +371,17 @@ pub mod events {
 		RoomThirdPartyInvite,
 		RoomTopic,
 	}
+	crate::impl_codec_enum!(TimelineEventType {
+		RoomAliases => "m.room.aliases",
+		RoomCreate => "m.room.create",
+		RoomJoinRules => "m.room.join_rules",
+		RoomMember => "m.room.member",
+		RoomMessage => "m.room.message",
+		RoomPowerLevels => "m.room.power_levels",
+		RoomRedaction => "m.room.redaction",
+		RoomThirdPartyInvite => "m.room.third_party_invite",
+		RoomTopic => "m.room.topic",
+	});
 	pub type StateEventType = TimelineEventType;
 	pub type MessageLikeEventType = TimelineEventType;
 	pub trait EventContent {
@@ -373,6 +397,13 @@ pub mod events {
 			Reference,
 			Thread,
 		}
+		crate::impl_codec_enum!(RelationType {
+			Reply => "m.in_reply_to",
+			Replacement => "m.replace",
+			Annotation => "m.annotation",
+			Reference => "m.reference",
+			Thread => "m.thread",
+		});
 	}
 	pub mod room {
 		pub mod redaction {
@@ -396,6 +427,13 @@ pub mod events {
 				Ban,
 				Knock,
 			}
+			crate::impl_codec_enum!(MembershipState {
+				Join => "join",
+				Invite => "invite",
+				Leave => "leave",
+				Ban => "ban",
+				Knock => "knock",
+			});
 			#[derive(Clone, Debug, Default)]
 			pub struct ThirdPartyInvite;
 		}
@@ -461,17 +499,19 @@ pub mod power_levels {
 
 pub mod signatures {
 	#[derive(Clone, Debug)]
-	pub struct Error;
-	/// Computes the event reference hash.
+	pub struct Error(pub alloc::string::String);
+	/// Computes the event reference hash via Rezzy.
 	///
 	/// # Errors
 	///
-	/// Returns an error if hashing fails.
+	/// Returns an error if the room version has no reference hash or the
+	/// canonical JSON writer rejects the object.
 	pub fn reference_hash(
-		_: &crate::CanonicalJsonObject,
-		_: &crate::RoomVersionId,
+		object: &crate::CanonicalJsonObject,
+		version: &crate::RoomVersionId,
 	) -> Result<alloc::string::String, Error> {
-		Ok(alloc::string::String::new())
+		rezzy::reference_hash(&crate::json::Value::Object(object.clone()), version.as_str())
+			.map_err(Error)
 	}
 }
 
@@ -485,6 +525,17 @@ pub mod serde {
 
 	#[derive(Clone, Debug, Default)]
 	pub struct Raw<T>(pub alloc::string::String, pub PhantomData<T>);
+
+	impl<T> crate::codec::Serialize for Raw<T> {
+		fn to_json(&self) -> crate::json::Value {
+			crate::json::Value::parse(&self.0).unwrap_or_default()
+		}
+	}
+	impl<T> crate::codec::Deserialize for Raw<T> {
+		fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+			Ok(Self(crate::codec::to_string(value), PhantomData))
+		}
+	}
 
 	impl<T> Raw<T> {
 		#[must_use]
@@ -513,3 +564,23 @@ pub struct IdParseError;
 pub type CanonicalJsonObject = canonical_json::Object;
 pub type CanonicalJsonValue = canonical_json::Value;
 pub type CanonicalJsonArray = canonical_json::Array;
+
+#[cfg(test)]
+mod codec_tests {
+	use crate::{
+		OwnedEventId, RoomVersionId,
+		codec::{from_str, to_string},
+		events::{TimelineEventType, room::member::MembershipState},
+	};
+
+	#[test]
+	fn ids_and_enums_round_trip() {
+		let id = OwnedEventId::from("$abc:example.org");
+		assert_eq!(from_str::<OwnedEventId>(&to_string(&id)).unwrap(), id);
+		let ty = TimelineEventType::RoomMember;
+		assert_eq!(to_string(&ty), "\"m.room.member\"");
+		assert_eq!(from_str::<TimelineEventType>("\"m.room.member\"").unwrap(), ty);
+		assert!(from_str::<MembershipState>("\"nope\"").is_err());
+		assert_eq!(from_str::<RoomVersionId>("\"11\"").unwrap(), RoomVersionId::V11);
+	}
+}
