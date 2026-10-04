@@ -264,7 +264,11 @@ macro_rules! event_id {
 }
 
 #[macro_export]
-macro_rules! device_id { ($value:expr) => { $crate::OwnedDeviceId::from($value) }; }
+macro_rules! device_id {
+	($value:expr) => {
+		$crate::OwnedDeviceId::from($value)
+	};
+}
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum RoomVersionId {
@@ -419,11 +423,25 @@ pub mod api {
 
 	pub mod client {
 		pub mod appservice {
-			#[derive(Clone, Debug, Default)] pub struct Namespace { pub exclusive: bool, pub regex: String }
-			#[derive(Clone, Debug, Default)] pub struct Namespaces { pub users: Vec<Namespace>, pub aliases: Vec<Namespace>, pub rooms: Vec<Namespace> }
-			#[derive(Clone, Debug, Default)] pub struct Registration {
-				pub id: String, pub url: Option<String>, pub as_token: String, pub hs_token: String,
-				pub sender_localpart: String, pub namespaces: Namespaces,
+			#[derive(Clone, Debug, Default)]
+			pub struct Namespace {
+				pub exclusive: bool,
+				pub regex: String,
+			}
+			#[derive(Clone, Debug, Default)]
+			pub struct Namespaces {
+				pub users: Vec<Namespace>,
+				pub aliases: Vec<Namespace>,
+				pub rooms: Vec<Namespace>,
+			}
+			#[derive(Clone, Debug, Default)]
+			pub struct Registration {
+				pub id: String,
+				pub url: Option<String>,
+				pub as_token: String,
+				pub hs_token: String,
+				pub sender_localpart: String,
+				pub namespaces: Namespaces,
 			}
 		}
 		pub mod filter {

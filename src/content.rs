@@ -139,6 +139,14 @@ impl ErrorKind {
 }
 
 impl ErrorKind {
+	/// The `M_FORBIDDEN` kind.
+	#[must_use]
+	pub fn forbidden() -> Self {
+		Self::Forbidden {
+			_value: (),
+		}
+	}
+
 	/// The kind for a Matrix `errcode`; unknown codes map to `Unknown`.
 	#[must_use]
 	pub fn from_errcode(errcode: &str) -> Self {

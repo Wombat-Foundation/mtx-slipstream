@@ -56,7 +56,9 @@ impl<'a> SendAccessToken<'a> {
 	#[must_use]
 	pub fn get_required_for_endpoint(self) -> Option<&'a str> {
 		match self {
-			Self::IfRequired(token) | Self::Always(token) | Self::Appservice(token) => Some(token),
+			Self::IfRequired(token) | Self::Always(token) | Self::Appservice(token) => {
+				Some(token)
+			}
 			Self::None => None,
 		}
 	}
@@ -492,7 +494,7 @@ impl<'a> Input<'a> {
 /// }
 /// ```
 #[macro_export]
-macro_rules! endpoint {
+macro_rules! endpoint_request {
 	(
 		method: $method:literal, path: $path:literal,
 		request {
@@ -500,18 +502,12 @@ macro_rules! endpoint {
 			query { $($query_field:ident : $qt:ty),* $(,)? }
 			body { $($body_field_name:ident : $bt:ty),* $(,)? }
 		}
-		response { $($resp_field:ident : $rt:ty),* $(,)? }
 	) => {
 		#[derive(Clone, Debug)]
 		pub struct Request {
 			$(pub $path_field: $pt,)*
 			$(pub $query_field: $qt,)*
 			$(pub $body_field_name: $bt,)*
-		}
-
-		#[derive(Clone, Debug)]
-		pub struct Response {
-			$(pub $resp_field: $rt,)*
 		}
 
 		impl $crate::endpoint::EndpointRequest for Request {
@@ -555,6 +551,17 @@ macro_rules! endpoint {
 				Ok(value)
 			}
 		}
+	};
+}
+
+/// Declares an endpoint's response type; see [`endpoint!`](macro@crate::endpoint).
+#[macro_export]
+macro_rules! endpoint_response {
+	(response { $($resp_field:ident : $rt:ty),* $(,)? }) => {
+		#[derive(Clone, Debug)]
+		pub struct Response {
+			$(pub $resp_field: $rt,)*
+		}
 
 		impl $crate::endpoint::EndpointResponse for Response {
 			fn to_body(&self) -> $crate::json::Value {
@@ -572,5 +579,28 @@ macro_rules! endpoint {
 				Ok(value)
 			}
 		}
+	};
+}
+
+#[macro_export]
+macro_rules! endpoint {
+	(
+		method: $method:literal, path: $path:literal,
+		request {
+			path { $($path_field:ident : $pt:ty),* $(,)? }
+			query { $($query_field:ident : $qt:ty),* $(,)? }
+			body { $($body_field_name:ident : $bt:ty),* $(,)? }
+		}
+		response { $($resp_field:ident : $rt:ty),* $(,)? }
+	) => {
+		$crate::endpoint_request! {
+			method: $method, path: $path,
+			request {
+				path { $($path_field : $pt),* }
+				query { $($query_field : $qt),* }
+				body { $($body_field_name : $bt),* }
+			}
+		}
+		$crate::endpoint_response! { response { $($resp_field : $rt),* } }
 	};
 }
