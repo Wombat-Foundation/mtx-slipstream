@@ -273,7 +273,7 @@ mod tests {
 		assert_eq!(from_str::<MilliSecondsSinceUnixEpoch>(&to_string(&ts)).unwrap(), ts);
 		let c = from_str::<RoomCreateEventContent>(r#"{"room_version":"11","creator":"@a:b"}"#)
 			.unwrap();
-		assert_eq!(c.room_version, Some(crate::RoomVersionId::V11));
+		assert_eq!(c.room_version, crate::RoomVersionId::V11);
 		assert!(c.additional_creators.is_none());
 	}
 

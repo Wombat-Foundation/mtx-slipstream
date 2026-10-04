@@ -652,7 +652,7 @@ pub mod events {
 			#[derive(Clone, Debug, Default)]
 			pub struct RoomCreateEventContent {
 				pub creator: Option<crate::OwnedUserId>,
-				pub room_version: Option<crate::RoomVersionId>,
+				pub room_version: crate::RoomVersionId,
 				pub additional_creators: Option<alloc::vec::Vec<crate::OwnedUserId>>,
 				pub federate: bool,
 				pub predecessor: Option<crate::json::Value>,
@@ -662,6 +662,7 @@ pub mod events {
 				pub fn new_v1(creator: crate::OwnedUserId) -> Self {
 					Self {
 						creator: Some(creator),
+						room_version: crate::RoomVersionId::V1,
 						federate: true,
 						..Self::default()
 					}
@@ -669,6 +670,7 @@ pub mod events {
 				#[must_use]
 				pub fn new_v11() -> Self {
 					Self {
+						room_version: crate::RoomVersionId::V11,
 						federate: true,
 						..Self::default()
 					}
@@ -676,6 +678,7 @@ pub mod events {
 				#[must_use]
 				pub fn new_v12() -> Self {
 					Self {
+						room_version: crate::RoomVersionId::V12,
 						federate: true,
 						..Self::default()
 					}
@@ -698,7 +701,7 @@ pub mod events {
 						room_version: get("room_version")
 							.map(crate::codec::from_value)
 							.transpose()?
-							.unwrap_or_default(),
+							.unwrap_or(crate::RoomVersionId::V1),
 						additional_creators: get("additional_creators")
 							.map(crate::codec::from_value)
 							.transpose()?,
