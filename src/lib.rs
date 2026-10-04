@@ -842,6 +842,9 @@ pub mod room {
 		Room,
 		Space,
 	}
+	pub mod federation {
+		pub use crate::federation_api::*;
+	}
 }
 
 pub mod power_levels {
@@ -972,6 +975,12 @@ pub struct JsTryFromIntError;
 pub struct MxcUriError;
 #[derive(Clone, Debug)]
 pub struct IdParseError;
+
+/// Signatures by entity and key ID, as found in signed JSON.
+pub type Signatures = alloc::collections::BTreeMap<
+	OwnedServerName,
+	alloc::collections::BTreeMap<OwnedServerSigningKeyId, alloc::string::String>,
+>;
 
 /// Matrix-facing names shared by the server and the serialization layer.
 ///

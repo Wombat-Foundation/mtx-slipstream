@@ -90,28 +90,7 @@ pub mod event {
 	}
 }
 
-pub mod discovery {
-	pub mod get_server_version {
-		pub mod v1 {
-			use crate::endpoint;
-
-			/// Server software name and version.
-			#[derive(Clone, Debug, Default)]
-			pub struct Server {
-				pub name: Option<String>,
-				pub version: Option<String>,
-			}
-
-			crate::impl_codec_struct!(Server { name: Option<String>, version: Option<String> });
-
-			endpoint! {
-				method: "GET", path: "/_matrix/federation/v1/version",
-				request { path {} query {} body {} }
-				response { server: Option<Server> }
-			}
-		}
-	}
-}
+pub mod discovery;
 
 #[cfg(test)]
 mod tests {

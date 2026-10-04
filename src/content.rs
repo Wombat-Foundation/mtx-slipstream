@@ -16,7 +16,7 @@ use crate::{
 	codec::{DeError, Deserialize, Serialize, from_value},
 	events::room::create::RoomCreateEventContent,
 	json::Value,
-	serde::Base64,
+	serde::{Base64, Raw},
 };
 
 impl Serialize for MilliSecondsSinceUnixEpoch {
@@ -210,6 +210,41 @@ impl UiaaResponse {
 			.header(http::header::CONTENT_TYPE, "application/json")
 			.body(buf)
 			.map_err(|e| IntoHttpError(alloc::string::ToString::to_string(&e)))
+	}
+}
+
+impl<T> Raw<T> {
+	/// Serializes `value` into raw JSON.
+	///
+	/// # Errors
+	///
+	/// Currently infallible; the `Result` mirrors ruma's signature.
+	pub fn new(value: &T) -> Result<Self, DeError>
+	where
+		T: Serialize,
+	{
+		Ok(Self(crate::codec::to_string(value), core::marker::PhantomData))
+	}
+
+	/// Parses the raw JSON into a `T`.
+	///
+	/// # Errors
+	///
+	/// Returns an error if the JSON does not match `T`.
+	pub fn deserialize(&self) -> Result<T, DeError>
+	where
+		T: Deserialize,
+	{
+		crate::codec::from_str(&self.0)
+	}
+}
+
+impl MilliSecondsSinceUnixEpoch {
+	/// The timestamp for a system time, if it fits.
+	#[must_use]
+	pub fn from_system_time(time: std::time::SystemTime) -> Option<Self> {
+		let millis = time.duration_since(std::time::UNIX_EPOCH).ok()?.as_millis();
+		u64::try_from(millis).ok().map(Self)
 	}
 }
 
