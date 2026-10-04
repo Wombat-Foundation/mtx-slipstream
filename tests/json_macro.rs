@@ -80,3 +80,11 @@ fn slipstream_json_accepts_models_values_and_primitives() {
 		)
 	);
 }
+
+#[test]
+fn slipstream_json_accepts_computed_keys() {
+	use mtx_slipstream::{OwnedUserId, codec::to_string, json};
+	let alice: OwnedUserId = "@alice:foo".into();
+	let v = json!({ "users": { (alice): 100, ("lit"): 1 } });
+	assert_eq!(to_string(&v), r#"{"users":{"@alice:foo":100,"lit":1}}"#);
+}

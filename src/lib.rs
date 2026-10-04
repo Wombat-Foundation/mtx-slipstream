@@ -64,6 +64,9 @@ pub mod json {
 /// Builds a [`json::Value`] from JSON-like literal syntax, interpolating
 /// any [`codec::Serialize`] value.
 ///
+/// Object keys are string literals or parenthesised expressions such as
+/// `(user_id())`, and anything `AsRef<str>` works.
+///
 /// Unlike `json::json!`, interpolated expressions are borrowed and encoded
 /// through the codec, so Slipstream models can appear directly.
 #[macro_export]
@@ -98,24 +101,24 @@ macro_rules! json {
 	}};
 	(@array $values:ident; $value:expr) => { $values.push($crate::codec::to_value(&$value)); };
 	(@object $object:ident;) => {};
-	(@object $object:ident; $key:literal : null $(, $($rest:tt)*)?) => {{
-		$object.insert($crate::alloc_string($key), $crate::json::Value::Null);
+	(@object $object:ident; $key:tt : null $(, $($rest:tt)*)?) => {{
+		$object.insert($crate::alloc_string(AsRef::<str>::as_ref(&$key)), $crate::json::Value::Null);
 		$crate::json!(@object $object; $($($rest)*)?);
 	}};
-	(@object $object:ident; $key:literal : { $($inner:tt)* } $(, $($rest:tt)*)?) => {{
-		$object.insert($crate::alloc_string($key), $crate::json!({ $($inner)* }));
+	(@object $object:ident; $key:tt : { $($inner:tt)* } $(, $($rest:tt)*)?) => {{
+		$object.insert($crate::alloc_string(AsRef::<str>::as_ref(&$key)), $crate::json!({ $($inner)* }));
 		$crate::json!(@object $object; $($($rest)*)?);
 	}};
-	(@object $object:ident; $key:literal : [ $($inner:tt)* ] $(, $($rest:tt)*)?) => {{
-		$object.insert($crate::alloc_string($key), $crate::json!([ $($inner)* ]));
+	(@object $object:ident; $key:tt : [ $($inner:tt)* ] $(, $($rest:tt)*)?) => {{
+		$object.insert($crate::alloc_string(AsRef::<str>::as_ref(&$key)), $crate::json!([ $($inner)* ]));
 		$crate::json!(@object $object; $($($rest)*)?);
 	}};
-	(@object $object:ident; $key:literal : $value:expr, $($rest:tt)*) => {{
-		$object.insert($crate::alloc_string($key), $crate::codec::to_value(&$value));
+	(@object $object:ident; $key:tt : $value:expr, $($rest:tt)*) => {{
+		$object.insert($crate::alloc_string(AsRef::<str>::as_ref(&$key)), $crate::codec::to_value(&$value));
 		$crate::json!(@object $object; $($rest)*);
 	}};
-	(@object $object:ident; $key:literal : $value:expr) => {
-		$object.insert($crate::alloc_string($key), $crate::codec::to_value(&$value));
+	(@object $object:ident; $key:tt : $value:expr) => {
+		$object.insert($crate::alloc_string(AsRef::<str>::as_ref(&$key)), $crate::codec::to_value(&$value));
 	};
 	($value:expr) => { $crate::codec::to_value(&$value) };
 }
