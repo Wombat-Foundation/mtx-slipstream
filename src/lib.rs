@@ -549,6 +549,7 @@ pub mod events {
 		pub room: bool,
 	}
 	impl Mentions {
+		#[must_use]
 		pub fn with_room_mention() -> Self {
 			Self {
 				room: true,

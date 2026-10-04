@@ -2,27 +2,21 @@ use crate::{OwnedEventId, OwnedRoomId, OwnedUserId, UInt};
 use alloc::collections::BTreeMap;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Default)]
 pub enum ReceiptType {
-	Read,
+	#[default]
+ Read,
 	ReadPrivate,
 	FullyRead,
-}
-impl Default for ReceiptType {
-	fn default() -> Self {
-		Self::Read
-	}
 }
 crate::impl_codec_enum!(ReceiptType { Read => "m.read", ReadPrivate => "m.read.private", FullyRead => "m.fully_read" });
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Default)]
 pub enum ReceiptThread {
-	Unthreaded,
+	#[default]
+ Unthreaded,
 	Thread(OwnedEventId),
-}
-impl Default for ReceiptThread {
-	fn default() -> Self {
-		Self::Unthreaded
-	}
 }
 
 #[derive(Clone, Debug, Default)]

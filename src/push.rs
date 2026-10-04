@@ -1,6 +1,7 @@
 #[derive(Clone, Debug, Default)]
 pub struct Ruleset;
 impl Ruleset {
+	#[must_use]
 	pub fn new() -> Self {
 		Self
 	}

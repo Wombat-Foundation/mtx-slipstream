@@ -1,16 +1,13 @@
 use crate::{MilliSecondsSinceUnixEpoch, OwnedUserId};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Default)]
 pub enum PresenceState {
 	Online,
 	Unavailable,
-	Offline,
+	#[default]
+ Offline,
 	Busy,
-}
-impl Default for PresenceState {
-	fn default() -> Self {
-		Self::Offline
-	}
 }
 crate::impl_codec_enum!(PresenceState {
 	Online => "online", Unavailable => "unavailable", Offline => "offline", Busy => "busy",
