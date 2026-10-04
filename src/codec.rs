@@ -129,6 +129,17 @@ macro_rules! int_impl {
 }
 int_impl!(i64 => as_i64, u64 => as_u64, i32 => as_i64, u32 => as_u64);
 
+impl Serialize for f64 {
+	fn to_json(&self) -> Value {
+		crate::json::Number::from_f64(*self).map_or(Value::Null, Value::Number)
+	}
+}
+impl Deserialize for f64 {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		value.as_f64().ok_or_else(|| DeError::expected("number"))
+	}
+}
+
 impl<T: Serialize> Serialize for Option<T> {
 	fn to_json(&self) -> Value {
 		self.as_ref().map_or(Value::Null, T::to_json)
@@ -225,13 +236,20 @@ macro_rules! impl_codec_enum {
 }
 
 /// Implements the codec traits for a struct of named fields.
+///
+/// Fields in the optional `default { .. }` block may be absent or null when
+/// decoding, and then take their `Default` value.
 #[macro_export]
 macro_rules! impl_codec_struct {
-	($t:ident { $($field:ident : $ty:ty),* $(,)? }) => {
+	(
+		$t:ident { $($field:ident : $ty:ty),* $(,)? }
+		$(default { $($dfield:ident : $dty:ty),* $(,)? })?
+	) => {
 		impl $crate::codec::Serialize for $t {
 			fn to_json(&self) -> $crate::json::Value {
 				$crate::json::Value::Object($crate::endpoint::object_from(::alloc::vec![
-					$((stringify!($field), $crate::codec::Serialize::to_json(&self.$field))),*
+					$((stringify!($field), $crate::codec::Serialize::to_json(&self.$field)),)*
+					$($((stringify!($dfield), $crate::codec::Serialize::to_json(&self.$dfield)),)*)?
 				]))
 			}
 		}
@@ -240,6 +258,7 @@ macro_rules! impl_codec_struct {
 				let input = $crate::endpoint::Input::new(&[], &[], Some(value));
 				let parsed = Self {
 					$($field: input.body::<$ty>(stringify!($field))?,)*
+					$($($dfield: input.body_or_default::<$dty>(stringify!($dfield))?,)*)?
 				};
 				input.finish()?;
 				Ok(parsed)

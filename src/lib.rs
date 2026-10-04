@@ -596,8 +596,6 @@ pub mod events {
 		}
 	}
 	#[derive(Clone, Debug, Default)]
-	pub struct GlobalAccountDataEvent;
-	#[derive(Clone, Debug, Default)]
 	pub struct AnyGlobalAccountDataEvent;
 	#[derive(Clone, Debug, Default)]
 	pub struct AnyRawAccountDataEvent;
@@ -605,8 +603,6 @@ pub mod events {
 	pub struct AnyRoomAccountDataEvent;
 	#[derive(Clone, Debug, Default)]
 	pub struct AnySyncEphemeralRoomEvent;
-	#[derive(Clone, Debug, Default)]
-	pub struct SyncEphemeralRoomEvent;
 	#[derive(Clone, Debug, Default)]
 	pub struct AnyToDeviceEvent;
 	#[derive(Clone, Debug, Default)]
@@ -621,8 +617,17 @@ pub mod events {
 			}
 		}
 	}
+	pub mod direct;
+	pub mod ignored_user_list;
+	pub mod invite_permission_config;
 	pub mod presence;
 	pub mod receipt;
+	pub mod tag;
+	pub mod typing;
+	mod wrappers;
+	pub use wrappers::{
+		EphemeralRoomEvent, GlobalAccountDataEvent, RoomAccountDataEvent, SyncEphemeralRoomEvent,
+	};
 	pub trait EventContent {
 		type EventType;
 		fn event_type(&self) -> Self::EventType;

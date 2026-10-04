@@ -485,6 +485,24 @@ impl<'a> Input<'a> {
 		body_field(self.body, name)
 	}
 
+	/// The named field of the JSON body, or its default when absent or null.
+	///
+	/// # Errors
+	///
+	/// Returns an error if the field is present but malformed.
+	pub fn body_or_default<T: Deserialize + Default>(&self, name: &str) -> Result<T, DeError> {
+		let present = self
+			.body
+			.and_then(Value::as_object)
+			.and_then(|object| object.get(name))
+			.is_some_and(|value| !value.is_null());
+		if present {
+			self.body(name)
+		} else {
+			Ok(T::default())
+		}
+	}
+
 	/// Checks that every path argument was consumed.
 	///
 	/// # Errors
