@@ -10,6 +10,7 @@ use core::fmt;
 
 use base64::{Engine as _, engine::general_purpose::STANDARD_NO_PAD};
 use ed25519_consensus::{Signature as RawSignature, SigningKey, VerificationKey};
+use rezzy::signing::{SignatureVerifier, verify_event_signatures};
 
 use crate::{
 	CanonicalJsonObject, OwnedServerName, OwnedServerSigningKeyId, RoomVersionId,
@@ -202,38 +203,49 @@ impl KeyRing {
 		for (server, set) in keys {
 			for (key_id, key) in set {
 				let key = VerificationKey::try_from(key.as_bytes())
-					.map_err(|e| Error::Key(e.to_string()))?;
+					.map_err(|e| Error::Key(alloc::format!("{e:?}")))?;
 				ring.insert((server.as_str().to_string(), key_id.as_str().to_string()), key);
 			}
 		}
 		Ok(Self(ring))
 	}
 
-	fn has_key(&self, server: &str, key_id: &str) -> bool {
-		self.0.contains_key(&(server.to_string(), key_id.to_string()))
-	}
-
 	/// Verifies a base64 signature by `(server, key_id)` over `message`.
-	fn verify(
+	fn verify_base64(
 		&self,
 		server: &str,
 		key_id: &str,
 		message: &[u8],
 		signature: &Value,
 	) -> Result<(), Error> {
-		let key = self
-			.0
-			.get(&(server.to_string(), key_id.to_string()))
-			.ok_or_else(|| Error::Verification(alloc::format!("no key {key_id} for {server}")))?;
 		let signature =
 			signature.as_str().ok_or_else(|| Error::Json("signature is not a string".into()))?;
 		let bytes = STANDARD_NO_PAD
 			.decode(signature.trim_end_matches('='))
 			.map_err(|e| Error::Json(e.to_string()))?;
-		let signature =
-			RawSignature::try_from(bytes.as_slice()).map_err(|e| Error::Json(e.to_string()))?;
+		self.verify(server, key_id, message, &bytes).map_err(Error::Verification)
+	}
+}
+
+impl SignatureVerifier for KeyRing {
+	fn has_key(&self, server_name: &str, key_id: &str) -> bool {
+		self.0.contains_key(&(server_name.to_string(), key_id.to_string()))
+	}
+
+	fn verify(
+		&self,
+		server_name: &str,
+		key_id: &str,
+		message: &[u8],
+		signature: &[u8],
+	) -> Result<(), String> {
+		let key = self
+			.0
+			.get(&(server_name.to_string(), key_id.to_string()))
+			.ok_or_else(|| alloc::format!("no key {key_id} for {server_name}"))?;
+		let signature = RawSignature::try_from(signature).map_err(|e| alloc::format!("{e:?}"))?;
 		key.verify(&signature, message)
-			.map_err(|e| Error::Verification(alloc::format!("{server} {key_id}: {e}")))
+			.map_err(|e| alloc::format!("{server_name} {key_id}: {e:?}"))
 	}
 }
 
@@ -329,7 +341,7 @@ pub fn verify_json(
 		};
 		for (key_id, signature) in entry {
 			if ring.has_key(server, key_id) {
-				ring.verify(server, key_id, message.as_bytes(), signature)?;
+				ring.verify_base64(server, key_id, message.as_bytes(), signature)?;
 				checked = true;
 			}
 		}
@@ -339,18 +351,6 @@ pub fn verify_json(
 	} else {
 		Err(Error::Verification("no signature matched a known key".into()))
 	}
-}
-
-/// The server expected to have signed an event: the event ID's domain in room
-/// versions 1 and 2, and the sender's domain after that.
-fn expected_signer<'a>(value: &'a Value, version: &RoomVersionId) -> Option<&'a str> {
-	let (field, sigil) = if matches!(version, RoomVersionId::V1 | RoomVersionId::V2) {
-		("event_id", '$')
-	} else {
-		("sender", '@')
-	};
-	let id = value.get(field).and_then(Value::as_str)?;
-	id.strip_prefix(sigil).unwrap_or(id).split_once(':').map(|(_, server)| server)
 }
 
 /// Verifies an event's signatures and content hash.
@@ -365,26 +365,7 @@ pub fn verify_event(
 ) -> Result<Verified, Error> {
 	let ring = KeyRing::new(keys)?;
 	let value = to_value(object);
-	let signer = expected_signer(&value, version)
-		.ok_or_else(|| Error::Json("cannot determine the signing server".into()))?;
-	let message = rezzy::try_canonical_redacted_json(&value, version.as_str())
-		.map_err(|e| Error::Json(e.clone()))?;
-	let signatures = value
-		.get("signatures")
-		.and_then(|signatures| signatures.get(signer))
-		.and_then(Value::as_object)
-		.ok_or_else(|| Error::Verification(alloc::format!("no signature from {signer}")))?;
-
-	let mut verified = false;
-	for (key_id, signature) in signatures {
-		if key_id.starts_with("ed25519:") && ring.has_key(signer, key_id) {
-			ring.verify(signer, key_id, message.as_bytes(), signature)?;
-			verified = true;
-		}
-	}
-	if !verified {
-		return Err(Error::Verification(alloc::format!("no known key signed for {signer}")));
-	}
+	verify_event_signatures(&value, version.as_str(), &ring).map_err(Error::Verification)?;
 	Ok(match rezzy::verify_content_hash(&value, version.as_str()) {
 		Ok(()) => Verified::All,
 		Err(_) => Verified::Signatures,
