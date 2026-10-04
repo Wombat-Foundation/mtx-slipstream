@@ -92,7 +92,7 @@ impl Base64 {
 	pub fn parse(input: impl AsRef<[u8]>) -> Result<Self, Base64DecodeError> {
 		let input = input.as_ref();
 		let padding = input.iter().rev().take_while(|&&b| b == b'=').count();
-		let unpadded_len = input.len() - padding;
+		let unpadded_len = input.len().checked_sub(padding).ok_or(Base64DecodeError)?;
 		let expected_padding = match unpadded_len % 4 {
 			0 => 0,
 			2 => 2,
