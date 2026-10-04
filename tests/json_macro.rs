@@ -146,3 +146,23 @@ fn codec_struct_renames_omits_and_ignores_unknown_keys() {
 	assert_eq!(parsed, sample);
 	assert!(from_str::<Sample>(r#"{"sender":"@a:example.org"}"#).is_err());
 }
+
+#[test]
+fn error_codes_round_trip_for_every_named_kind() {
+	use mtx_slipstream::api::client::error::ErrorKind;
+	for code in [
+		"M_THREEPID_IN_USE",
+		"M_THREEPID_DENIED",
+		"M_THREEPID_AUTH_FAILED",
+		"M_INVITE_BLOCKED",
+		"M_NOT_YET_UPLOADED",
+		"M_CANNOT_OVERWRITE_MEDIA",
+		"M_FEATURE_DISABLED",
+		"M_SENDER_IGNORED",
+		"M_WRONG_ROOM_KEYS_VERSION",
+		"M_EXCLUSIVE",
+	] {
+		assert_eq!(ErrorKind::from_errcode(code).errcode(), code);
+	}
+	assert_eq!(ErrorKind::from_errcode("M_SOMETHING_ELSE").errcode(), "M_UNKNOWN");
+}

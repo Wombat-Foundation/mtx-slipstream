@@ -750,6 +750,7 @@ pub mod api {
 				ThreepidAuthFailed,
 				UserDeactivated,
 				ThreepidDenied,
+				ThreepidInUse,
 				InviteBlocked,
 				UserSuspended,
 				MissingToken,

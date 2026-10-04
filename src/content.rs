@@ -144,7 +144,20 @@ impl ErrorKind {
 			Self::UserLocked => "M_USER_LOCKED",
 			Self::UserSuspended => "M_USER_SUSPENDED",
 			Self::GuestAccessForbidden => "M_GUEST_ACCESS_FORBIDDEN",
-			_ => "M_UNKNOWN",
+			Self::SenderIgnored {
+				..
+			} => "M_SENDER_IGNORED",
+			Self::WrongRoomKeysVersion {
+				..
+			} => "M_WRONG_ROOM_KEYS_VERSION",
+			Self::FeatureDisabled => "M_FEATURE_DISABLED",
+			Self::CannotOverwriteMedia => "M_CANNOT_OVERWRITE_MEDIA",
+			Self::NotYetUploaded => "M_NOT_YET_UPLOADED",
+			Self::ThreepidAuthFailed => "M_THREEPID_AUTH_FAILED",
+			Self::ThreepidDenied => "M_THREEPID_DENIED",
+			Self::ThreepidInUse => "M_THREEPID_IN_USE",
+			Self::InviteBlocked => "M_INVITE_BLOCKED",
+			Self::NotImplemented | Self::Unknown => "M_UNKNOWN",
 		}
 	}
 }
@@ -184,6 +197,19 @@ impl ErrorKind {
 			"M_USER_LOCKED" => Self::UserLocked,
 			"M_USER_SUSPENDED" => Self::UserSuspended,
 			"M_GUEST_ACCESS_FORBIDDEN" => Self::GuestAccessForbidden,
+			"M_SENDER_IGNORED" => Self::SenderIgnored {
+				room_id: None,
+			},
+			"M_WRONG_ROOM_KEYS_VERSION" => Self::WrongRoomKeysVersion {
+				_value: (),
+			},
+			"M_FEATURE_DISABLED" => Self::FeatureDisabled,
+			"M_CANNOT_OVERWRITE_MEDIA" => Self::CannotOverwriteMedia,
+			"M_NOT_YET_UPLOADED" => Self::NotYetUploaded,
+			"M_THREEPID_AUTH_FAILED" => Self::ThreepidAuthFailed,
+			"M_THREEPID_DENIED" => Self::ThreepidDenied,
+			"M_THREEPID_IN_USE" => Self::ThreepidInUse,
+			"M_INVITE_BLOCKED" => Self::InviteBlocked,
 			_ => Self::Unknown,
 		}
 	}
