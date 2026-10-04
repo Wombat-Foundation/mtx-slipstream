@@ -220,6 +220,11 @@ impl UiaaResponse {
 }
 
 impl<T> Raw<T> {
+	/// Parses the raw JSON value without deserializing it into `T`.
+	pub fn json(&self) -> Result<crate::json::Value, DeError> {
+		crate::codec::from_str(&self.0)
+	}
+
 	/// Serializes `value` into raw JSON.
 	///
 	/// # Errors
