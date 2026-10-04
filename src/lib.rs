@@ -593,8 +593,11 @@ pub mod events {
 	};
 	#[derive(Clone, Debug, Default)]
 	pub struct AnyGlobalAccountDataEvent;
-	#[derive(Clone, Debug, Default)]
-	pub struct AnyRawAccountDataEvent;
+	#[derive(Clone, Debug)]
+	pub enum AnyRawAccountDataEvent {
+		Room(crate::serde::Raw<AnyRoomAccountDataEvent>),
+		Global(crate::serde::Raw<AnyGlobalAccountDataEvent>),
+	}
 	#[derive(Clone, Debug, Default)]
 	pub struct AnyRoomAccountDataEvent;
 	#[derive(Clone, Debug, Default)]
