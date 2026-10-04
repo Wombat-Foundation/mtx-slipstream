@@ -1225,7 +1225,8 @@ mod compat_tests {
 
 	#[test]
 	fn compat_filters_accept_is_invited_alias_and_skip_empty() {
-		let parsed = from_str::<CompatListFilters>(r#"{"is_invited":true,"tags":["a"]}"#).unwrap();
+		let parsed =
+			from_str::<CompatListFilters>(r#"{"is_invited":true,"tags":["a"]}"#).unwrap();
 		assert_eq!(parsed.is_invite, Some(true));
 		assert_eq!(to_string(&parsed), r#"{"is_invite":true,"tags":["a"]}"#);
 		assert_eq!(to_string(&CompatListFilters::default()), "{}");

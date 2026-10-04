@@ -92,11 +92,7 @@ impl Deserialize for StateHashEntry {
 	fn from_json(value: &Value) -> Result<Self, DeError> {
 		let object = value.as_object().ok_or_else(|| DeError::expected("state hash entry"))?;
 		let text = |name: &str| {
-			object
-				.get(name)
-				.filter(|v| !v.is_null())
-				.map(String::from_json)
-				.transpose()
+			object.get(name).filter(|v| !v.is_null()).map(String::from_json).transpose()
 		};
 		Ok(Self {
 			before: text("before")?,

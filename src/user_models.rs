@@ -75,7 +75,10 @@ mod tests {
 			field: "displayname".into(),
 			value: None,
 		};
-		assert_eq!(to_string(&update), r#"{"field":"displayname","user_id":"@a:x","value":null}"#);
+		assert_eq!(
+			to_string(&update),
+			r#"{"field":"displayname","user_id":"@a:x","value":null}"#
+		);
 		assert_eq!(from_str::<ProfileUpdate>(&to_string(&update)).unwrap(), update);
 	}
 

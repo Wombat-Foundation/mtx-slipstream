@@ -172,7 +172,10 @@ pub fn file_from_response<T: AsRef<[u8]>>(
 		response.body().as_ref().to_vec(),
 		header_text(headers, http::header::CONTENT_TYPE),
 		disposition,
-		header_text(headers, http::header::HeaderName::from_static("cross-origin-resource-policy")),
+		header_text(
+			headers,
+			http::header::HeaderName::from_static("cross-origin-resource-policy"),
+		),
 		header_text(headers, http::header::CACHE_CONTROL),
 	))
 }
@@ -301,7 +304,10 @@ pub mod authenticated_client {
 
 			impl Request {
 				#[must_use]
-				pub fn new(media_id: alloc::string::String, server_name: OwnedServerName) -> Self {
+				pub fn new(
+					media_id: alloc::string::String,
+					server_name: OwnedServerName,
+				) -> Self {
 					Self {
 						server_name,
 						media_id,
@@ -406,7 +412,10 @@ pub mod legacy {
 
 			impl Request {
 				#[must_use]
-				pub fn new(media_id: alloc::string::String, server_name: OwnedServerName) -> Self {
+				pub fn new(
+					media_id: alloc::string::String,
+					server_name: OwnedServerName,
+				) -> Self {
 					Self {
 						server_name,
 						media_id,
@@ -562,8 +571,7 @@ pub mod legacy {
 				}
 
 				fn from_body(body: &Value) -> Result<Self, DeError> {
-					let object =
-						body.as_object().ok_or_else(|| DeError::expected("object"))?;
+					let object = body.as_object().ok_or_else(|| DeError::expected("object"))?;
 					Ok(Self {
 						content_uri: object
 							.get("content_uri")
@@ -593,7 +601,8 @@ pub mod legacy {
 					access_token: SendAccessToken<'_>,
 					_considering_versions: &[crate::endpoint::MatrixVersion],
 				) -> Result<http::Request<B>, IntoHttpError> {
-					let query = upload_url_query(self.filename.as_deref(), self.generate_blurhash);
+					let query =
+						upload_url_query(self.filename.as_deref(), self.generate_blurhash);
 					upload_request(
 						Self::METADATA,
 						base_url,
@@ -872,9 +881,10 @@ pub mod federation {
 			if body.get(after..after.saturating_add(2)) == Some(b"--") {
 				return Some(parts);
 			}
-			let start = body.get(after..)?.strip_prefix(b"\r\n").map(|rest| {
-				body.len().saturating_sub(rest.len())
-			})?;
+			let start = body
+				.get(after..)?
+				.strip_prefix(b"\r\n")
+				.map(|rest| body.len().saturating_sub(rest.len()))?;
 			let next = find(body, separator.as_bytes(), start)?;
 			parts.push(parse_part(body.get(start..next)?)?);
 			at = next.saturating_add(2);
@@ -942,14 +952,18 @@ pub mod federation {
 		};
 		let mut out = Vec::new();
 		out.extend_from_slice(
-			alloc::format!("--{boundary}\r\nContent-Type: application/json\r\n\r\n{{}}\r\n--{boundary}\r\n")
-				.as_bytes(),
+			alloc::format!(
+				"--{boundary}\r\nContent-Type: application/json\r\n\r\n{{}}\r\n--{boundary}\r\n"
+			)
+			.as_bytes(),
 		);
 		match content {
 			FileOrLocation::File(content) => {
 				let content_type =
 					content.content_type.as_deref().unwrap_or("application/octet-stream");
-				out.extend_from_slice(alloc::format!("Content-Type: {content_type}\r\n").as_bytes());
+				out.extend_from_slice(
+					alloc::format!("Content-Type: {content_type}\r\n").as_bytes(),
+				);
 				if let Some(disposition) = &content.content_disposition {
 					out.extend_from_slice(
 						alloc::format!("Content-Disposition: {disposition}\r\n").as_bytes(),
@@ -957,10 +971,10 @@ pub mod federation {
 				}
 				out.extend_from_slice(b"\r\n");
 				out.extend_from_slice(&content.file);
-			},
+			}
 			FileOrLocation::Location(url) => {
 				out.extend_from_slice(alloc::format!("Location: {url}\r\n\r\n").as_bytes());
-			},
+			}
 		}
 		out.extend_from_slice(alloc::format!("\r\n--{boundary}--\r\n").as_bytes());
 		let mut body = B::default();
@@ -992,8 +1006,12 @@ pub mod federation {
 					Self,
 					$crate::endpoint::FromHttpResponseError<$crate::api::client::error::Error>,
 				> {
-					$crate::media_api::federation::decode_response(response)
-						.map(|(content, metadata)| Self { content, metadata })
+					$crate::media_api::federation::decode_response(response).map(
+						|(content, metadata)| Self {
+							content,
+							metadata,
+						},
+					)
 				}
 			}
 
@@ -1105,7 +1123,9 @@ mod tests {
 	use super::*;
 	use crate::{
 		OwnedServerName,
-		api::{IncomingRequest, IncomingResponse, OutgoingRequest, OutgoingResponse, SendAccessToken},
+		api::{
+			IncomingRequest, IncomingResponse, OutgoingRequest, OutgoingResponse, SendAccessToken,
+		},
 		http_headers::ContentDispositionType,
 	};
 
@@ -1122,7 +1142,10 @@ mod tests {
 				&[crate::endpoint::MatrixVersion::V1_11],
 			)
 			.unwrap();
-		assert_eq!(http.uri().to_string(), "https://hs.example/_matrix/media/v3/download/example.org/abc");
+		assert_eq!(
+			http.uri().to_string(),
+			"https://hs.example/_matrix/media/v3/download/example.org/abc"
+		);
 		let parsed = legacy::get_content::v3::Request::try_from_http_request(
 			http,
 			&["example.org", "abc"],
@@ -1146,7 +1169,8 @@ mod tests {
 
 	#[test]
 	fn file_response_carries_headers_and_bytes() {
-		let mut response = legacy::get_content::v3::Response::new(b"data".to_vec(), Some("text/plain".into()));
+		let mut response =
+			legacy::get_content::v3::Response::new(b"data".to_vec(), Some("text/plain".into()));
 		response.content_disposition = Some(
 			ContentDisposition::new(ContentDispositionType::Attachment)
 				.with_filename(Some("a.txt".into())),
@@ -1174,7 +1198,8 @@ mod tests {
 			)
 			.unwrap();
 		let parsed =
-			legacy::create_content::v3::Request::try_from_http_request(http, &[] as &[&str]).unwrap();
+			legacy::create_content::v3::Request::try_from_http_request(http, &[] as &[&str])
+				.unwrap();
 		assert_eq!(parsed.file, [0, 255, 7]);
 		assert_eq!(parsed.filename.as_deref(), Some("my file.bin"));
 		assert_eq!(parsed.content_type.as_deref(), Some("application/octet-stream"));

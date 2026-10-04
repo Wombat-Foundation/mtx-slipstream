@@ -289,7 +289,8 @@ pub fn request_url(
 	args: &[String],
 	query: &[(String, String)],
 ) -> String {
-	let mut url = alloc::format!("{}{}", base_url.trim_end_matches('/'), build_path(template, args));
+	let mut url =
+		alloc::format!("{}{}", base_url.trim_end_matches('/'), build_path(template, args));
 	if !query.is_empty() {
 		let pairs: Vec<String> = query
 			.iter()
