@@ -258,6 +258,20 @@ impl<T> Raw<T> {
 	{
 		crate::codec::from_str(&self.0)
 	}
+
+	/// Reads one top-level field without deserializing the whole value.
+	///
+	/// Returns `None` when the field is absent or `null`.
+	///
+	/// # Errors
+	///
+	/// Returns an error if the raw JSON is invalid, is not an object, or the
+	/// field does not match `U`.
+	pub fn get_field<U: Deserialize>(&self, name: &str) -> Result<Option<U>, DeError> {
+		let value = self.json()?;
+		let object = value.as_object().ok_or_else(|| DeError::expected("object"))?;
+		object.get(name).filter(|v| !v.is_null()).map(U::from_json).transpose()
+	}
 }
 
 impl MilliSecondsSinceUnixEpoch {

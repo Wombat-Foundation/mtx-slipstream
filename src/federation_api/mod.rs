@@ -111,6 +111,33 @@ pub mod event {
 		}
 	}
 
+	pub mod get_event_by_timestamp {
+		pub mod v1 {
+			use crate::{MilliSecondsSinceUnixEpoch, OwnedEventId, OwnedRoomId, api::Direction, endpoint};
+
+			endpoint! {
+				method: "GET", path: "/_matrix/federation/v1/timestamp_to_event/{room_id}",
+				request {
+					path { room_id: OwnedRoomId }
+					query { dir: Direction, ts: MilliSecondsSinceUnixEpoch }
+					body {}
+				}
+				response { event_id: OwnedEventId, origin_server_ts: MilliSecondsSinceUnixEpoch }
+			}
+
+			impl Request {
+				#[must_use]
+				pub fn new(room_id: OwnedRoomId, ts: MilliSecondsSinceUnixEpoch, dir: Direction) -> Self {
+					Self {
+						room_id,
+						dir,
+						ts,
+					}
+				}
+			}
+		}
+	}
+
 	pub mod get_missing_events {
 		pub mod v1 {
 			use crate::{OwnedEventId, OwnedRoomId, UInt, endpoint, federation_api::RawPdu};
