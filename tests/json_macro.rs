@@ -27,6 +27,7 @@ fn matrix_ids_parse_via_from_str() {
 fn ids_convert_into_string_and_triples_round_trip() {
 	use mtx_slipstream::codec::{from_str, to_string};
 	let id: mtx_slipstream::OwnedEventId = "$e".into();
+	assert_eq!(String::from(&id), "$e");
 	assert_eq!(String::from(id), "$e");
 	let triple = (1_u64, "x".to_owned(), 3_u64);
 	let back: (u64, String, u64) = from_str(&to_string(&triple)).unwrap();
@@ -38,7 +39,8 @@ fn slipstream_json_interpolates_codec_types() {
 	use mtx_slipstream::{OwnedEventId, codec::to_string, json};
 	let id: OwnedEventId = "$e".into();
 	let ids = vec![id.clone()];
-	let v = json!({ "id": id, "ids": ids, "n": 1_u64, "s": "x", "nested": [null, { "ok": true }] });
+	let v =
+		json!({ "id": id, "ids": ids, "n": 1_u64, "s": "x", "nested": [null, { "ok": true }] });
 	assert_eq!(
 		to_string(&v),
 		r#"{"id":"$e","ids":["$e"],"n":1,"nested":[null,{"ok":true}],"s":"x"}"#
@@ -48,10 +50,7 @@ fn slipstream_json_interpolates_codec_types() {
 #[test]
 fn slipstream_json_accepts_models_values_and_primitives() {
 	use mtx_slipstream::{
-		OwnedRoomId, OwnedUserId,
-		codec::to_string,
-		events::receipt::ReceiptEventContent,
-		json,
+		OwnedRoomId, OwnedUserId, codec::to_string, events::receipt::ReceiptEventContent, json,
 	};
 
 	let content = ReceiptEventContent::default();

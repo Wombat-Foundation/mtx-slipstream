@@ -194,6 +194,11 @@ macro_rules! matrix_id {
 				Self::parse(value)
 			}
 		}
+		impl From<&$owned> for alloc::string::String {
+			fn from(value: &$owned) -> Self {
+				value.0.clone()
+			}
+		}
 		impl From<$owned> for alloc::string::String {
 			fn from(value: $owned) -> Self {
 				value.0
@@ -408,6 +413,27 @@ macro_rules! event_id {
 macro_rules! device_id {
 	($value:expr) => {
 		$crate::OwnedDeviceId::from($value)
+	};
+}
+
+#[macro_export]
+macro_rules! room_id {
+	($value:expr) => {
+		$crate::OwnedRoomId::from($value)
+	};
+}
+
+#[macro_export]
+macro_rules! user_id {
+	($value:expr) => {
+		$crate::OwnedUserId::from($value)
+	};
+}
+
+#[macro_export]
+macro_rules! room_version_id {
+	($value:expr) => {
+		$crate::RoomVersionId::parse($value).expect("valid room version")
 	};
 }
 
