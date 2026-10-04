@@ -184,7 +184,9 @@ impl RoomVersionId {
 }
 
 impl core::fmt::Display for RoomVersionId {
-	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result { f.write_str(self.as_str()) }
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+		f.write_str(self.as_str())
+	}
 }
 
 impl codec::Serialize for RoomVersionId {
@@ -267,17 +269,25 @@ pub mod api {
 		pub struct IntoHttpError(pub alloc::string::String);
 
 		impl fmt::Display for IntoHttpError {
-			fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str(&self.0) }
+			fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+				f.write_str(&self.0)
+			}
 		}
 		impl core::error::Error for IntoHttpError {}
 		impl From<crate::codec::DeError> for IntoHttpError {
-			fn from(e: crate::codec::DeError) -> Self { Self(e.0) }
+			fn from(e: crate::codec::DeError) -> Self {
+				Self(e.0)
+			}
 		}
 		impl From<crate::CanonicalJsonError> for IntoHttpError {
-			fn from(e: crate::CanonicalJsonError) -> Self { Self(alloc::string::ToString::to_string(&e)) }
+			fn from(e: crate::CanonicalJsonError) -> Self {
+				Self(alloc::string::ToString::to_string(&e))
+			}
 		}
 		impl From<crate::json::Error> for IntoHttpError {
-			fn from(e: crate::json::Error) -> Self { Self(alloc::string::ToString::to_string(&e)) }
+			fn from(e: crate::json::Error) -> Self {
+				Self(alloc::string::ToString::to_string(&e))
+			}
 		}
 	}
 	#[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -596,18 +606,16 @@ pub mod serde {
 		/// # Errors
 		///
 		/// Returns an error if the JSON is invalid or does not match `U`.
-		pub fn deserialize_as<U: crate::codec::Deserialize>(&self) -> Result<U, crate::codec::DeError> {
+		pub fn deserialize_as<U: crate::codec::Deserialize>(
+			&self,
+		) -> Result<U, crate::codec::DeError> {
 			crate::codec::from_str(&self.0)
 		}
 	}
 
 	#[derive(Clone, Debug, Default)]
 	pub struct Base64;
-	use crate::{
-		Int,
-		codec::DeError,
-		json::Value,
-	};
+	use crate::{Int, codec::DeError, json::Value};
 
 	/// Reads a power level that v1 rooms may spell as a string or integer.
 	///

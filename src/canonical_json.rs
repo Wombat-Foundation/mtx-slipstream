@@ -32,7 +32,9 @@ impl core::error::Error for RedactionError {}
 /// # Errors
 ///
 /// Currently infallible; the `Result` mirrors ruma's signature.
-pub fn try_from_json_map(map: JsonMap) -> Result<Object, crate::CanonicalJsonError> { Ok(map) }
+pub fn try_from_json_map(map: JsonMap) -> Result<Object, crate::CanonicalJsonError> {
+	Ok(map)
+}
 
 /// Redacts `content` in place according to the room version's rules.
 ///
@@ -80,8 +82,12 @@ mod tests {
 	fn rejects_custom_room_version() {
 		let mut content = Object::new();
 		assert!(
-			redact_content_in_place(&mut content, &RoomVersionId::Custom("x".into()), "m.x".into())
-				.is_err()
+			redact_content_in_place(
+				&mut content,
+				&RoomVersionId::Custom("x".into()),
+				"m.x".into()
+			)
+			.is_err()
 		);
 	}
 }
