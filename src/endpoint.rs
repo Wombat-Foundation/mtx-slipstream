@@ -66,11 +66,99 @@ impl<'a> SendAccessToken<'a> {
 	}
 }
 
+/// How an endpoint authenticates its caller.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum AuthScheme {
+	/// No credentials.
+	None,
+	/// A user access token.
+	AccessToken,
+	/// A user access token if present, otherwise unauthenticated.
+	AccessTokenOptional,
+	/// An appservice access token.
+	AppserviceToken,
+	/// An `X-Matrix` federation signature.
+	ServerSignatures,
+}
+
+#[path = "endpoint_auth.rs"]
+mod auth_table;
+
+#[cfg(test)]
+#[path = "endpoint_auth_spec.rs"]
+mod auth_spec;
+
+/// The declared authentication of `method` + `path`, if the table has it.
+///
+/// Placeholders (`{name}`) match each other regardless of name.
+#[must_use]
+pub const fn lookup_auth(method: &str, path: &str) -> Option<AuthScheme> {
+	let table = auth_table::AUTH_TABLE;
+	let mut i = 0;
+	while i < table.len() {
+		let (m, p, scheme) = table[i];
+		if bytes_eq(m.as_bytes(), method.as_bytes()) && template_eq(p.as_bytes(), path.as_bytes())
+		{
+			return Some(scheme);
+		}
+		i += 1;
+	}
+	None
+}
+
+const fn bytes_eq(a: &[u8], b: &[u8]) -> bool {
+	if a.len() != b.len() {
+		return false;
+	}
+	let mut i = 0;
+	while i < a.len() {
+		if a[i] != b[i] {
+			return false;
+		}
+		i += 1;
+	}
+	true
+}
+
+const fn template_eq(a: &[u8], b: &[u8]) -> bool {
+	let (mut i, mut j) = (0, 0);
+	while i < a.len() && j < b.len() {
+		if a[i] == b'{' && b[j] == b'{' {
+			while i < a.len() && a[i] != b'}' {
+				i += 1;
+			}
+			while j < b.len() && b[j] != b'}' {
+				j += 1;
+			}
+		} else if a[i] != b[j] {
+			return false;
+		}
+		i += 1;
+		j += 1;
+	}
+	i == a.len() && j == b.len()
+}
+
 /// Static description of an endpoint.
 #[derive(Clone, Copy, Debug)]
 pub struct Metadata {
 	pub method: &'static str,
 	pub path: &'static str,
+	pub authentication: AuthScheme,
+}
+
+impl Metadata {
+	/// Describes an endpoint, looking up its authentication.
+	///
+	/// There is deliberately no default: an endpoint missing from the table fails to
+	/// compile (const evaluation panics) instead of silently picking a policy.
+	#[must_use]
+	pub const fn new(method: &'static str, path: &'static str) -> Self {
+		let Some(authentication) = lookup_auth(method, path) else {
+			panic!("no authentication declared for this endpoint; add it to endpoint_auth.rs");
+		};
+		Self { method, path, authentication }
+	}
 }
 
 /// An error returned by the remote endpoint, parsed from an HTTP response.
@@ -600,7 +688,7 @@ macro_rules! endpoint_request {
 		impl $crate::endpoint::EndpointRequest for Request {
 			type Response = Response;
 			const METADATA: $crate::endpoint::Metadata =
-				$crate::endpoint::Metadata { method: $method, path: $path };
+				$crate::endpoint::Metadata::new($method, $path);
 
 			fn path_args(&self) -> ::alloc::vec::Vec<::alloc::string::String> {
 				::alloc::vec![$($crate::endpoint::to_param(&self.$path_field).unwrap_or_default()),*]
@@ -715,7 +803,7 @@ macro_rules! endpoint_request_raw {
 		impl $crate::endpoint::EndpointRequest for Request {
 			type Response = Response;
 			const METADATA: $crate::endpoint::Metadata =
-				$crate::endpoint::Metadata { method: $method, path: $path };
+				$crate::endpoint::Metadata::new($method, $path);
 
 			fn path_args(&self) -> ::alloc::vec::Vec<::alloc::string::String> {
 				::alloc::vec![$($crate::endpoint::to_param(&self.$path_field).unwrap_or_default()),*]
@@ -810,4 +898,93 @@ macro_rules! endpoint_response_status_array {
 			}
 		}
 	};
+}
+
+#[cfg(test)]
+mod auth_tests {
+	extern crate std;
+
+	use std::{fs, path::Path, string::String, vec::Vec};
+
+	use super::{AuthScheme, lookup_auth};
+
+	/// Endpoints where the pinned ruwuma contract differs from the matrix spec. Each
+	/// entry was reviewed by hand; the ruwuma value is what Continuwuity ran with, so
+	/// it is the one declared in `endpoint_auth.rs`.
+	const KNOWN_SPEC_DIFFERENCES: &[(&str, &str)] = &[
+		("GET", "/_matrix/client/v1/room_summary/{}"),
+		("GET", "/_matrix/federation/v1/query/{}"),
+		("GET", "/_matrix/federation/v1/timestamp_to_event/{}"),
+		("POST", "/_matrix/client/v1/appservice/{}/ping"),
+		("POST", "/_matrix/client/v3/login"),
+		("POST", "/_matrix/client/v3/register"),
+		("PUT", "/_matrix/client/v3/directory/list/appservice/{}/{}"),
+		("PUT", "/_matrix/federation/v1/exchange_third_party_invite/{}"),
+	];
+
+	fn rust_files(dir: &Path, out: &mut Vec<String>) {
+		for entry in fs::read_dir(dir).unwrap() {
+			let path = entry.unwrap().path();
+			if path.is_dir() {
+				rust_files(&path, out);
+			} else if path.extension().is_some_and(|ext| ext == "rs") {
+				out.push(fs::read_to_string(&path).unwrap());
+			}
+		}
+	}
+
+	/// Every endpoint path literal declared in `src/` has an authentication entry, so a
+	/// new endpoint cannot ship without one.
+	#[test]
+	fn every_declared_endpoint_has_authentication() {
+		let mut sources = Vec::new();
+		rust_files(&Path::new(env!("CARGO_MANIFEST_DIR")).join("src"), &mut sources);
+		let mut missing = Vec::new();
+		for source in &sources {
+			for line in source.lines() {
+				let Some(start) = line.find("\"/_matrix/") else { continue };
+				let rest = &line[start + 1..];
+				let Some(end) = rest.find('"') else { continue };
+				let path = &rest[..end];
+				let method = ["GET", "POST", "PUT", "DELETE"]
+					.into_iter()
+					.find(|method| line.contains(&std::format!("\"{method}\"")));
+				if let Some(method) = method {
+					if lookup_auth(method, path).is_none() {
+						missing.push(std::format!("{method} {path}"));
+					}
+				}
+			}
+		}
+		assert!(missing.is_empty(), "endpoints with no declared authentication: {missing:#?}");
+	}
+
+	/// The declared scheme matches matrix-spec for every endpoint both describe, apart
+	/// from the reviewed differences above.
+	#[test]
+	fn spec_cross_check() {
+		let mut mismatches = Vec::new();
+		for &(method, path, expected) in super::auth_spec::SPEC_AUTH {
+			let Some(declared) = lookup_auth(method, path) else { continue };
+			let known = KNOWN_SPEC_DIFFERENCES.contains(&(method, path));
+			if declared != expected && !known {
+				mismatches.push(std::format!("{method} {path}: declared {declared:?}, spec {expected:?}"));
+			}
+		}
+		assert!(mismatches.is_empty(), "authentication drifted from the spec: {mismatches:#?}");
+	}
+
+	#[test]
+	fn public_endpoints_stay_public() {
+		assert_eq!(lookup_auth("GET", "/_matrix/client/versions"), Some(AuthScheme::None));
+		assert_eq!(lookup_auth("GET", "/_matrix/client/v3/login"), Some(AuthScheme::None));
+		assert_eq!(
+			lookup_auth("GET", "/_matrix/client/v3/publicRooms"),
+			Some(AuthScheme::AccessTokenOptional)
+		);
+		assert_eq!(
+			lookup_auth("GET", "/_matrix/client/v3/account/whoami"),
+			Some(AuthScheme::AccessToken)
+		);
+	}
 }

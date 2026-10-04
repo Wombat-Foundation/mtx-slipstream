@@ -134,10 +134,7 @@ pub mod get_server_keys {
 		impl EndpointRequest for Request {
 			type Response = Response;
 
-			const METADATA: Metadata = Metadata {
-				method: "GET",
-				path: "/_matrix/key/v2/server",
-			};
+			const METADATA: Metadata = Metadata::new("GET", "/_matrix/key/v2/server");
 
 			fn path_args(&self) -> alloc::vec::Vec<String> {
 				alloc::vec::Vec::new()

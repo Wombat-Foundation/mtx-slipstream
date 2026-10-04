@@ -237,10 +237,7 @@ pub mod set_pusher {
 		impl EndpointRequest for Request {
 			type Response = Response;
 
-			const METADATA: Metadata = Metadata {
-				method: "POST",
-				path: "/_matrix/client/v3/pushers/set",
-			};
+			const METADATA: Metadata = Metadata::new("POST", "/_matrix/client/v3/pushers/set");
 
 			fn path_args(&self) -> Vec<String> {
 				Vec::new()

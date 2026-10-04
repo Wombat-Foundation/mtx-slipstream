@@ -19,6 +19,7 @@ pub mod filter;
 pub mod id_validation;
 pub mod room_api;
 pub mod search;
+pub mod session;
 pub mod threads;
 mod uiaa;
 pub use antispam::{draupnir as draupnir_antispam, meowlnir as meowlnir_antispam};
@@ -638,6 +639,11 @@ pub mod api {
 				get_media_preview,
 			};
 		}
+		pub mod session {
+			pub use crate::session::{
+				get_login_token, get_login_types, login, logout, logout_all,
+			};
+		}
 		pub mod authenticated_media {
 			pub use crate::media_api::authenticated_client::{
 				get_content, get_content_as_filename, get_content_thumbnail, get_media_config,
@@ -755,6 +761,7 @@ pub mod api {
 				Unrecognized,
 				Exclusive,
 				BadAlias,
+				InvalidUsername,
 				CannotOverwriteMedia,
 				NotYetUploaded,
 				GuestAccessForbidden,
@@ -803,9 +810,9 @@ pub mod api {
 	pub use crate::appservice;
 	pub use crate::{
 		endpoint::{
-			EndpointError, EndpointRequest, FromHttpRequestError, FromHttpResponseError, IncomingRequest,
-			IncomingResponse, MatrixVersion, Metadata, OutgoingRequest, OutgoingResponse,
-			SendAccessToken,
+			EndpointError, EndpointRequest, FromHttpRequestError, FromHttpResponseError,
+			IncomingRequest, IncomingResponse, MatrixVersion, Metadata, OutgoingRequest,
+			OutgoingResponse, SendAccessToken,
 		},
 		federation_api as federation,
 	};

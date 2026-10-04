@@ -322,10 +322,7 @@ pub mod v3 {
 	impl EndpointRequest for Request {
 		type Response = Response;
 
-		const METADATA: Metadata = Metadata {
-			method: "GET",
-			path: "/_matrix/client/v3/sync",
-		};
+		const METADATA: Metadata = Metadata::new("GET", "/_matrix/client/v3/sync");
 
 		fn path_args(&self) -> Vec<String> {
 			Vec::new()
@@ -723,10 +720,7 @@ pub mod v5 {
 	impl EndpointRequest for Request {
 		type Response = Response;
 
-		const METADATA: Metadata = Metadata {
-			method: "POST",
-			path: "/_matrix/client/unstable/org.matrix.simplified_msc3575/sync",
-		};
+		const METADATA: Metadata = Metadata::new("POST", "/_matrix/client/unstable/org.matrix.simplified_msc3575/sync");
 
 		fn path_args(&self) -> Vec<String> {
 			Vec::new()
@@ -1061,10 +1055,7 @@ pub mod v4 {
 	impl EndpointRequest for Request {
 		type Response = Response;
 
-		const METADATA: Metadata = Metadata {
-			method: "POST",
-			path: "/_matrix/client/unstable/org.matrix.msc3575/sync",
-		};
+		const METADATA: Metadata = Metadata::new("POST", "/_matrix/client/unstable/org.matrix.msc3575/sync");
 
 		fn path_args(&self) -> Vec<String> {
 			Vec::new()

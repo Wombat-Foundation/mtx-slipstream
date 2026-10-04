@@ -173,7 +173,7 @@ macro_rules! filtered_request {
 		impl $crate::endpoint::EndpointRequest for Request {
 			type Response = Response;
 			const METADATA: $crate::endpoint::Metadata =
-				$crate::endpoint::Metadata { method: $method, path: $path };
+				$crate::endpoint::Metadata::new($method, $path);
 
 			fn path_args(&self) -> ::alloc::vec::Vec<::alloc::string::String> {
 				::alloc::vec::Vec::new()

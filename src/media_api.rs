@@ -39,7 +39,7 @@ macro_rules! media_request {
 		impl $crate::endpoint::EndpointRequest for Request {
 			type Response = $resp;
 			const METADATA: $crate::endpoint::Metadata =
-				$crate::endpoint::Metadata { method: $method, path: $path };
+				$crate::endpoint::Metadata::new($method, $path);
 
 			fn path_args(&self) -> ::alloc::vec::Vec<::alloc::string::String> {
 				::alloc::vec![$($crate::endpoint::to_param(&self.$pf).unwrap_or_default()),*]
@@ -590,10 +590,7 @@ pub mod legacy {
 				type EndpointError = Error;
 				type IncomingResponse = Response;
 
-				const METADATA: Metadata = Metadata {
-					method: "POST",
-					path: "/_matrix/media/v3/upload",
-				};
+				const METADATA: Metadata = Metadata::new("POST", "/_matrix/media/v3/upload");
 
 				fn try_into_http_request<B: Default + bytes::BufMut>(
 					self,
@@ -691,10 +688,7 @@ pub mod legacy {
 				type EndpointError = Error;
 				type IncomingResponse = Response;
 
-				const METADATA: Metadata = Metadata {
-					method: "PUT",
-					path: "/_matrix/media/v3/upload/{server_name}/{media_id}",
-				};
+				const METADATA: Metadata = Metadata::new("PUT", "/_matrix/media/v3/upload/{server_name}/{media_id}");
 
 				fn try_into_http_request<B: Default + bytes::BufMut>(
 					self,

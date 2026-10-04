@@ -1567,10 +1567,7 @@ pub mod set_pushrule {
 		impl EndpointRequest for Request {
 			type Response = Response;
 
-			const METADATA: Metadata = Metadata {
-				method: "PUT",
-				path: "/_matrix/client/v3/pushrules/{scope}/{kind}/{rule_id}",
-			};
+			const METADATA: Metadata = Metadata::new("PUT", "/_matrix/client/v3/pushrules/{scope}/{kind}/{rule_id}");
 
 			fn path_args(&self) -> Vec<String> {
 				[
