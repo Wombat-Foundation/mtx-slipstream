@@ -32,3 +32,15 @@ fn ids_convert_into_string_and_triples_round_trip() {
 	let back: (u64, String, u64) = from_str(&to_string(&triple)).unwrap();
 	assert_eq!(back, triple);
 }
+
+#[test]
+fn slipstream_json_interpolates_codec_types() {
+	use mtx_slipstream::{OwnedEventId, codec::to_string, json};
+	let id: OwnedEventId = "$e".into();
+	let ids = vec![id.clone()];
+	let v = json!({ "id": id, "ids": ids, "n": 1_u64, "s": "x", "nested": [null, { "ok": true }] });
+	assert_eq!(
+		to_string(&v),
+		r#"{"id":"$e","ids":["$e"],"n":1,"nested":[null,{"ok":true}],"s":"x"}"#
+	);
+}
