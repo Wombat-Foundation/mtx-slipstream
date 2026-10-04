@@ -1,5 +1,5 @@
 #[derive(Clone, Debug, Default)]
 pub struct RoomPreviewUrlsEventContent {
 	pub url_preview: bool,
-	pub disabled: Option<bool>,
+	pub disabled: bool,
 }

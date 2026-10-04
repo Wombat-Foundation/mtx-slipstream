@@ -103,9 +103,7 @@ impl Serialize for RoomPreviewUrlsEventContent {
 	fn to_json(&self) -> Value {
 		let mut object = Object::new();
 		insert(&mut object, "url_previews", &self.url_preview);
-		if let Some(disabled) = self.disabled {
-			insert(&mut object, "disabled", &disabled);
-		}
+		insert(&mut object, "disabled", &self.disabled);
 		Value::Object(object)
 	}
 }
@@ -114,7 +112,7 @@ impl Deserialize for RoomPreviewUrlsEventContent {
 		let object = object(value)?;
 		Ok(Self {
 			url_preview: field(object, "url_previews")?.unwrap_or(false),
-			disabled: field(object, "disabled")?,
+			disabled: field(object, "disabled")?.unwrap_or(false),
 		})
 	}
 }
