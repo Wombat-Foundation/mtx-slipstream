@@ -625,6 +625,7 @@ pub mod events {
 		pub mod server_acl;
 		pub mod tombstone;
 		pub mod topic;
+		pub use message::MediaSource;
 		pub mod redaction {
 			#[derive(Clone, Debug, Default)]
 			pub struct RoomRedactionEventContent {

@@ -143,6 +143,7 @@ impl From<DeError> for FromHttpRequestError {
 
 /// A request that can be sent to a remote server.
 pub trait OutgoingRequest: Sized {
+	const METADATA: Metadata;
 	type EndpointError: EndpointError;
 	type IncomingResponse: IncomingResponse<EndpointError = Self::EndpointError>;
 
@@ -276,6 +277,7 @@ fn build_path(template: &str, args: &[String]) -> String {
 }
 
 impl<T: EndpointRequest> OutgoingRequest for T {
+	const METADATA: Metadata = T::METADATA;
 	type EndpointError = Error;
 	type IncomingResponse = T::Response;
 
