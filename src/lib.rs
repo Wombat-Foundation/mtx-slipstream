@@ -660,6 +660,8 @@ pub mod events {
 						additional_creators: get("additional_creators")
 							.map(crate::codec::from_value)
 							.transpose()?,
+						federate: get("m.federate").and_then(crate::json::Value::as_bool).unwrap_or(true),
+						predecessor: get("predecessor").cloned(),
 					})
 				}
 			}
