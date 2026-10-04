@@ -60,6 +60,33 @@ pub fn redact_content_in_place(
 	Ok(())
 }
 
+/// Redacts a full event object, using its `type` field when no type is supplied.
+pub fn redact(
+	mut object: Object,
+	version: &crate::RoomVersionId,
+	event_type: Option<&str>,
+) -> Result<Object, RedactionError> {
+	let kind = event_type
+		.map(str::to_owned)
+		.or_else(|| object.get("type").and_then(Value::as_str).map(str::to_owned))
+		.unwrap_or_default();
+	if let Some(Value::Object(content)) = object.get_mut("content") {
+		redact_content_in_place(content, version, kind)?;
+	}
+	Ok(object)
+}
+
+/// Redacts a full event object in place.
+pub fn redact_in_place(
+	object: &mut Object,
+	version: &crate::RoomVersionId,
+	event_type: Option<&str>,
+) -> Result<(), RedactionError> {
+	let redacted = redact(core::mem::take(object), version, event_type)?;
+	*object = redacted;
+	Ok(())
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;

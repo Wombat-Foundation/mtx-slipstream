@@ -10,7 +10,7 @@ use alloc::{
 	string::{String, ToString},
 	vec::Vec,
 };
-use core::fmt;
+use core::fmt::{self, Write as _};
 
 use bytes::BufMut;
 
@@ -250,7 +250,7 @@ fn percent_encode(input: &str) -> String {
 		if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'.' | b'_' | b'~') {
 			out.push(char::from(byte));
 		} else {
-			out.push_str(&alloc::format!("%{byte:02X}"));
+			let _ = write!(out, "%{byte:02X}");
 		}
 	}
 	out
@@ -398,7 +398,7 @@ pub fn put_field<T: Serialize>(object: &mut Object, name: &str, value: &T) {
 
 /// Declares an endpoint's request and response types.
 ///
-/// ```ignore
+/// ```text
 /// endpoint! {
 ///     method: "GET", path: "/_matrix/federation/v1/event/{event_id}",
 ///     request {
@@ -437,6 +437,7 @@ macro_rules! endpoint {
 			const METADATA: $crate::endpoint::Metadata =
 				$crate::endpoint::Metadata { method: $method, path: $path };
 
+			#[allow(clippy::vec_init_then_push)]
 			fn path_args(&self) -> ::alloc::vec::Vec<::alloc::string::String> {
 				#[allow(unused_mut)]
 				let mut args = ::alloc::vec::Vec::new();
@@ -477,7 +478,7 @@ macro_rules! endpoint {
 					let $path_field: $pt = $crate::endpoint::from_param(
 						path.get(index).map(::alloc::string::String::as_str),
 					)?;
-					index += 1;
+					index = index.saturating_add(1);
 				)*
 				Ok(Self {
 					$($path_field,)*

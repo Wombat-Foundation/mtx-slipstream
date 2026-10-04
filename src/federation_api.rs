@@ -1,18 +1,14 @@
 //! Federation API endpoints.
 
-use crate::{
-	OwnedEventId, OwnedRoomId, OwnedServerName, UInt, endpoint, json::Value, serde::Raw,
-};
+use crate::{json::Value, serde::Raw};
 
 /// A PDU as it appears on the wire.
 pub type RawPdu = Raw<Value>;
 
 pub mod event {
-	use super::*;
-
 	pub mod get_event {
 		pub mod v1 {
-			use super::super::*;
+			use crate::{OwnedEventId, OwnedServerName, endpoint, federation_api::RawPdu};
 
 			endpoint! {
 				method: "GET", path: "/_matrix/federation/v1/event/{event_id}",
@@ -45,7 +41,7 @@ pub mod event {
 
 	pub mod get_missing_events {
 		pub mod v1 {
-			use super::super::*;
+			use crate::{OwnedEventId, OwnedRoomId, UInt, endpoint, federation_api::RawPdu};
 
 			endpoint! {
 				method: "POST", path: "/_matrix/federation/v1/get_missing_events/{room_id}",
@@ -66,7 +62,7 @@ pub mod event {
 
 	pub mod get_room_state_ids {
 		pub mod v1 {
-			use super::super::*;
+			use crate::{OwnedEventId, OwnedRoomId, endpoint};
 
 			endpoint! {
 				method: "GET", path: "/_matrix/federation/v1/state_ids/{room_id}",
@@ -114,5 +110,88 @@ pub mod discovery {
 				response { server: Option<Server> }
 			}
 		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use alloc::vec::Vec;
+
+	use crate::{
+		MilliSecondsSinceUnixEpoch, OwnedEventId, OwnedRoomId,
+		api::{
+			IncomingRequest, IncomingResponse, MatrixVersion, OutgoingRequest, OutgoingResponse,
+			SendAccessToken,
+		},
+		federation_api::{
+			discovery::get_server_version,
+			event::{get_event, get_missing_events, get_room_state_ids},
+		},
+	};
+
+	#[test]
+	fn get_event_request_builds_path_and_query() {
+		let request =
+			get_event::v1::Request::new(OwnedEventId::from("$ev:example.org"), Some(false));
+		let http = request
+			.try_into_http_request::<Vec<u8>>(
+				"https://example.org/",
+				SendAccessToken::None,
+				&[MatrixVersion::V1_11],
+			)
+			.unwrap();
+		assert_eq!(http.method(), http::Method::GET);
+		assert_eq!(
+			http.uri().to_string(),
+			"https://example.org/_matrix/federation/v1/event/%24ev%3Aexample.org\
+			 ?include_unredacted_content=false"
+		);
+		assert!(http.body().is_empty());
+	}
+
+	#[test]
+	fn get_missing_events_request_round_trips_through_http() {
+		let request = get_missing_events::v1::Request {
+			room_id: OwnedRoomId::from("!room:example.org"),
+			limit: 50,
+			min_depth: 0,
+			earliest_events: alloc::vec![OwnedEventId::from("$a")],
+			latest_events: alloc::vec![OwnedEventId::from("$b")],
+		};
+		let http = request
+			.try_into_http_request::<Vec<u8>>("https://example.org", SendAccessToken::None, &[])
+			.unwrap();
+		assert_eq!(http.method(), http::Method::POST);
+		let parsed =
+			get_missing_events::v1::Request::try_from_http_request(http, &["!room:example.org"])
+				.unwrap();
+		assert_eq!(parsed.limit, 50);
+		assert_eq!(parsed.latest_events, alloc::vec![OwnedEventId::from("$b")]);
+		assert_eq!(parsed.room_id.as_str(), "!room:example.org");
+	}
+
+	#[test]
+	fn get_event_response_decodes_and_encodes() {
+		let body =
+			r#"{"origin":"example.org","origin_server_ts":5,"pdu":{"type":"m.room.message"}}"#;
+		let response =
+			http::Response::builder().status(200).body(body.as_bytes().to_vec()).unwrap();
+		let decoded = get_event::v1::Response::try_from_http_response(response).unwrap();
+		assert_eq!(decoded.origin.as_str(), "example.org");
+		assert_eq!(decoded.origin_server_ts, MilliSecondsSinceUnixEpoch(5));
+		assert!(decoded.pdu.get().contains("m.room.message"));
+		let again = decoded.try_into_http_response::<Vec<u8>>().unwrap();
+		assert_eq!(again.status(), http::StatusCode::OK);
+	}
+
+	#[test]
+	fn error_response_becomes_matrix_error() {
+		let response = http::Response::builder()
+			.status(404)
+			.body(br#"{"errcode":"M_NOT_FOUND","error":"nope"}"#.to_vec())
+			.unwrap();
+		let err = get_room_state_ids::v1::Response::try_from_http_response(response).unwrap_err();
+		assert!(err.to_string().contains("nope"));
+		let _ = get_server_version::v1::Request {};
 	}
 }
