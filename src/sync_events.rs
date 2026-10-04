@@ -742,8 +742,8 @@ pub mod v5 {
 	pub mod response {
 		use alloc::{collections::BTreeMap, string::String, vec::Vec};
 
-		pub use crate::events::{SyncReceiptEvent, SyncTypingEvent};
 		use super::{DeviceLists, UnreadNotificationsCount};
+		pub use crate::events::{SyncReceiptEvent, SyncTypingEvent};
 		use crate::{
 			OwnedMxcUri, OwnedRoomId, OwnedUserId, UInt,
 			events::{
@@ -754,7 +754,6 @@ pub mod v5 {
 			key_id::OneTimeKeyAlgorithm,
 			serde::Raw,
 		};
-
 
 		sync_struct! {
 			pub struct List {

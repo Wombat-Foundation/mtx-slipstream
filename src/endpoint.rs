@@ -201,7 +201,7 @@ pub trait OutgoingResponse {
 
 /// Request half of an endpoint, implemented by [`endpoint!`](macro@crate::endpoint).
 pub trait EndpointRequest: Sized {
-	type Response: EndpointResponse;
+	type Response: IncomingResponse<EndpointError = Error> + OutgoingResponse;
 	const METADATA: Metadata;
 
 	/// Values for each `{placeholder}` in the path, in order.
@@ -281,6 +281,63 @@ fn build_path(template: &str, args: &[String]) -> String {
 	out
 }
 
+/// Builds the request URL: the path template filled with `args`, then the query.
+#[must_use]
+pub fn request_url(
+	base_url: &str,
+	template: &str,
+	args: &[String],
+	query: &[(String, String)],
+) -> String {
+	let mut url = alloc::format!("{}{}", base_url.trim_end_matches('/'), build_path(template, args));
+	if !query.is_empty() {
+		let pairs: Vec<String> = query
+			.iter()
+			.map(|(k, v)| alloc::format!("{}={}", percent_encode(k), percent_encode(v)))
+			.collect();
+		url.push('?');
+		url.push_str(&pairs.join("&"));
+	}
+	url
+}
+
+/// Decodes `%XX` escapes; malformed escapes are kept literally.
+#[must_use]
+pub fn percent_decode(input: &str) -> String {
+	let bytes = input.as_bytes();
+	let mut out = Vec::with_capacity(bytes.len());
+	let mut i = 0;
+	while let Some(&byte) = bytes.get(i) {
+		let escaped = (byte == b'%')
+			.then(|| bytes.get(i.saturating_add(1)..i.saturating_add(3)))
+			.flatten()
+			.and_then(|hex| core::str::from_utf8(hex).ok())
+			.and_then(|hex| u8::from_str_radix(hex, 16).ok());
+		if let Some(decoded) = escaped {
+			out.push(decoded);
+			i = i.saturating_add(3);
+		} else {
+			out.push(byte);
+			i = i.saturating_add(1);
+		}
+	}
+	String::from_utf8_lossy(&out).into_owned()
+}
+
+/// The decoded key/value pairs of a request URI's query string.
+#[must_use]
+pub fn parse_query(uri: &http::Uri) -> Vec<(String, String)> {
+	uri.query()
+		.unwrap_or_default()
+		.split('&')
+		.filter(|pair| !pair.is_empty())
+		.map(|pair| {
+			let (k, v) = pair.split_once('=').unwrap_or((pair, ""));
+			(percent_decode(k), percent_decode(v))
+		})
+		.collect()
+}
+
 impl<T: EndpointRequest> OutgoingRequest for T {
 	const METADATA: Metadata = T::METADATA;
 	type EndpointError = Error;
@@ -348,17 +405,7 @@ impl<T: EndpointRequest> IncomingRequest for T {
 			return Err(FromHttpRequestError::MethodMismatch);
 		}
 		let path: Vec<String> = path_args.iter().map(|s| s.as_ref().to_string()).collect();
-		let query: Vec<(String, String)> = request
-			.uri()
-			.query()
-			.unwrap_or_default()
-			.split('&')
-			.filter(|pair| !pair.is_empty())
-			.map(|pair| {
-				let (k, v) = pair.split_once('=').unwrap_or((pair, ""));
-				(k.to_string(), v.to_string())
-			})
-			.collect();
+		let query = parse_query(request.uri());
 		let bytes = request.body().as_ref();
 		let body = if bytes.is_empty() {
 			None

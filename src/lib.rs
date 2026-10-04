@@ -39,6 +39,8 @@ mod events_codec;
 pub mod federation;
 pub mod federation_api;
 pub mod js_option;
+#[macro_use]
+pub mod media_api;
 pub mod push;
 pub mod push_rules;
 pub mod pusher;
@@ -492,6 +494,19 @@ pub mod api {
 	}
 
 	pub mod client {
+		pub mod media {
+			pub use crate::media_api::legacy::{
+				create_content, create_content_async, create_mxc_uri, get_content,
+				get_content_as_filename, get_content_thumbnail, get_media_config,
+				get_media_preview,
+			};
+		}
+		pub mod authenticated_media {
+			pub use crate::media_api::authenticated_client::{
+				get_content, get_content_as_filename, get_content_thumbnail, get_media_config,
+				get_media_preview,
+			};
+		}
 		pub mod sync {
 			pub use crate::sync_events::{self, DeviceLists, UnreadNotificationsCount};
 		}

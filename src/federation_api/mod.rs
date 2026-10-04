@@ -162,6 +162,13 @@ pub mod event {
 	}
 }
 
+/// Authenticated media downloads.
+pub mod authenticated_media {
+	pub use crate::media_api::federation::{
+		Content, ContentMetadata, FileOrLocation, get_content, get_content_thumbnail,
+	};
+}
+
 pub mod authorization;
 pub mod backfill;
 pub mod discovery;

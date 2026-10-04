@@ -146,7 +146,7 @@ impl OwnedUserId {
 		if localpart.starts_with('@') {
 			return Self::parse(localpart);
 		}
-		Self::parse(&alloc::format!("@{localpart}:{}", server_name.as_str()))
+		Self::parse(alloc::format!("@{localpart}:{}", server_name.as_str()))
 	}
 
 	#[must_use]

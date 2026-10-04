@@ -36,6 +36,14 @@ impl Serialize for RoomHistoryVisibilityEventContent {
 		)
 	}
 }
+impl Deserialize for RoomHistoryVisibilityEventContent {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		let object = object(value)?;
+		Ok(Self {
+			history_visibility: field(object, "history_visibility")?.unwrap_or_default(),
+		})
+	}
+}
 impl Serialize for RoomNameEventContent {
 	fn to_json(&self) -> Value {
 		let mut object = Object::new();
