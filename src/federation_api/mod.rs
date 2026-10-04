@@ -91,6 +91,7 @@ pub mod event {
 }
 
 pub mod discovery;
+pub mod transactions;
 
 #[cfg(test)]
 mod tests {
