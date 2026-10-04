@@ -641,11 +641,35 @@ pub mod events {
 				pub predecessor: Option<crate::json::Value>,
 			}
 			impl RoomCreateEventContent {
-				pub fn new_v1(creator: crate::OwnedUserId) -> Self { Self { creator: Some(creator), federate: true, ..Self::default() } }
-				pub fn new_v11() -> Self { Self { federate: true, ..Self::default() } }
-				pub fn new_v12() -> Self { Self { federate: true, ..Self::default() } }
+				#[must_use]
+				pub fn new_v1(creator: crate::OwnedUserId) -> Self {
+					Self {
+						creator: Some(creator),
+						federate: true,
+						..Self::default()
+					}
+				}
+				#[must_use]
+				pub fn new_v11() -> Self {
+					Self {
+						federate: true,
+						..Self::default()
+					}
+				}
+				#[must_use]
+				pub fn new_v12() -> Self {
+					Self {
+						federate: true,
+						..Self::default()
+					}
+				}
 			}
-			impl crate::events::EventContent for RoomCreateEventContent { type EventType = crate::events::StateEventType; fn event_type(&self) -> Self::EventType { crate::events::StateEventType::RoomCreate } }
+			impl crate::events::EventContent for RoomCreateEventContent {
+				type EventType = crate::events::StateEventType;
+				fn event_type(&self) -> Self::EventType {
+					crate::events::StateEventType::RoomCreate
+				}
+			}
 			impl crate::codec::Deserialize for RoomCreateEventContent {
 				fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
 					let object = value
@@ -660,7 +684,9 @@ pub mod events {
 						additional_creators: get("additional_creators")
 							.map(crate::codec::from_value)
 							.transpose()?,
-						federate: get("m.federate").and_then(crate::json::Value::as_bool).unwrap_or(true),
+						federate: get("m.federate")
+							.and_then(crate::json::Value::as_bool)
+							.unwrap_or(true),
 						predecessor: get("predecessor").cloned(),
 					})
 				}
