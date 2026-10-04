@@ -7,7 +7,7 @@ use crate::{
 		guest_access::RoomGuestAccessEventContent,
 		history_visibility::RoomHistoryVisibilityEventContent,
 		join_rules::{JoinRule, RestrictedRule, RoomJoinRulesEventContent},
-		member::RoomMemberEventContent,
+		member::{RoomMemberEventContent, ThirdPartyInvite},
 		message::RoomMessageEventContent,
 		name::RoomNameEventContent,
 		power_levels::RoomPowerLevelsEventContent,
@@ -196,26 +196,52 @@ impl Deserialize for RoomPowerLevelsEventContent {
 	}
 }
 
+impl Serialize for ThirdPartyInvite {
+	fn to_json(&self) -> Value {
+		let mut signed = Object::new();
+		insert(&mut signed, "mxid", &self.signed.mxid);
+		insert(&mut signed, "token", &self.signed.token);
+		let mut o = Object::new();
+		o.insert("signed".into(), Value::Object(signed));
+		Value::Object(o)
+	}
+}
+
 impl Serialize for RoomMemberEventContent {
 	fn to_json(&self) -> Value {
 		let mut o = Object::new();
 		insert(&mut o, "membership", &self.membership);
-		if let Some(server) = &self.join_authorized_via_users_server {
-			insert(&mut o, "join_authorized_via_users_server", server);
+		let optional: [(&str, Value); 8] = [
+			("displayname", self.displayname.to_json()),
+			("avatar_url", self.avatar_url.to_json()),
+			("blurhash", self.blurhash.to_json()),
+			("reason", self.reason.to_json()),
+			("is_direct", self.is_direct.to_json()),
+			("third_party_invite", self.third_party_invite.to_json()),
+			("redact_events", self.redact_events.to_json()),
+			("join_authorized_via_users_server", self.join_authorized_via_users_server.to_json()),
+		];
+		for (name, value) in optional {
+			if !value.is_null() {
+				o.insert(name.into(), value);
+			}
 		}
 		Value::Object(o)
 	}
 }
 impl Deserialize for RoomMemberEventContent {
 	fn from_json(value: &Value) -> Result<Self, DeError> {
-		let membership = field(object(value)?, "membership")?
-			.ok_or_else(|| DeError::expected("membership"))?;
+		let o = object(value)?;
 		Ok(Self {
-			membership,
-			join_authorized_via_users_server: field(
-				object(value)?,
-				"join_authorized_via_users_server",
-			)?,
+			membership: field(o, "membership")?.ok_or_else(|| DeError::expected("membership"))?,
+			displayname: field(o, "displayname")?,
+			avatar_url: field(o, "avatar_url")?,
+			blurhash: field(o, "blurhash")?,
+			reason: field(o, "reason")?,
+			is_direct: field(o, "is_direct")?,
+			third_party_invite: field(o, "third_party_invite")?,
+			redact_events: field(o, "redact_events")?,
+			join_authorized_via_users_server: field(o, "join_authorized_via_users_server")?,
 		})
 	}
 }
@@ -336,5 +362,23 @@ mod tests {
 	fn member_requires_membership() {
 		assert!(from_str::<RoomMemberEventContent>(r#"{"membership":"join"}"#).is_ok());
 		assert!(from_str::<RoomMemberEventContent>("{}").is_err());
+	}
+}
+
+#[cfg(test)]
+mod member_tests {
+	use super::*;
+	use crate::codec::{from_str, to_string};
+
+	#[test]
+	fn member_content_round_trips_all_fields() {
+		let text = r#"{"membership":"invite","displayname":"A","avatar_url":"mxc://x/y","reason":"hi","is_direct":true,"third_party_invite":{"signed":{"mxid":"@a:x","token":"t"}},"redact_events":false}"#;
+		let content = from_str::<RoomMemberEventContent>(text).unwrap();
+		assert_eq!(content.reason.as_deref(), Some("hi"));
+		assert_eq!(content.redact_events, Some(false));
+		let again = from_str::<RoomMemberEventContent>(&to_string(&content)).unwrap();
+		assert_eq!(again.displayname.as_deref(), Some("A"));
+		assert!(again.third_party_invite.is_some());
+		assert!(!to_string(&RoomMemberEventContent::default()).contains("reason"));
 	}
 }

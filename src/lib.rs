@@ -684,6 +684,25 @@ pub mod events {
 			StateEventType::from("m.room.preview_urls")
 		}
 	}
+	macro_rules! event_content {
+		($($t:ty => $kind:ident :: $variant:ident),* $(,)?) => {$(
+			impl EventContent for $t {
+				type EventType = $kind;
+				fn event_type(&self) -> Self::EventType {
+					$kind::$variant
+				}
+			}
+		)*};
+	}
+	event_content! {
+		room::member::RoomMemberEventContent => StateEventType::RoomMember,
+		room::join_rules::RoomJoinRulesEventContent => StateEventType::RoomJoinRules,
+		room::avatar::RoomAvatarEventContent => StateEventType::RoomAvatar,
+		room::third_party_invite::RoomThirdPartyInviteEventContent => StateEventType::RoomThirdPartyInvite,
+		room::server_acl::RoomServerAclEventContent => StateEventType::RoomServerAcl,
+		room::encryption::RoomEncryptionEventContent => StateEventType::RoomEncryption,
+		room::redaction::RoomRedactionEventContent => MessageLikeEventType::RoomRedaction,
+	}
 	pub mod relation {
 		pub use crate::relation_types::{
 			Annotation, BundledMessageLikeRelations, BundledReference, BundledThread,
@@ -827,12 +846,27 @@ pub mod events {
 			#[derive(Clone, Debug, Default)]
 			pub struct RoomMemberEventContent {
 				pub membership: MembershipState,
+				pub displayname: Option<alloc::string::String>,
+				pub avatar_url: Option<crate::OwnedMxcUri>,
+				pub blurhash: Option<alloc::string::String>,
+				pub reason: Option<alloc::string::String>,
+				pub is_direct: Option<bool>,
+				pub third_party_invite: Option<ThirdPartyInvite>,
+				pub redact_events: Option<bool>,
 				pub join_authorized_via_users_server: Option<crate::OwnedUserId>,
 			}
 			impl RoomMemberEventContent {
+				#[must_use]
 				pub fn new(membership: MembershipState) -> Self {
 					Self {
 						membership,
+						displayname: None,
+						avatar_url: None,
+						blurhash: None,
+						reason: None,
+						is_direct: None,
+						third_party_invite: None,
+						redact_events: None,
 						join_authorized_via_users_server: None,
 					}
 				}
@@ -940,6 +974,7 @@ pub mod events {
 				pub join_rule: JoinRule,
 			}
 			impl RoomJoinRulesEventContent {
+				#[must_use]
 				pub fn new(join_rule: JoinRule) -> Self {
 					Self {
 						join_rule,
