@@ -101,6 +101,7 @@ event_type!(StateEventType {
 	RoomGuestAccess => "m.room.guest_access",
 	RoomHistoryVisibility => "m.room.history_visibility",
 	RoomServerAcl => "m.room.server_acl",
+	RoomTombstone => "m.room.tombstone",
 	RoomPolicy => "m.policy.rule.room",
 	SpaceChild => "m.space.child",
 });
