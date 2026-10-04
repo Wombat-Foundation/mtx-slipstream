@@ -125,6 +125,15 @@ impl OwnedServerName {
 	}
 }
 impl OwnedUserId {
+	/// Builds a user ID from a localpart and an explicit server name.
+	pub fn parse_with_server_name(localpart: impl AsRef<str>, server_name: &OwnedServerName) -> Result<Self, crate::MatrixIdParseError> {
+		let localpart = localpart.as_ref();
+		if localpart.starts_with('@') {
+			return Self::parse(localpart);
+		}
+		Self::parse(&alloc::format!("@{localpart}:{}", server_name.as_str()))
+	}
+
 	#[must_use]
 	pub fn server_name(&self) -> OwnedServerName {
 		crate::server_part(self.as_str()).unwrap_or_else(|| OwnedServerName::from(""))
