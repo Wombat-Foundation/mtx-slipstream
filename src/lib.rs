@@ -14,6 +14,7 @@ pub mod codec;
 mod compat;
 mod content;
 mod event_type;
+mod events_codec;
 pub mod federation;
 pub mod sync;
 pub mod writer;

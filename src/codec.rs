@@ -160,18 +160,22 @@ impl<T: Deserialize> Deserialize for Vec<T> {
 	}
 }
 
-impl<T: Serialize> Serialize for BTreeMap<String, T> {
+impl<K: Serialize, V: Serialize> Serialize for BTreeMap<K, V> {
 	fn to_json(&self) -> Value {
-		Value::Object(self.iter().map(|(k, v)| (k.clone(), v.to_json())).collect())
+		Value::Object(
+			self.iter()
+				.map(|(k, v)| (k.to_json().as_str().unwrap_or_default().to_string(), v.to_json()))
+				.collect(),
+		)
 	}
 }
-impl<T: Deserialize> Deserialize for BTreeMap<String, T> {
+impl<K: Deserialize + Ord, V: Deserialize> Deserialize for BTreeMap<K, V> {
 	fn from_json(value: &Value) -> Result<Self, DeError> {
 		value
 			.as_object()
 			.ok_or_else(|| DeError::expected("object"))?
 			.iter()
-			.map(|(k, v)| Ok((k.clone(), T::from_json(v)?)))
+			.map(|(k, v)| Ok((K::from_json(&Value::String(k.clone()))?, V::from_json(v)?)))
 			.collect()
 	}
 }
