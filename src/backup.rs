@@ -2,12 +2,7 @@
 
 use alloc::{collections::BTreeMap, string::String};
 
-use crate::{
-	UInt,
-	impl_codec_struct,
-	json::Value,
-	serde::Raw,
-};
+use crate::{UInt, impl_codec_struct, json::Value, serde::Raw};
 
 /// A backup algorithm and its public parameters.
 #[derive(Clone, Debug)]

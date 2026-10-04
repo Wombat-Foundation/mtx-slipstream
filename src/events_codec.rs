@@ -7,6 +7,7 @@ use crate::{
 		history_visibility::RoomHistoryVisibilityEventContent,
 		join_rules::{JoinRule, RestrictedRule, RoomJoinRulesEventContent},
 		member::RoomMemberEventContent,
+		message::RoomMessageEventContent,
 		name::RoomNameEventContent,
 		power_levels::RoomPowerLevelsEventContent,
 		redaction::RoomRedactionEventContent,
@@ -65,6 +66,25 @@ fn level(object: &Object, name: &str, default: crate::Int) -> Result<crate::Int,
 
 fn insert<T: Serialize>(object: &mut Object, name: &str, value: &T) {
 	object.insert(name.into(), value.to_json());
+}
+
+impl Serialize for RoomMessageEventContent {
+	fn to_json(&self) -> Value {
+		let mut object = Object::new();
+		object.insert("body".into(), Value::String(self.body.clone()));
+		Value::Object(object)
+	}
+}
+
+impl Deserialize for RoomMessageEventContent {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		let body = object(value)?
+			.get("body")
+			.and_then(Value::as_str)
+			.map(str::to_owned)
+			.ok_or_else(|| DeError::expected("body"))?;
+		Ok(Self::text_plain(body))
+	}
 }
 
 impl Serialize for NotificationPowerLevels {
