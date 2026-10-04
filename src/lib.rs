@@ -11,6 +11,8 @@ extern crate alloc;
 
 pub mod canonical_json;
 pub mod codec;
+mod compat;
+mod event_type;
 pub mod federation;
 pub mod sync;
 pub mod writer;
@@ -57,7 +59,7 @@ macro_rules! matrix_id {
 			pub fn as_str(&self) -> &str {
 				&self.0
 			}
-			pub fn server_name(&self) -> Option<OwnedServerName> {
+			pub(crate) fn server_part(&self) -> Option<OwnedServerName> {
 				self.as_str().rsplit_once(':').map(|(_, server)| OwnedServerName::from(server))
 			}
 		}
@@ -400,55 +402,7 @@ pub mod api {
 }
 
 pub mod events {
-	#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-	pub enum TimelineEventType {
-		RoomAliases,
-		RoomCreate,
-		RoomJoinRules,
-		RoomMember,
-		RoomMessage,
-		RoomPowerLevels,
-		RoomRedaction,
-		RoomThirdPartyInvite,
-		RoomTopic,
-	}
-	crate::impl_codec_enum!(TimelineEventType {
-		RoomAliases => "m.room.aliases",
-		RoomCreate => "m.room.create",
-		RoomJoinRules => "m.room.join_rules",
-		RoomMember => "m.room.member",
-		RoomMessage => "m.room.message",
-		RoomPowerLevels => "m.room.power_levels",
-		RoomRedaction => "m.room.redaction",
-		RoomThirdPartyInvite => "m.room.third_party_invite",
-		RoomTopic => "m.room.topic",
-	});
-	#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-	pub enum StateEventType {
-		RoomAliases,
-		RoomCreate,
-		RoomJoinRules,
-		RoomMember,
-		RoomPowerLevels,
-		RoomRedaction,
-		RoomThirdPartyInvite,
-		RoomTopic,
-	}
-	crate::impl_codec_enum!(StateEventType {
-		RoomAliases => "m.room.aliases",
-		RoomCreate => "m.room.create",
-		RoomJoinRules => "m.room.join_rules",
-		RoomMember => "m.room.member",
-		RoomPowerLevels => "m.room.power_levels",
-		RoomRedaction => "m.room.redaction",
-		RoomThirdPartyInvite => "m.room.third_party_invite",
-		RoomTopic => "m.room.topic",
-	});
-	#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-	pub enum MessageLikeEventType {
-		RoomMessage,
-	}
-	crate::impl_codec_enum!(MessageLikeEventType { RoomMessage => "m.room.message" });
+	pub use crate::event_type::{MessageLikeEventType, StateEventType, TimelineEventType};
 	pub trait EventContent {
 		type EventType;
 		fn event_type(&self) -> Self::EventType;
