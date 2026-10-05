@@ -42,6 +42,7 @@ pub mod room {
 }
 
 pub mod event {
+	pub use super::get_room_state;
 	pub mod get_event {
 		pub mod v1 {
 			use crate::{OwnedEventId, OwnedServerName, endpoint, federation_api::RawPdu};
@@ -202,10 +203,12 @@ pub mod authenticated_media {
 	};
 }
 
+pub mod authentication;
 pub mod authorization;
 pub mod backfill;
 pub mod device;
 pub mod discovery;
+pub mod get_room_state;
 pub mod knock;
 pub mod membership;
 pub mod query;

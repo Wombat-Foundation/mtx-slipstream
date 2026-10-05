@@ -6,3 +6,6 @@
 
 pub mod pdu_stream;
 pub mod raw_pdu;
+
+/// Federation authentication and endpoint declarations.
+pub use crate::federation_api::{authentication, get_room_state};

@@ -12,7 +12,9 @@ use crate::{
 /// Device-list queries.
 pub mod get_devices {
 	pub mod v1 {
-		use super::super::{endpoint, OwnedUserId, UInt, Raw, CrossSigningKey, OwnedDeviceId, DeviceKeys, String};
+		use super::super::{
+			CrossSigningKey, DeviceKeys, OwnedDeviceId, OwnedUserId, Raw, String, UInt, endpoint,
+		};
 
 		endpoint! {
 			method: "GET",
