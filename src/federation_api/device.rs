@@ -12,7 +12,7 @@ use crate::{
 /// Device-list queries.
 pub mod get_devices {
 	pub mod v1 {
-		use super::super::*;
+		use super::super::{endpoint, OwnedUserId, UInt, Raw, CrossSigningKey, OwnedDeviceId, DeviceKeys, String};
 
 		endpoint! {
 			method: "GET",
@@ -83,7 +83,7 @@ mod tests {
 		use crate::endpoint::{EndpointRequest, EndpointResponse};
 		let response = get_devices::v1::Response {
 			user_id: OwnedUserId::from("@alice:example.org"),
-			stream_id: 7_u64.into(),
+			stream_id: 7_u64,
 			devices: vec![UserDevice {
 				device_id: OwnedDeviceId::from("DEVICE"),
 				keys: Raw::from_json_text("{}").unwrap(),

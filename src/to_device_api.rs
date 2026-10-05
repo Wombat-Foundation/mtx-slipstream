@@ -6,7 +6,7 @@ use crate::{OwnedTransactionId, OwnedUserId, endpoint, events::AnyToDeviceEvent,
 
 pub mod send_event_to_device {
 	pub mod v3 {
-		use super::super::*;
+		use super::super::{endpoint, BTreeMap, OwnedUserId, Raw, AnyToDeviceEvent, String, OwnedTransactionId};
 
 		pub type Messages = BTreeMap<
 			OwnedUserId,

@@ -186,13 +186,21 @@ mod tests {
 	}
 
 	#[test]
-	fn parse_and_decode_enforce_grammar_but_from_does_not() {
-		use crate::{OwnedUserId, codec::from_str};
+	fn try_from_does_not_validate_but_parse_does() {
+		use crate::OwnedUserId;
 		assert!(OwnedUserId::parse("@a:example.org").is_ok());
 		assert!(OwnedUserId::parse("nonsense").is_err());
 		assert!("nonsense".parse::<OwnedUserId>().is_err());
+		assert_eq!(OwnedUserId::from("nonsense").as_str(), "nonsense");
+		// `TryFrom<&str>` is core's blanket impl over the infallible `From`, so
+		// it never validates; ruma's did. Use `parse` where validation matters.
+		assert_eq!(OwnedUserId::from("nonsense").as_str(), "nonsense");
+	}
+
+	#[test]
+	fn codec_decode_enforces_grammar() {
+		use crate::{OwnedUserId, codec::from_str};
 		assert!(from_str::<OwnedUserId>("\"nonsense\"").is_err());
 		assert!(from_str::<OwnedUserId>("\"@a:example.org\"").is_ok());
-		assert_eq!(OwnedUserId::from("nonsense").as_str(), "nonsense");
 	}
 }

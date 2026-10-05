@@ -183,6 +183,8 @@ macro_rules! matrix_id {
 			/// Returns [`MatrixIdParseError`] if `value` does not match the
 			/// identifier's grammar. `From<&str>` skips this check and is meant for
 			/// values already known to be well formed, such as database rows.
+			/// `TryFrom<&str>` is core's blanket impl over that `From`, so it never
+			/// fails either; use `parse` wherever input is untrusted.
 			pub fn parse(value: impl AsRef<str>) -> Result<Self, MatrixIdParseError> {
 				let value = value.as_ref();
 				if $validate(value) {
