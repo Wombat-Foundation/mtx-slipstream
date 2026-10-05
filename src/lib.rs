@@ -680,6 +680,7 @@ pub mod api {
 		}
 		pub use crate::client_api::account;
 		pub use crate::client_api::profile;
+		pub use authentication::TokenType;
 		pub mod media {
 			pub use crate::media_api::legacy::{
 				create_content, create_content_async, create_mxc_uri, get_content,
@@ -773,39 +774,6 @@ pub mod api {
 				DehydratedDeviceData, Device, delete_device, delete_devices, get_device,
 				get_devices, update_device,
 			};
-		}
-		pub mod keys {
-			use crate::{
-				OneTimeKeyAlgorithm, OwnedDeviceId, OwnedOneTimeKeyId, OwnedUserId,
-				encryption::{CrossSigningKey, DeviceKeys, OneTimeKey},
-				serde::Raw,
-			};
-			use alloc::collections::BTreeMap;
-			pub mod get_keys {
-				pub mod v3 {
-					use super::super::{
-						BTreeMap, CrossSigningKey, DeviceKeys, OwnedDeviceId, OwnedUserId, Raw,
-					};
-					crate::endpoint! {
-						method: "POST", path: "/_matrix/client/v3/keys/query",
-						request { path {} query {} body { device_keys: BTreeMap<OwnedUserId, alloc::vec::Vec<OwnedDeviceId>>, timeout: Option<crate::UInt>, notary: Option<bool> } }
-						response { device_keys: BTreeMap<OwnedUserId, BTreeMap<OwnedDeviceId, Raw<DeviceKeys>>>, master_keys: BTreeMap<OwnedUserId, Raw<CrossSigningKey>>, self_signing_keys: BTreeMap<OwnedUserId, Raw<CrossSigningKey>>, user_signing_keys: BTreeMap<OwnedUserId, Raw<CrossSigningKey>>, failures: BTreeMap<String, crate::json::Value> }
-					}
-				}
-			}
-			pub mod claim_keys {
-				pub mod v3 {
-					use super::super::{
-						BTreeMap, OneTimeKey, OneTimeKeyAlgorithm, OwnedDeviceId,
-						OwnedOneTimeKeyId, OwnedUserId, Raw,
-					};
-					crate::endpoint! {
-						method: "POST", path: "/_matrix/client/v3/keys/claim",
-						request { path {} query {} body { one_time_keys: BTreeMap<OwnedUserId, BTreeMap<OwnedDeviceId, OneTimeKeyAlgorithm>>, timeout: Option<crate::UInt> } }
-						response { one_time_keys: BTreeMap<OwnedUserId, BTreeMap<OwnedOneTimeKeyId, Raw<OneTimeKey>>>, failures: BTreeMap<String, crate::json::Value> }
-					}
-				}
-			}
 		}
 		pub mod filter {
 			pub use crate::filter::{

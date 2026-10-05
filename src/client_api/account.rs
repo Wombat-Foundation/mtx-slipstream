@@ -12,6 +12,12 @@ pub enum RegistrationKind {
 }
 crate::impl_codec_enum!(RegistrationKind { Guest => "guest", User => "user" });
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum LoginType {
+	ApplicationService,
+}
+crate::impl_codec_enum!(LoginType { ApplicationService => "m.login.application_service" });
+
 pub mod request_openid_token {
 	pub mod v3 {
 		use crate::{OwnedServerName, OwnedUserId, endpoint};
@@ -44,7 +50,7 @@ pub mod deactivate {
 		endpoint! {
 			method: "POST", path: "/_matrix/client/v3/account/deactivate",
 			request { path {} query {} body { auth: Option<crate::uiaa::AuthData>, id_server: Option<String>, id_server_access_token: Option<String>, erase: Option<bool> } }
-			response { id_server_unbind_result: Option<super::super::ThirdPartyIdRemovalStatus> }
+			response { id_server_unbind_result: super::super::ThirdPartyIdRemovalStatus }
 		}
 	}
 }
@@ -93,13 +99,29 @@ pub mod add_3pid {
 pub mod delete_3pid {
 	pub mod v3 {
 		use crate::endpoint;
-		endpoint! { method: "POST", path: "/_matrix/client/v3/account/3pid/delete", request { path {} query {} body { medium: crate::thirdparty::Medium, address: String, id_server: Option<String>, id_server_access_token: Option<String> } } response { id_server_unbind_result: Option<super::super::ThirdPartyIdRemovalStatus> } }
+		endpoint! {
+			method: "POST", path: "/_matrix/client/v3/account/3pid/delete",
+			request {
+				path {} query {}
+				body {
+					medium: crate::thirdparty::Medium,
+					address: String,
+					id_server: Option<String>,
+					id_server_access_token: Option<String>,
+				}
+			}
+			response { id_server_unbind_result: super::super::ThirdPartyIdRemovalStatus }
+		}
 	}
 }
 pub mod check_registration_token_validity {
-	pub mod v3 {
+	pub mod v1 {
 		use crate::endpoint;
-		endpoint! { method: "GET", path: "/_matrix/client/v3/register/m.login.registration_token/validity", request { path {} query { token: String } body {} } response { valid: bool } }
+		endpoint! {
+			method: "GET", path: "/_matrix/client/v1/register/m.login.registration_token/validity",
+			request { path {} query { token: String } body {} }
+			response { valid: bool }
+		}
 	}
 }
 pub mod request_registration_token_via_email {
@@ -109,9 +131,27 @@ pub mod request_registration_token_via_email {
 	}
 }
 pub mod register {
-	pub use super::RegistrationKind as LoginType;
+	pub use super::LoginType;
+
 	pub mod v3 {
 		use crate::endpoint;
-		endpoint! { method: "POST", path: "/_matrix/client/v3/register", request { path {} query {} body { username: Option<String>, password: Option<String>, device_id: Option<crate::OwnedDeviceId>, initial_device_display_name: Option<String>, inhibit_login: bool, kind: super::super::RegistrationKind, auth: Option<crate::uiaa::AuthData> } } response { user_id: crate::OwnedUserId, access_token: Option<String>, device_id: Option<crate::OwnedDeviceId>, refresh_token: Option<String>, expires_in_ms: Option<crate::UInt> } }
+		endpoint! {
+			method: "POST", path: "/_matrix/client/v3/register",
+			request {
+				path {} query { kind: super::super::RegistrationKind }
+				body {
+					username: Option<String>, password: Option<String>,
+					device_id: Option<crate::OwnedDeviceId>,
+					initial_device_display_name: Option<String>, inhibit_login: bool,
+					type_: Option<super::super::LoginType>,
+					auth: Option<crate::uiaa::AuthData>,
+				}
+			}
+			response {
+				user_id: crate::OwnedUserId, access_token: Option<String>,
+				device_id: Option<crate::OwnedDeviceId>, refresh_token: Option<String>,
+				expires_in_ms: Option<crate::UInt>
+			}
+		}
 	}
 }
