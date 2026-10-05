@@ -59,7 +59,34 @@ impl TagInfo {
 	}
 }
 
-crate::impl_codec_struct!(TagInfo { order: Option<f64> });
+impl Serialize for TagInfo {
+	fn to_json(&self) -> Value {
+		let mut object = crate::json::Object::new();
+		if let Some(order) = self.order {
+			object.insert("order".into(), order.to_json());
+		}
+		Value::Object(object)
+	}
+}
+
+/// Decodes `order` as a number, or as a numeric string: some clients wrote it
+/// stringified, and the previous (ruma `compat-tag-info`) build accepted that.
+/// An absent or `null` order is `None`; unknown fields are ignored.
+impl Deserialize for TagInfo {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		let object = value.as_object().ok_or_else(|| DeError::expected("object"))?;
+		let order = match object.get("order") {
+			None | Some(Value::Null) => None,
+			Some(Value::String(text)) => {
+				Some(text.parse::<f64>().map_err(|_| DeError::expected("numeric order"))?)
+			}
+			Some(other) => Some(f64::from_json(other)?),
+		};
+		Ok(Self {
+			order,
+		})
+	}
+}
 
 /// The tags a user has put on a room.
 #[derive(Clone, Debug, Default, PartialEq)]
