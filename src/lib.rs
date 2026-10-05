@@ -878,7 +878,7 @@ pub mod events {
 		GlobalAccountDataEventType, MessageLikeEventType, RoomAccountDataEventType,
 		StateEventType, TimelineEventType,
 	};
-	#[derive(Debug, Default, Clone)]
+	#[derive(Debug, Default)]
 	pub struct AnyGlobalAccountDataEvent;
 	pub type AnyGlobalAccountDataEventContent = AnyGlobalAccountDataEvent;
 	#[derive(Debug)]
@@ -886,12 +886,12 @@ pub mod events {
 		Room(crate::serde::Raw<AnyRoomAccountDataEvent>),
 		Global(crate::serde::Raw<AnyGlobalAccountDataEvent>),
 	}
-	#[derive(Debug, Default, Clone)]
+	#[derive(Debug, Default)]
 	pub struct AnyRoomAccountDataEvent;
 	pub type AnyRoomAccountDataEventContent = AnyRoomAccountDataEvent;
 	mod ephemeral;
 	pub use ephemeral::{AnySyncEphemeralRoomEvent, SyncReceiptEvent, SyncTypingEvent};
-	#[derive(Debug, Default, Clone)]
+	#[derive(Debug, Default)]
 	pub struct AnyToDeviceEvent;
 	pub use mentions::Mentions;
 	pub mod direct;
@@ -1349,7 +1349,7 @@ pub mod events {
 	}
 	#[derive(Debug, Default)]
 	pub struct AnyTimelineEvent;
-	#[derive(Debug, Default, Clone)]
+	#[derive(Debug, Default)]
 	pub struct AnySyncTimelineEvent;
 	#[derive(Debug, Default)]
 	pub struct AnyMessageLikeEvent;
@@ -1359,9 +1359,9 @@ pub mod events {
 	pub struct AnyStateEventContent;
 	#[derive(Debug, Default)]
 	pub struct AnyStateEvent;
-	#[derive(Debug, Default, Clone)]
+	#[derive(Debug, Default)]
 	pub struct AnySyncStateEvent;
-	#[derive(Debug, Default, Clone)]
+	#[derive(Debug, Default)]
 	pub struct AnyStrippedStateEvent;
 	#[derive(Debug, Default)]
 	pub struct StateEvent<T>(pub core::marker::PhantomData<T>);
