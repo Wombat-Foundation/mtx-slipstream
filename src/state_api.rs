@@ -248,7 +248,10 @@ fn path_args(room_id: &OwnedRoomId, event_type: &StateEventType, state_key: &str
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::json;
+
+	fn json(text: &str) -> crate::json::Value {
+		crate::codec::from_str(text).unwrap()
+	}
 
 	fn room() -> OwnedRoomId {
 		OwnedRoomId::from("!r:example.org")
@@ -264,7 +267,7 @@ mod tests {
 		);
 		assert_eq!(request.path_args(), ["!r:example.org", "m.room.name", ""]);
 		let body = request.body().unwrap();
-		assert_eq!(body, json!({"name": "x"}));
+		assert_eq!(body, json(r#"{"name": "x"}"#));
 		let back = send_state_event::v3::Request::from_parts(
 			&request.path_args(),
 			&request.query(),
@@ -282,7 +285,7 @@ mod tests {
 		assert_eq!(read.state_key, "");
 		assert_eq!(read.format, None);
 		let write =
-			send_state_event::v3::Request::from_parts(&path, &[], Some(&json!({}))).unwrap();
+			send_state_event::v3::Request::from_parts(&path, &[], Some(&json(r"{}"))).unwrap();
 		assert_eq!(write.state_key, "");
 	}
 
@@ -300,16 +303,16 @@ mod tests {
 	#[test]
 	fn response_is_content_or_event_as_the_whole_body() {
 		let content = get_state_events_for_key::v3::Response {
-			content: Some(json!({"name": "x"})),
+			content: Some(json(r#"{"name": "x"}"#)),
 			event: None,
 		};
-		assert_eq!(content.to_body(), json!({"name": "x"}));
+		assert_eq!(content.to_body(), json(r#"{"name": "x"}"#));
 		let event = get_state_events_for_key::v3::Response {
 			content: None,
-			event: Some(json!({"type": "m.room.name", "content": {"name": "x"}})),
+			event: Some(json(r#"{"type": "m.room.name", "content": {"name": "x"}}"#)),
 		};
-		assert_eq!(event.to_body(), json!({"type": "m.room.name", "content": {"name": "x"}}));
-		assert_eq!(get_state_events_for_key::v3::Response::default().to_body(), json!({}));
+		assert_eq!(event.to_body(), json(r#"{"type": "m.room.name", "content": {"name": "x"}}"#));
+		assert_eq!(get_state_events_for_key::v3::Response::default().to_body(), json(r"{}"));
 	}
 
 	#[test]

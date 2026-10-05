@@ -25,7 +25,12 @@ pub struct ThirdPartyIdentifierInit {
 
 impl crate::codec::Serialize for ThirdPartyIdentifier {
 	fn to_json(&self) -> crate::json::Value {
-		crate::json!({"address": self.address, "medium": self.medium, "validated_at": self.validated_at, "added_at": self.added_at})
+		crate::endpoint::body_object(&mut [
+			("address", self.address.to_json()),
+			("medium", self.medium.to_json()),
+			("validated_at", self.validated_at.to_json()),
+			("added_at", self.added_at.to_json()),
+		])
 	}
 }
 impl crate::codec::Deserialize for ThirdPartyIdentifier {

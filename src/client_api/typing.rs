@@ -179,21 +179,24 @@ mod tests {
 
 	#[test]
 	fn typing_true_without_timeout_is_rejected() {
-		let value = crate::json!({ "typing": true });
+		let value = crate::endpoint::body_object(&mut [("typing", Value::Bool(true))]);
 
 		assert!(Typing::from_json(&value).is_err(), "typing without timeout should be rejected");
 	}
 
 	#[test]
 	fn typing_false_with_timeout_reads_as_no() {
-		let value = crate::json!({ "typing": false, "timeout": 30_000u64 });
+		let value = crate::endpoint::body_object(&mut [
+			("typing", Value::Bool(false)),
+			("timeout", Value::from(30_000_u64)),
+		]);
 
 		assert_eq!(Typing::from_json(&value).expect("valid typing"), Typing::No);
 	}
 
 	#[test]
 	fn bare_boolean_is_rejected() {
-		let value = crate::json!({});
+		let value = crate::endpoint::body_object(&mut []);
 
 		assert!(
 			Typing::from_json(&value).is_err(),

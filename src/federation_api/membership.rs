@@ -349,16 +349,21 @@ pub mod create_invite {
 		#[cfg(test)]
 		mod tests {
 			use super::*;
-			use crate::json;
+
+			fn json(text: &str) -> crate::json::Value {
+				crate::codec::from_str(text).unwrap()
+			}
 
 			#[test]
 			fn via_uses_the_msc4125_key_and_round_trips() {
-				let body = json!({
+				let body = json(
+					r#"{
 					"room_version": "11",
 					"event": {"type": "m.room.member"},
 					"invite_room_state": [],
-					"org.matrix.msc4125.via": ["a.example"],
-				});
+					"org.matrix.msc4125.via": ["a.example"]
+				}"#,
+				);
 				let request = Request::from_parts(
 					&["!r:example.org".to_owned(), "$e".to_owned()],
 					&[],
@@ -373,7 +378,8 @@ pub mod create_invite {
 
 			#[test]
 			fn via_is_optional() {
-				let body = json!({"room_version": "11", "event": {}, "invite_room_state": []});
+				let body =
+					json(r#"{"room_version": "11", "event": {}, "invite_room_state": []}"#);
 				let request = Request::from_parts(
 					&["!r:example.org".to_owned(), "$e".to_owned()],
 					&[],

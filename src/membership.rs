@@ -607,7 +607,11 @@ mod tests {
 	use alloc::vec;
 
 	use super::*;
-	use crate::{codec::from_str, json};
+	use crate::codec::from_str;
+
+	fn json(text: &str) -> crate::json::Value {
+		from_str(text).unwrap()
+	}
 
 	#[test]
 	fn invite_by_user_id_round_trips() {
@@ -619,7 +623,7 @@ mod tests {
 			reason: Some("hi".into()),
 		};
 		let body = request.body().unwrap();
-		assert_eq!(body, json!({"user_id": "@carl:example.org", "reason": "hi"}));
+		assert_eq!(body, json(r#"{"user_id": "@carl:example.org", "reason": "hi"}"#));
 		let back = invite_user::v3::Request::from_parts(
 			&["!r:example.org".to_owned()],
 			&[],
@@ -656,7 +660,7 @@ mod tests {
 			("server_name".to_owned(), "b.example".to_owned()),
 			("server_name".to_owned(), "a.example".to_owned()),
 		];
-		let body = json!({"reason": "because"});
+		let body = json(r#"{"reason": "because"}"#);
 		let request = join_room_by_id_or_alias::v3::Request::from_parts(
 			&["#room:example.org".to_owned()],
 			&query,
@@ -685,7 +689,7 @@ mod tests {
 		let request = knock_room::v3::Request::from_parts(
 			&["!r:example.org".to_owned()],
 			&query,
-			Some(&json!({"reason": "let me in"})),
+			Some(&json(r#"{"reason": "let me in"}"#)),
 		)
 		.unwrap();
 		let via: Vec<&str> = request.via.iter().map(crate::OwnedServerName::as_str).collect();
@@ -695,7 +699,7 @@ mod tests {
 
 	#[test]
 	fn membership_filter_uses_lowercase_names() {
-		assert_eq!(MembershipEventFilter::Knock.to_json(), json!("knock"));
+		assert_eq!(MembershipEventFilter::Knock.to_json(), json(r#""knock""#));
 		let parsed: MembershipEventFilter = from_str("\"leave\"").unwrap();
 		assert_eq!(parsed, MembershipEventFilter::Leave);
 	}
