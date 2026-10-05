@@ -328,6 +328,14 @@ pub mod get_hierarchy {
 				}
 			}
 		}
+		impl Clone for Request {
+			fn clone(&self) -> Self {
+				Self {
+					room_id: self.room_id.clone(),
+					suggested_only: self.suggested_only,
+				}
+			}
+		}
 	}
 }
 

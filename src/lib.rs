@@ -953,7 +953,7 @@ pub mod events {
 			Annotation, BundledMessageLikeRelations, BundledReference, BundledThread,
 			CustomRelation, InReplyTo, Reference, ReferenceChunk, Relation, Replacement, Thread,
 		};
-		#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+		#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 		pub enum RelationType {
 			Reply,
 			Replacement,
@@ -1167,7 +1167,7 @@ pub mod events {
 					}
 				}
 			}
-			#[derive(Debug, Default, PartialEq, Eq)]
+			#[derive(Clone, Debug, Default, PartialEq, Eq)]
 			pub enum MembershipState {
 				Join,
 				Invite,

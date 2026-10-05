@@ -47,7 +47,7 @@ impl Deserialize for TagName {
 }
 
 /// Extra data attached to a tag.
-#[derive(Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct TagInfo {
 	pub order: Option<f64>,
 }

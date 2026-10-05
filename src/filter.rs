@@ -44,7 +44,7 @@ pub enum UrlFilter {
 }
 
 /// A filter on timeline, state or account-data events of a room.
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct RoomEventFilter {
 	pub limit: Option<UInt>,
 	pub types: Option<Vec<String>>,
@@ -112,7 +112,7 @@ impl Deserialize for RoomEventFilter {
 }
 
 /// A filter on non-room events such as presence.
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Filter {
 	pub limit: Option<UInt>,
 	pub types: Option<Vec<String>>,
@@ -130,7 +130,7 @@ impl_codec_struct!(Filter {} default {
 });
 
 /// Filters applying to events in rooms.
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct RoomFilter {
 	pub not_rooms: Vec<OwnedRoomId>,
 	pub rooms: Option<Vec<OwnedRoomId>>,
@@ -162,7 +162,7 @@ pub enum EventFormat {
 impl_codec_enum!(EventFormat { Client => "client", Federation => "federation" });
 
 /// A full sync filter.
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct FilterDefinition {
 	pub event_fields: Option<Vec<String>>,
 	pub event_format: EventFormat,

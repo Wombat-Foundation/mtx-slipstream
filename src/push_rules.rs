@@ -416,7 +416,7 @@ impl Serialize for AnyPushRule {
 pub type PushRule = AnyPushRule;
 
 /// A rule to be created by `PUT /pushrules/global/{kind}/{ruleId}`.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum NewPushRule {
 	Override(NewConditionalPushRule),
 	Content(NewPatternedPushRule),
@@ -425,21 +425,21 @@ pub enum NewPushRule {
 	Underride(NewConditionalPushRule),
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct NewConditionalPushRule {
 	pub rule_id: String,
 	pub conditions: Vec<PushCondition>,
 	pub actions: Vec<Action>,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct NewPatternedPushRule {
 	pub rule_id: String,
 	pub pattern: String,
 	pub actions: Vec<Action>,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct NewSimplePushRule<T> {
 	pub rule_id: T,
 	pub actions: Vec<Action>,
@@ -549,7 +549,7 @@ crate::compat::simple_error! {
 }
 
 /// A user's push rules, ordered by priority within each kind.
-#[derive(Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Ruleset {
 	pub override_: RuleList<ConditionalPushRule>,
 	pub content: RuleList<PatternedPushRule>,
@@ -582,7 +582,7 @@ impl<T: AsRef<str>> HasRuleId for SimplePushRule<T> {
 ///
 /// Dereferences to the underlying `Vec` for iteration and in-place edits; the
 /// by-ID `get`, `insert` and `shift_remove` mirror an insertion-ordered set.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RuleList<T>(Vec<T>);
 
 impl<T> Default for RuleList<T> {
