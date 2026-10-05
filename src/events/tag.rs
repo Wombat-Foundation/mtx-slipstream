@@ -78,7 +78,11 @@ impl Deserialize for TagInfo {
 		let order = match object.get("order") {
 			None | Some(Value::Null) => None,
 			Some(Value::String(text)) => {
-				Some(text.parse::<f64>().map_err(|_| DeError::expected("numeric order"))?)
+				let order = text.parse::<f64>().map_err(|_| DeError::expected("numeric order"))?;
+				if !order.is_finite() {
+					return Err(DeError::expected("finite numeric order"));
+				}
+				Some(order)
 			}
 			Some(other) => Some(f64::from_json(other)?),
 		};

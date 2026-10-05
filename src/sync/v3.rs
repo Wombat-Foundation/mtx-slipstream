@@ -7,7 +7,7 @@
 //!
 //! With a direct pipeline:
 //! ```text
-//! ruma Response → simd_json::to_owned_value → OwnedValue → patch → JsonWriter → bytes
+//! ruma Response → simd_json::to_owned_value → OwnedValue → patch → BufWriter → simd_json::to_writer → bytes
 //! ```
 
 use bytes::BytesMut;
