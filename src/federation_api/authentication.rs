@@ -51,6 +51,10 @@ impl XMatrix {
 	}
 
 	/// Encodes this credential as an `X-Matrix` authorization header.
+	///
+	/// # Panics
+	///
+	/// Panics if the credential fields produce an invalid HTTP header value.
 	#[must_use]
 	pub fn encode(&self) -> HeaderValue {
 		let destination = self

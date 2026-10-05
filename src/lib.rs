@@ -777,7 +777,6 @@ pub mod api {
 			use crate::{
 				OneTimeKeyAlgorithm, OwnedDeviceId, OwnedOneTimeKeyId, OwnedUserId,
 				encryption::{CrossSigningKey, DeviceKeys, OneTimeKey},
-				endpoint,
 				serde::Raw,
 			};
 			use alloc::collections::BTreeMap;
