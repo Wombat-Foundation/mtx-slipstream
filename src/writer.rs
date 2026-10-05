@@ -2,8 +2,8 @@
 
 use std::io;
 
+use crate::simd_json::prelude::*;
 use bytes::BytesMut;
-use simd_json::prelude::*;
 
 /// Adapter that implements [`io::Write`] for a [`BytesMut`] buffer.
 ///
@@ -31,7 +31,7 @@ impl io::Write for BufWriter<'_> {
 ///
 /// Returns `io::Error` if serialization fails.
 #[inline]
-pub fn to_bytes(value: &simd_json::OwnedValue) -> io::Result<BytesMut> {
+pub fn to_bytes(value: &crate::simd_json::OwnedValue) -> io::Result<BytesMut> {
 	let mut buf = BytesMut::with_capacity(8192);
 	let mut writer = BufWriter(&mut buf);
 	value.write(&mut writer)?;
@@ -41,7 +41,8 @@ pub fn to_bytes(value: &simd_json::OwnedValue) -> io::Result<BytesMut> {
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
-	use simd_json::json;
+	use crate::simd_json;
+	use crate::simd_json::json;
 
 	use super::*;
 
@@ -85,9 +86,9 @@ mod tests {
 		.unwrap();
 		let mut input = bytes.to_vec();
 		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
-		assert_eq!(
-			parsed["rooms"]["join"]["!room:example.com"]["timeline"]["events"][0]["type"],
-			"m.room.message"
-		);
+		let events = parsed["rooms"]["join"]["!room:example.com"]["timeline"]["events"]
+			.as_array()
+			.unwrap();
+		assert_eq!(events[0]["type"].as_str(), Some("m.room.message"));
 	}
 }

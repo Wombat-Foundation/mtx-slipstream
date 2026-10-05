@@ -1,9 +1,8 @@
 //! High-performance sync v5 (sliding sync) response builder.
 
+use crate::simd_json::{self, OwnedValue, prelude::*};
 use bytes::BytesMut;
-use simd_json::{OwnedValue, prelude::*};
 
-use alloc::boxed::Box;
 use alloc::vec::Vec;
 
 use crate::writer::BufWriter;
@@ -110,9 +109,9 @@ impl SlidingSyncResponseBuilder {
 			if let Some(timeline) = room.get("timeline").cloned() {
 				room.insert("timeline_events".to_owned(), timeline);
 			}
-			let lists_val = OwnedValue::Array(Box::new(
+			let lists_val = OwnedValue::Array(
 				extra.lists.iter().map(|s| OwnedValue::from(s.as_str())).collect(),
-			));
+			);
 			room.insert("lists".to_owned(), lists_val);
 			if extra.expanded_timeline {
 				room.insert("expanded_timeline".to_owned(), OwnedValue::from(true));
@@ -135,8 +134,9 @@ mod tests {
 		let mut val = json!({"rooms": {}});
 		builder.patch(&mut val);
 		assert_eq!(
-			val["extensions"]["io.element.msc4308.thread_subscriptions"]["!room:example.com"],
-			true
+			val["extensions"]["io.element.msc4308.thread_subscriptions"]["!room:example.com"]
+				.as_bool(),
+			Some(true)
 		);
 	}
 
@@ -160,11 +160,11 @@ mod tests {
 		});
 		builder.patch(&mut val);
 		let room = &val["rooms"]["!room:example.com"];
-		assert_eq!(room["membership"], "join");
+		assert_eq!(room["membership"].as_str(), Some("join"));
 		assert_eq!(room["stripped_state"]["events"], json!([]));
 		assert_eq!(room["timeline_events"]["events"], json!([]));
-		assert_eq!(room["lists"][0], "list1");
-		assert_eq!(room["expanded_timeline"], true);
+		assert_eq!(room["lists"].as_array().unwrap()[0].as_str(), Some("list1"));
+		assert_eq!(room["expanded_timeline"].as_bool(), Some(true));
 	}
 
 	#[test]

@@ -4,8 +4,9 @@
 //! serializing, this module provides a `PduStreamWriter` that serializes
 //! PDUs incrementally into a growing byte buffer.
 
+use crate::simd_json;
+use crate::simd_json::prelude::*;
 use bytes::{BufMut, BytesMut};
-use simd_json::prelude::*;
 
 use crate::writer::BufWriter;
 
@@ -262,8 +263,9 @@ mod tests {
 		let bytes = stream.finish();
 		let mut input = bytes.to_vec();
 		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
-		assert_eq!(parsed[0]["event_id"], "$a");
-		assert_eq!(parsed[1]["event_id"], "$b");
+		let items = parsed.as_array().unwrap();
+		assert_eq!(items[0]["event_id"].as_str(), Some("$a"));
+		assert_eq!(items[1]["event_id"].as_str(), Some("$b"));
 	}
 
 	#[test]
@@ -276,9 +278,11 @@ mod tests {
 		let bytes = writer.finish();
 		let mut input = bytes.to_vec();
 		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
-		assert_eq!(parsed["state"][0]["event_id"], "$s1");
-		assert_eq!(parsed["state"][1]["event_id"], "$s2");
-		assert_eq!(parsed["auth_chain"][0]["event_id"], "$a1");
+		let state = parsed["state"].as_array().unwrap();
+		let auth_chain = parsed["auth_chain"].as_array().unwrap();
+		assert_eq!(state[0]["event_id"].as_str(), Some("$s1"));
+		assert_eq!(state[1]["event_id"].as_str(), Some("$s2"));
+		assert_eq!(auth_chain[0]["event_id"].as_str(), Some("$a1"));
 	}
 
 	#[test]

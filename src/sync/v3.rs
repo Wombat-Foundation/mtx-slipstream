@@ -10,11 +10,10 @@
 //! ruma Response → simd_json::to_owned_value → OwnedValue → patch → JsonWriter → bytes
 //! ```
 
+use crate::simd_json::{self, OwnedValue, prelude::*};
 use bytes::BytesMut;
-use simd_json::{OwnedValue, prelude::*};
 
 use crate::writer::BufWriter;
-use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
 
@@ -105,7 +104,7 @@ impl SyncResponseBuilder {
 				if let Some(room) = join.get_mut(room_id.as_str()) {
 					let mut events = simd_json::value::owned::Object::new();
 					events.insert("events".to_owned(), state_after.clone());
-					let state_after_obj = OwnedValue::Object(Box::new(events));
+					let state_after_obj = OwnedValue::Object(events);
 					if let Some(obj) = room.as_object_mut() {
 						obj.insert("state_after".to_owned(), state_after_obj.clone());
 						obj.insert("org.matrix.msc4222.state_after".to_owned(), state_after_obj);
@@ -119,7 +118,7 @@ impl SyncResponseBuilder {
 				if let Some(room) = leave.get_mut(room_id.as_str()) {
 					let mut events = simd_json::value::owned::Object::new();
 					events.insert("events".to_owned(), state_after.clone());
-					let state_after_obj = OwnedValue::Object(Box::new(events));
+					let state_after_obj = OwnedValue::Object(events);
 					if let Some(obj) = room.as_object_mut() {
 						obj.insert("state_after".to_owned(), state_after_obj.clone());
 						obj.insert("org.matrix.msc4222.state_after".to_owned(), state_after_obj);

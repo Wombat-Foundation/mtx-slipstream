@@ -14,8 +14,8 @@
 
 use std::io;
 
+use crate::simd_json::{self, OwnedValue, prelude::*};
 use bytes::{BufMut, BytesMut};
-use simd_json::{OwnedValue, prelude::*};
 
 use crate::writer::BufWriter;
 use alloc::string::String;
@@ -145,7 +145,7 @@ fn write_canonical_value(buf: &mut BytesMut, value: &simd_json::OwnedValue) -> i
 		// an f64. Reject violations here rather than silently emitting
 		// non-canonical bytes that would fail interop event-hash checks
 		// against other homeservers.
-		if value.is_f64() {
+		if value.as_i64().is_none() && value.as_u64().is_none() && value.as_f64().is_some() {
 			return Err(io::Error::new(
 				io::ErrorKind::InvalidData,
 				"canonical JSON forbids floating-point values",
@@ -424,8 +424,8 @@ mod tests {
 
 		let mut input = out.clone();
 		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
-		assert_eq!(parsed["event_id"], "$abc");
-		assert_eq!(parsed["unsigned"]["age"], 42);
+		assert_eq!(parsed["event_id"].as_str(), Some("$abc"));
+		assert_eq!(parsed["unsigned"]["age"].as_i64(), Some(42));
 	}
 
 	#[test]
@@ -435,7 +435,7 @@ mod tests {
 
 		let mut input = out.clone();
 		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
-		assert_eq!(parsed["age"], 42);
+		assert_eq!(parsed["age"].as_i64(), Some(42));
 	}
 
 	#[test]
@@ -445,9 +445,9 @@ mod tests {
 
 		let mut input = out.clone();
 		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
-		assert_eq!(parsed["event_id"], "$abc");
-		assert_eq!(parsed["age"], 1);
-		assert_eq!(parsed["transaction_id"], "t1");
+		assert_eq!(parsed["event_id"].as_str(), Some("$abc"));
+		assert_eq!(parsed["age"].as_i64(), Some(1));
+		assert_eq!(parsed["transaction_id"].as_str(), Some("t1"));
 	}
 
 	#[test]
@@ -466,7 +466,7 @@ mod tests {
 
 		let mut input = out.clone();
 		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
-		assert_eq!(parsed["age"], 42);
+		assert_eq!(parsed["age"].as_i64(), Some(42));
 	}
 
 	#[test]
@@ -477,8 +477,8 @@ mod tests {
 		let mut input = out.clone();
 		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
 		// Existing "age" is left untouched, not duplicated or overwritten.
-		assert_eq!(parsed["age"], 1);
-		assert_eq!(parsed["new_field"], 7);
+		assert_eq!(parsed["age"].as_i64(), Some(1));
+		assert_eq!(parsed["new_field"].as_i64(), Some(7));
 		assert_eq!(out.windows(6).filter(|w| *w == b"\"age\":").count(), 1);
 	}
 
@@ -491,8 +491,8 @@ mod tests {
 
 		let mut input = out.clone();
 		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
-		assert_eq!(parsed["age"], 42);
-		assert_eq!(parsed["content"]["age"], 5);
+		assert_eq!(parsed["age"].as_i64(), Some(42));
+		assert_eq!(parsed["content"]["age"].as_i64(), Some(5));
 	}
 
 	#[test]

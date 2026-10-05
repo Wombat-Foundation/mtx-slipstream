@@ -31,6 +31,7 @@ pub mod encryption;
 mod key_id;
 mod relation_types;
 mod room_power_levels;
+mod simd_json;
 mod space_child;
 pub use key_id::{
 	Base64PublicKey, KeyId, OneTimeKeyAlgorithm, OneTimeKeyId, OneTimeKeyName, OwnedKeyId,
