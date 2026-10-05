@@ -105,7 +105,7 @@ mod auth_spec;
 /// Placeholders (`{name}`) match each other regardless of name.
 #[must_use]
 pub const fn lookup_auth(method: &str, path: &str) -> Option<AuthScheme> {
-	if let Some(scheme) = lookup_in(EXTRA_AUTH, method, path) {
+	if let Some(scheme) = lookup_sorted(EXTRA_AUTH, method, path) {
 		return Some(scheme);
 	}
 	lookup_sorted(auth_table::AUTH_TABLE, method, path)
@@ -119,45 +119,26 @@ pub const fn lookup_auth(method: &str, path: &str) -> Option<AuthScheme> {
 /// - Federation `query` and `exchange_third_party_invite`: ruwuma declared
 ///   `AccessToken`, but both are signed federation requests in the spec and in synapse.
 const EXTRA_AUTH: &[(&str, &str, AuthScheme)] = &[
+	("DELETE", "/_matrix/client/v3/pushrules/{}/{}/{}", AuthScheme::AccessToken),
 	("GET", "/_matrix/client/v3/pushrules/{}/{}/{}", AuthScheme::AccessToken),
 	("PUT", "/_matrix/client/v3/pushrules/{}/{}/{}", AuthScheme::AccessToken),
-	("DELETE", "/_matrix/client/v3/pushrules/{}/{}/{}", AuthScheme::AccessToken),
 	("GET", "/_matrix/client/v3/pushrules/{}/{}/{}/actions", AuthScheme::AccessToken),
 	("PUT", "/_matrix/client/v3/pushrules/{}/{}/{}/actions", AuthScheme::AccessToken),
 	("GET", "/_matrix/client/v3/pushrules/{}/{}/{}/enabled", AuthScheme::AccessToken),
 	("PUT", "/_matrix/client/v3/pushrules/{}/{}/{}/enabled", AuthScheme::AccessToken),
-	("POST", "/_meowlnir/antispam/{}/user_may_invite", AuthScheme::None),
-	("POST", "/_meowlnir/antispam/{}/user_may_join_room", AuthScheme::None),
-	("POST", "/_meowlnir/antispam/{}/accept_make_join", AuthScheme::None),
-	("POST", "/api/1/spam_check/user_may_invite", AuthScheme::None),
-	("POST", "/api/1/spam_check/user_may_join_room", AuthScheme::None),
 	("POST", "/_matrix/federation/unstable/event_relationships", AuthScheme::ServerSignatures),
-	("GET", "/_matrix/federation/v1/query/{}", AuthScheme::ServerSignatures),
 	(
 		"PUT",
 		"/_matrix/federation/v1/exchange_third_party_invite/{}",
 		AuthScheme::ServerSignatures,
 	),
+	("GET", "/_matrix/federation/v1/query/{}", AuthScheme::ServerSignatures),
+	("POST", "/_meowlnir/antispam/{}/accept_make_join", AuthScheme::None),
+	("POST", "/_meowlnir/antispam/{}/user_may_invite", AuthScheme::None),
+	("POST", "/_meowlnir/antispam/{}/user_may_join_room", AuthScheme::None),
+	("POST", "/api/1/spam_check/user_may_invite", AuthScheme::None),
+	("POST", "/api/1/spam_check/user_may_join_room", AuthScheme::None),
 ];
-
-/// Linear scan; only for the small hand-written override table.
-const fn lookup_in(
-	table: &[(&str, &str, AuthScheme)],
-	method: &str,
-	path: &str,
-) -> Option<AuthScheme> {
-	let mut i = 0;
-	while i < table.len() {
-		let (m, p, scheme) = table[i];
-		if template_cmp(p.as_bytes(), path.as_bytes()) == 0
-			&& bytes_cmp(m.as_bytes(), method.as_bytes()) == 0
-		{
-			return Some(scheme);
-		}
-		i = i.saturating_add(1);
-	}
-	None
-}
 
 /// Binary search over a table sorted by `(path, method)`.
 ///
