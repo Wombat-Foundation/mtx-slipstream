@@ -42,6 +42,18 @@ macro_rules! transparent_value {
 }
 transparent_value!(RtcFocusInfo, ContactRole);
 
+impl From<String> for ContactRole {
+	fn from(value: String) -> Self {
+		Self(Value::String(value))
+	}
+}
+
+impl From<&str> for ContactRole {
+	fn from(value: &str) -> Self {
+		Self(Value::String(value.into()))
+	}
+}
+
 impl Serialize for RoomCreateEventContent {
 	fn to_json(&self) -> Value {
 		let mut object = crate::json::Object::new();

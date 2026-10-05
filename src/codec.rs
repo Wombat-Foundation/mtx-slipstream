@@ -160,6 +160,18 @@ impl Serialize for f64 {
 		crate::json::Number::from_f64(*self).map_or(Value::Null, Value::Number)
 	}
 }
+
+impl Serialize for usize {
+	fn to_json(&self) -> Value {
+		u64::try_from(*self).unwrap_or(u64::MAX).to_json()
+	}
+}
+
+impl Deserialize for usize {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		usize::try_from(u64::from_json(value)?).map_err(|_| DeError::expected("usize"))
+	}
+}
 impl Deserialize for f64 {
 	fn from_json(value: &Value) -> Result<Self, DeError> {
 		value.as_f64().ok_or_else(|| DeError::expected("number"))
