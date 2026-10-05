@@ -41,6 +41,7 @@ pub use key_id::{
 	Base64PublicKey, KeyId, OneTimeKeyAlgorithm, OneTimeKeyId, OneTimeKeyName, OwnedKeyId,
 	OwnedOneTimeKeyId, ServerSigningKeyVersion, SigningKeyAlgorithm,
 };
+pub mod client_api;
 mod compat;
 mod content;
 pub mod delayed_events;
@@ -49,6 +50,7 @@ mod event_type;
 mod events_codec;
 pub mod federation;
 pub mod federation_api;
+pub mod thirdparty;
 /// Shared to-device target identifier used by client and federation payloads.
 pub mod to_device {
 	pub use crate::room::federation::transactions::edu::DeviceIdOrAllDevices;
@@ -669,6 +671,14 @@ pub mod api {
 	}
 
 	pub mod client {
+		pub mod authentication {
+			#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+			pub enum TokenType {
+				Bearer,
+			}
+			crate::impl_codec_enum!(TokenType { Bearer => "Bearer" });
+		}
+		pub use crate::client_api::account;
 		pub mod media {
 			pub use crate::media_api::legacy::{
 				create_content, create_content_async, create_mxc_uri, get_content,
@@ -775,9 +785,8 @@ pub mod api {
 				pub mod v3 {
 					use super::super::{
 						BTreeMap, CrossSigningKey, DeviceKeys, OwnedDeviceId, OwnedUserId, Raw,
-						endpoint,
 					};
-					endpoint! {
+					crate::endpoint! {
 						method: "POST", path: "/_matrix/client/v3/keys/query",
 						request { path {} query {} body { device_keys: BTreeMap<OwnedUserId, alloc::vec::Vec<OwnedDeviceId>>, timeout: Option<crate::UInt>, notary: Option<bool> } }
 						response { device_keys: BTreeMap<OwnedUserId, BTreeMap<OwnedDeviceId, Raw<DeviceKeys>>>, master_keys: BTreeMap<OwnedUserId, Raw<CrossSigningKey>>, self_signing_keys: BTreeMap<OwnedUserId, Raw<CrossSigningKey>>, user_signing_keys: BTreeMap<OwnedUserId, Raw<CrossSigningKey>>, failures: BTreeMap<String, crate::json::Value> }
@@ -788,9 +797,9 @@ pub mod api {
 				pub mod v3 {
 					use super::super::{
 						BTreeMap, OneTimeKey, OneTimeKeyAlgorithm, OwnedDeviceId,
-						OwnedOneTimeKeyId, OwnedUserId, Raw, endpoint,
+						OwnedOneTimeKeyId, OwnedUserId, Raw,
 					};
-					endpoint! {
+					crate::endpoint! {
 						method: "POST", path: "/_matrix/client/v3/keys/claim",
 						request { path {} query {} body { one_time_keys: BTreeMap<OwnedUserId, BTreeMap<OwnedDeviceId, OneTimeKeyAlgorithm>>, timeout: Option<crate::UInt> } }
 						response { one_time_keys: BTreeMap<OwnedUserId, BTreeMap<OwnedOneTimeKeyId, Raw<OneTimeKey>>>, failures: BTreeMap<String, crate::json::Value> }

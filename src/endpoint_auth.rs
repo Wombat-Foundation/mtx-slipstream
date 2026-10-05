@@ -410,6 +410,7 @@ pub(super) const AUTH_TABLE: &[(&str, &str, AuthScheme)] = &[
 	("POST", "/_matrix/client/v3/register", AuthScheme::AppserviceToken),
 	("GET", "/_matrix/client/v3/register/available", AuthScheme::None),
 	("POST", "/_matrix/client/v3/register/email/requestToken", AuthScheme::None),
+	("GET", "/_matrix/client/v3/register/m.login.registration_token/validity", AuthScheme::None),
 	("POST", "/_matrix/client/v3/register/msisdn/requestToken", AuthScheme::None),
 	("DELETE", "/_matrix/client/v3/room_keys/keys", AuthScheme::AccessToken),
 	("GET", "/_matrix/client/v3/room_keys/keys", AuthScheme::AccessToken),

@@ -220,7 +220,8 @@ summary!(
 );
 summary!(
 	/// A child room in the hierarchy.
-	SpaceHierarchyChildSummary, SpaceHierarchyChildSummaryInit,
+	SpaceHierarchyChildSummary,
+	SpaceHierarchyChildSummaryInit,
 );
 
 summary!(
