@@ -34,10 +34,8 @@ macro_rules! event_type {
 		}
 		impl From<&str> for $name {
 			fn from(value: &str) -> Self {
-				match value {
-					$($wire => Self::$variant,)*
-					other => Self::Custom(other.into()),
-				}
+				$(if value == $wire { return Self::$variant; })*
+				Self::Custom(value.into())
 			}
 		}
 		impl From<String> for $name {
@@ -89,13 +87,13 @@ event_type!(TimelineEventType {
 	Image => "m.image",
 	KeyVerificationStart => "m.key.verification.start",
 	Location => "m.location",
-	UnstablePollStart => "org.matrix.msc3381.poll.start",
 	Reaction => "m.reaction",
 	Video => "m.video",
 	Voice => "m.voice",
 	CallNotify => "m.call.notify",
 	PollStart => "org.matrix.msc3381.poll.start",
 	Sticker => "m.sticker",
+	UnstablePollStart => "org.matrix.msc3381.poll.start",
 });
 
 event_type!(StateEventType {
