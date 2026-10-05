@@ -9,7 +9,7 @@ publish = false
 [features]
 bench = []
 serde-comparison = ["dep:serde_json"]
-mimalloc-alloc = ["dep:mimalloc"]
+mimalloc = ["dep:mimalloc"]
 nightly-benches = []
 
 [dependencies]

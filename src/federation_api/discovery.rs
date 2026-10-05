@@ -7,6 +7,15 @@ use crate::{
 	serde::Base64,
 };
 
+pub mod discover_homeserver {
+	use crate::{OwnedServerName, endpoint};
+	endpoint! {
+		method: "GET", path: "/.well-known/matrix/server",
+		request { path {} query {} body {} }
+		response { server: OwnedServerName }
+	}
+}
+
 /// A server's current public signing key.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct VerifyKey {

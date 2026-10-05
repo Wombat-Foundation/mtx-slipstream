@@ -7,6 +7,85 @@ pub type RawPdu = Raw<Value>;
 
 pub use crate::directory::federation as directory;
 
+pub mod openid {
+	pub mod get_openid_userinfo {
+		pub mod v1 {
+			use crate::{OwnedUserId, endpoint};
+			endpoint! {
+				method: "GET", path: "/_matrix/federation/v1/openid/userinfo",
+				request { path {} query { access_token: String } body {} }
+				response { sub: OwnedUserId }
+			}
+			impl Response {
+				#[must_use]
+				pub fn new(sub: OwnedUserId) -> Self {
+					Self {
+						sub,
+					}
+				}
+			}
+		}
+	}
+}
+
+pub mod edutypes {
+	pub mod get_edutypes {
+		pub mod unstable {
+			use crate::endpoint;
+			endpoint! {
+				method: "GET", path: "/_matrix/federation/v1/edutypes",
+				request { path {} query {} body {} }
+				response { typing: bool, presence: bool, receipt: bool }
+			}
+		}
+	}
+}
+
+pub mod keys {
+	use crate::{
+		OwnedDeviceId, OwnedServerName, OwnedUserId,
+		encryption::{CrossSigningKey, DeviceKeys, OneTimeKey},
+		endpoint,
+		serde::Raw,
+	};
+	use alloc::collections::BTreeMap;
+
+	pub mod get_keys {
+		pub mod v1 {
+			use super::super::{
+				BTreeMap, CrossSigningKey, DeviceKeys, OwnedDeviceId, OwnedServerName,
+				OwnedUserId, Raw, endpoint,
+			};
+			endpoint! {
+				method: "POST", path: "/_matrix/federation/v1/user/keys/query",
+				request { path {} query {} body { device_keys: BTreeMap<OwnedUserId, alloc::vec::Vec<OwnedDeviceId>> } }
+				response {
+					device_keys: BTreeMap<OwnedUserId, BTreeMap<OwnedDeviceId, Raw<DeviceKeys>>>,
+					master_keys: BTreeMap<OwnedUserId, Raw<CrossSigningKey>>,
+					self_signing_keys: BTreeMap<OwnedUserId, Raw<CrossSigningKey>>,
+					failures: BTreeMap<OwnedServerName, crate::json::Value>
+				}
+			}
+		}
+	}
+
+	pub mod claim_keys {
+		pub mod v1 {
+			use super::super::{
+				BTreeMap, OneTimeKey, OwnedDeviceId, OwnedServerName, OwnedUserId, endpoint,
+			};
+			endpoint! {
+				method: "POST", path: "/_matrix/federation/v1/user/keys/claim",
+				request { path {} query {} body { one_time_keys: BTreeMap<OwnedUserId, BTreeMap<OwnedDeviceId, String>> } }
+				response {
+					one_time_keys: BTreeMap<OwnedUserId, BTreeMap<OwnedDeviceId, BTreeMap<crate::OneTimeKeyAlgorithm, OneTimeKey>>>,
+					failures: BTreeMap<OwnedServerName, crate::json::Value>
+				}
+			}
+		}
+	}
+}
+
 /// Policy server endpoints (MSC4284).
 pub mod room {
 	pub mod policy_check {

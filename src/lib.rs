@@ -9,6 +9,10 @@
 
 extern crate alloc;
 
+#[cfg(feature = "mimalloc")]
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 pub mod antispam;
 pub mod appservice;
 pub mod backup;
@@ -758,6 +762,41 @@ pub mod api {
 				DehydratedDeviceData, Device, delete_device, delete_devices, get_device,
 				get_devices, update_device,
 			};
+		}
+		pub mod keys {
+			use crate::{
+				OneTimeKeyAlgorithm, OwnedDeviceId, OwnedOneTimeKeyId, OwnedUserId,
+				encryption::{CrossSigningKey, DeviceKeys, OneTimeKey},
+				endpoint,
+				serde::Raw,
+			};
+			use alloc::collections::BTreeMap;
+			pub mod get_keys {
+				pub mod v3 {
+					use super::super::{
+						BTreeMap, CrossSigningKey, DeviceKeys, OwnedDeviceId, OwnedUserId, Raw,
+						endpoint,
+					};
+					endpoint! {
+						method: "POST", path: "/_matrix/client/v3/keys/query",
+						request { path {} query {} body { device_keys: BTreeMap<OwnedUserId, alloc::vec::Vec<OwnedDeviceId>>, timeout: Option<crate::UInt>, notary: Option<bool> } }
+						response { device_keys: BTreeMap<OwnedUserId, BTreeMap<OwnedDeviceId, Raw<DeviceKeys>>>, master_keys: BTreeMap<OwnedUserId, Raw<CrossSigningKey>>, self_signing_keys: BTreeMap<OwnedUserId, Raw<CrossSigningKey>>, user_signing_keys: BTreeMap<OwnedUserId, Raw<CrossSigningKey>>, failures: BTreeMap<String, crate::json::Value> }
+					}
+				}
+			}
+			pub mod claim_keys {
+				pub mod v3 {
+					use super::super::{
+						BTreeMap, OneTimeKey, OneTimeKeyAlgorithm, OwnedDeviceId,
+						OwnedOneTimeKeyId, OwnedUserId, Raw, endpoint,
+					};
+					endpoint! {
+						method: "POST", path: "/_matrix/client/v3/keys/claim",
+						request { path {} query {} body { one_time_keys: BTreeMap<OwnedUserId, BTreeMap<OwnedDeviceId, OneTimeKeyAlgorithm>>, timeout: Option<crate::UInt> } }
+						response { one_time_keys: BTreeMap<OwnedUserId, BTreeMap<OwnedOneTimeKeyId, Raw<OneTimeKey>>>, failures: BTreeMap<String, crate::json::Value> }
+					}
+				}
+			}
 		}
 		pub mod filter {
 			pub use crate::filter::{

@@ -10,7 +10,7 @@
 
 extern crate test;
 
-#[cfg(feature = "mimalloc-alloc")]
+#[cfg(feature = "mimalloc")]
 #[global_allocator]
 static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
