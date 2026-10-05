@@ -81,6 +81,18 @@ pub enum AuthScheme {
 	ServerSignatures,
 }
 
+impl AuthScheme {
+	/// Whether a request carrying no credentials is let through to the handler.
+	///
+	/// `None`, `AccessTokenOptional` and `AppserviceToken` admit anonymous callers (the
+	/// last because `/register` and `/login` are reachable without a token);
+	/// `AccessToken` and `ServerSignatures` do not.
+	#[must_use]
+	pub const fn allows_anonymous(self) -> bool {
+		matches!(self, Self::None | Self::AccessTokenOptional | Self::AppserviceToken)
+	}
+}
+
 #[path = "endpoint_auth.rs"]
 mod auth_table;
 
@@ -93,7 +105,46 @@ mod auth_spec;
 /// Placeholders (`{name}`) match each other regardless of name.
 #[must_use]
 pub const fn lookup_auth(method: &str, path: &str) -> Option<AuthScheme> {
-	let table = auth_table::AUTH_TABLE;
+	if let Some(scheme) = lookup_in(EXTRA_AUTH, method, path) {
+		return Some(scheme);
+	}
+	lookup_in(auth_table::AUTH_TABLE, method, path)
+}
+
+/// Hand-reviewed entries that take precedence over the generated table.
+///
+/// - Push rules: ruma only knew the `global` scope; ours takes any `{scope}`.
+/// - Antispam: requests we *send* to spam checkers; the router never serves them.
+/// - `event_relationships` (MSC2836): federation, signed.
+/// - Federation `query` and `exchange_third_party_invite`: ruwuma declared
+///   `AccessToken`, but both are signed federation requests in the spec and in synapse.
+const EXTRA_AUTH: &[(&str, &str, AuthScheme)] = &[
+	("GET", "/_matrix/client/v3/pushrules/{}/{}/{}", AuthScheme::AccessToken),
+	("PUT", "/_matrix/client/v3/pushrules/{}/{}/{}", AuthScheme::AccessToken),
+	("DELETE", "/_matrix/client/v3/pushrules/{}/{}/{}", AuthScheme::AccessToken),
+	("GET", "/_matrix/client/v3/pushrules/{}/{}/{}/actions", AuthScheme::AccessToken),
+	("PUT", "/_matrix/client/v3/pushrules/{}/{}/{}/actions", AuthScheme::AccessToken),
+	("GET", "/_matrix/client/v3/pushrules/{}/{}/{}/enabled", AuthScheme::AccessToken),
+	("PUT", "/_matrix/client/v3/pushrules/{}/{}/{}/enabled", AuthScheme::AccessToken),
+	("POST", "/_meowlnir/antispam/{}/user_may_invite", AuthScheme::None),
+	("POST", "/_meowlnir/antispam/{}/user_may_join_room", AuthScheme::None),
+	("POST", "/_meowlnir/antispam/{}/accept_make_join", AuthScheme::None),
+	("POST", "/api/1/spam_check/user_may_invite", AuthScheme::None),
+	("POST", "/api/1/spam_check/user_may_join_room", AuthScheme::None),
+	("POST", "/_matrix/federation/unstable/event_relationships", AuthScheme::ServerSignatures),
+	("GET", "/_matrix/federation/v1/query/{}", AuthScheme::ServerSignatures),
+	(
+		"PUT",
+		"/_matrix/federation/v1/exchange_third_party_invite/{}",
+		AuthScheme::ServerSignatures,
+	),
+];
+
+const fn lookup_in(
+	table: &[(&str, &str, AuthScheme)],
+	method: &str,
+	path: &str,
+) -> Option<AuthScheme> {
 	let mut i = 0;
 	while i < table.len() {
 		let (m, p, scheme) = table[i];
@@ -101,7 +152,7 @@ pub const fn lookup_auth(method: &str, path: &str) -> Option<AuthScheme> {
 		{
 			return Some(scheme);
 		}
-		i += 1;
+		i = i.saturating_add(1);
 	}
 	None
 }
@@ -115,7 +166,7 @@ const fn bytes_eq(a: &[u8], b: &[u8]) -> bool {
 		if a[i] != b[i] {
 			return false;
 		}
-		i += 1;
+		i = i.saturating_add(1);
 	}
 	true
 }
@@ -125,22 +176,22 @@ const fn template_eq(a: &[u8], b: &[u8]) -> bool {
 	while i < a.len() && j < b.len() {
 		if a[i] == b'{' && b[j] == b'{' {
 			while i < a.len() && a[i] != b'}' {
-				i += 1;
+				i = i.saturating_add(1);
 			}
 			while j < b.len() && b[j] != b'}' {
-				j += 1;
+				j = j.saturating_add(1);
 			}
 		} else if a[i] != b[j] {
 			return false;
 		}
-		i += 1;
-		j += 1;
+		i = i.saturating_add(1);
+		j = j.saturating_add(1);
 	}
 	i == a.len() && j == b.len()
 }
 
 /// Static description of an endpoint.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Metadata {
 	pub method: &'static str,
 	pub path: &'static str,
@@ -152,12 +203,21 @@ impl Metadata {
 	///
 	/// There is deliberately no default: an endpoint missing from the table fails to
 	/// compile (const evaluation panics) instead of silently picking a policy.
+	///
+	/// # Panics
+	///
+	/// Panics (at compile time in const contexts) if no authentication is declared
+	/// for `method` and `path`.
 	#[must_use]
 	pub const fn new(method: &'static str, path: &'static str) -> Self {
 		let Some(authentication) = lookup_auth(method, path) else {
 			panic!("no authentication declared for this endpoint; add it to endpoint_auth.rs");
 		};
-		Self { method, path, authentication }
+		Self {
+			method,
+			path,
+			authentication,
+		}
 	}
 }
 
@@ -685,6 +745,7 @@ macro_rules! endpoint_request {
 			$(pub $body_field_name: $bt,)*
 		}
 
+		const _: $crate::endpoint::Metadata = $crate::endpoint::Metadata::new($method, $path);
 		impl $crate::endpoint::EndpointRequest for Request {
 			type Response = Response;
 			const METADATA: $crate::endpoint::Metadata =
@@ -800,6 +861,7 @@ macro_rules! endpoint_request_raw {
 			pub $body_field: $bt,
 		}
 
+		const _: $crate::endpoint::Metadata = $crate::endpoint::Metadata::new($method, $path);
 		impl $crate::endpoint::EndpointRequest for Request {
 			type Response = Response;
 			const METADATA: $crate::endpoint::Metadata =
@@ -908,18 +970,164 @@ mod auth_tests {
 
 	use super::{AuthScheme, lookup_auth};
 
-	/// Endpoints where the pinned ruwuma contract differs from the matrix spec. Each
-	/// entry was reviewed by hand; the ruwuma value is what Continuwuity ran with, so
-	/// it is the one declared in `endpoint_auth.rs`.
-	const KNOWN_SPEC_DIFFERENCES: &[(&str, &str)] = &[
-		("GET", "/_matrix/client/v1/room_summary/{}"),
-		("GET", "/_matrix/federation/v1/query/{}"),
-		("GET", "/_matrix/federation/v1/timestamp_to_event/{}"),
-		("POST", "/_matrix/client/v1/appservice/{}/ping"),
-		("POST", "/_matrix/client/v3/login"),
-		("POST", "/_matrix/client/v3/register"),
-		("PUT", "/_matrix/client/v3/directory/list/appservice/{}/{}"),
-		("PUT", "/_matrix/federation/v1/exchange_third_party_invite/{}"),
+	/// Where the pinned ruwuma contract differs from the matrix spec: `(method, path,
+	/// declared, reason)`. The declared value is the one in effect; the reason records
+	/// which source won. Each was reviewed by hand (ruwuma, spec and `../synapse`).
+	const SPEC_DIFFERENCES: &[(&str, &str, AuthScheme, &str)] = &[
+		(
+			"GET",
+			"/_matrix/client/v1/room_summary/{}",
+			AuthScheme::AccessTokenOptional,
+			"ruwuma and synapse (`get_user_by_req(allow_guest=True)`, anonymous allowed) win; the spec generator mislabelled it",
+		),
+		(
+			"GET",
+			"/_matrix/federation/v1/query/{}",
+			AuthScheme::ServerSignatures,
+			"spec and synapse (`BaseFederationServerServlet`) win over ruwuma's AccessToken; not routed here",
+		),
+		(
+			"PUT",
+			"/_matrix/federation/v1/exchange_third_party_invite/{}",
+			AuthScheme::ServerSignatures,
+			"spec and synapse win over ruwuma's AccessToken; not routed here",
+		),
+		(
+			"GET",
+			"/_matrix/federation/v1/timestamp_to_event/{}",
+			AuthScheme::ServerSignatures,
+			"ruwuma and synapse (signed federation servlet) win; the spec generator picked up a client scheme",
+		),
+		(
+			"POST",
+			"/_matrix/client/v3/login",
+			AuthScheme::AppserviceToken,
+			"ruwuma wins: appservices may log in; `router/auth.rs` overrides every /login path to unauthenticated",
+		),
+		(
+			"POST",
+			"/_matrix/client/v3/register",
+			AuthScheme::AppserviceToken,
+			"ruwuma wins: appservice registration; with no token the router treats it as unauthenticated",
+		),
+		(
+			"POST",
+			"/_matrix/client/v1/appservice/{}/ping",
+			AuthScheme::AccessToken,
+			"ruwuma wins over the spec's appservice scheme: AccessToken also admits appservice tokens, so behaviour is unchanged",
+		),
+		(
+			"PUT",
+			"/_matrix/client/v3/directory/list/appservice/{}/{}",
+			AuthScheme::AccessToken,
+			"ruwuma wins for the same reason as appservice ping",
+		),
+	];
+
+	/// Endpoints the spec gives no `security` block (`OpenAPI`: no authentication), each
+	/// resolved by hand: `(method, path, declared, reason)`.
+	const REVIEWED_NO_SECURITY: &[(&str, &str, AuthScheme, &str)] = &[
+		("GET", "/.well-known/matrix/client", AuthScheme::None, "discovery, public"),
+		("GET", "/.well-known/matrix/server", AuthScheme::None, "discovery, public"),
+		("GET", "/.well-known/matrix/support", AuthScheme::None, "discovery, public"),
+		("GET", "/_matrix/client/v1/auth_metadata", AuthScheme::None, "OAuth metadata, public"),
+		(
+			"GET",
+			"/_matrix/client/v1/register/m.login.registration_token/validity",
+			AuthScheme::None,
+			"pre-registration, no account yet",
+		),
+		(
+			"POST",
+			"/_matrix/client/v3/account/3pid/email/requestToken",
+			AuthScheme::None,
+			"ruwuma None; synapse requires none for requestToken",
+		),
+		(
+			"POST",
+			"/_matrix/client/v3/account/password/email/requestToken",
+			AuthScheme::None,
+			"password reset, caller is logged out",
+		),
+		(
+			"POST",
+			"/_matrix/client/v3/register/email/requestToken",
+			AuthScheme::None,
+			"pre-registration",
+		),
+		("GET", "/_matrix/client/v3/register/available", AuthScheme::None, "pre-registration"),
+		("GET", "/_matrix/client/v3/login", AuthScheme::None, "login flows, public"),
+		("GET", "/_matrix/client/v3/login/sso/redirect", AuthScheme::None, "SSO start, public"),
+		(
+			"POST",
+			"/_matrix/client/v3/refresh",
+			AuthScheme::None,
+			"authenticated by the refresh token in the body",
+		),
+		(
+			"GET",
+			"/_matrix/client/v3/profile/{}",
+			AuthScheme::None,
+			"ruwuma None; synapse gates it on `require_auth_for_profile_requests`, which Continuwuity handles in the handler",
+		),
+		("GET", "/_matrix/client/v3/profile/{}/{}", AuthScheme::None, "same as profile"),
+		(
+			"GET",
+			"/_matrix/client/v3/publicRooms",
+			AuthScheme::None,
+			"ruwuma None; synapse gates on `allow_public_rooms_without_auth`, Continuwuity's handler checks its own config",
+		),
+		(
+			"GET",
+			"/_matrix/client/v3/directory/room/{}",
+			AuthScheme::None,
+			"alias lookup, public in ruwuma and synapse",
+		),
+		(
+			"GET",
+			"/_matrix/client/v3/directory/list/room/{}",
+			AuthScheme::None,
+			"room visibility, public",
+		),
+		(
+			"GET",
+			"/_matrix/media/v3/download/{}/{}",
+			AuthScheme::None,
+			"legacy unauthenticated media, as ruwuma",
+		),
+		(
+			"GET",
+			"/_matrix/media/v3/download/{}/{}/{}",
+			AuthScheme::None,
+			"legacy unauthenticated media, as ruwuma",
+		),
+		(
+			"GET",
+			"/_matrix/media/v3/thumbnail/{}/{}",
+			AuthScheme::None,
+			"legacy unauthenticated media, as ruwuma",
+		),
+		(
+			"GET",
+			"/_matrix/federation/v1/version",
+			AuthScheme::None,
+			"public in ruwuma and synapse",
+		),
+		(
+			"GET",
+			"/_matrix/federation/v1/openid/userinfo",
+			AuthScheme::None,
+			"authenticated by the OpenID token in the query",
+		),
+		(
+			"PUT",
+			"/_matrix/federation/v1/3pid/onbind",
+			AuthScheme::None,
+			"called by identity servers, not homeservers",
+		),
+		("GET", "/_matrix/key/v2/server", AuthScheme::None, "server keys are public"),
+		("GET", "/_matrix/key/v2/query/{}", AuthScheme::None, "notary lookups are public"),
+		("POST", "/_matrix/key/v2/query", AuthScheme::None, "notary lookups are public"),
 	];
 
 	fn rust_files(dir: &Path, out: &mut Vec<String>) {
@@ -942,17 +1150,28 @@ mod auth_tests {
 		let mut missing = Vec::new();
 		for source in &sources {
 			for line in source.lines() {
-				let Some(start) = line.find("\"/_matrix/") else { continue };
+				let trimmed = line.trim_start();
+				// Only endpoint declarations, not docs or prose.
+				if trimmed.starts_with("//")
+					|| !(line.contains("path: \"") || line.contains("Metadata::new("))
+				{
+					continue;
+				}
+				let Some(start) = line.find("\"/_matrix/") else {
+					continue;
+				};
 				let rest = &line[start + 1..];
-				let Some(end) = rest.find('"') else { continue };
+				let Some(end) = rest.find('"') else {
+					continue;
+				};
 				let path = &rest[..end];
 				let method = ["GET", "POST", "PUT", "DELETE"]
 					.into_iter()
 					.find(|method| line.contains(&std::format!("\"{method}\"")));
-				if let Some(method) = method {
-					if lookup_auth(method, path).is_none() {
-						missing.push(std::format!("{method} {path}"));
-					}
+				if let Some(method) = method
+					&& lookup_auth(method, path).is_none()
+				{
+					missing.push(std::format!("{method} {path}"));
 				}
 			}
 		}
@@ -961,30 +1180,91 @@ mod auth_tests {
 
 	/// The declared scheme matches matrix-spec for every endpoint both describe, apart
 	/// from the reviewed differences above.
+	/// The recorded decisions are what is actually declared.
+	#[test]
+	fn recorded_decisions_match_declarations() {
+		for &(method, path, expected, reason) in
+			SPEC_DIFFERENCES.iter().chain(REVIEWED_NO_SECURITY)
+		{
+			assert!(!reason.is_empty());
+			assert_eq!(lookup_auth(method, path), Some(expected), "{method} {path}");
+		}
+	}
+
 	#[test]
 	fn spec_cross_check() {
 		let mut mismatches = Vec::new();
 		for &(method, path, expected) in super::auth_spec::SPEC_AUTH {
-			let Some(declared) = lookup_auth(method, path) else { continue };
-			let known = KNOWN_SPEC_DIFFERENCES.contains(&(method, path));
+			let Some(declared) = lookup_auth(method, path) else {
+				continue;
+			};
+			let known = SPEC_DIFFERENCES.iter().any(|d| d.0 == method && d.1 == path);
 			if declared != expected && !known {
-				mismatches.push(std::format!("{method} {path}: declared {declared:?}, spec {expected:?}"));
+				mismatches.push(std::format!(
+					"{method} {path}: declared {declared:?}, spec {expected:?}"
+				));
 			}
 		}
 		assert!(mismatches.is_empty(), "authentication drifted from the spec: {mismatches:#?}");
 	}
 
+	/// Pins the security-relevant values reviewed by hand against ruwuma, the spec and
+	/// synapse. A change here should be a deliberate decision.
+	/// Anonymous access follows from the declared scheme: login, register and the
+	/// optional-auth endpoints admit it; `get_token` and signed federation do not.
 	#[test]
-	fn public_endpoints_stay_public() {
-		assert_eq!(lookup_auth("GET", "/_matrix/client/versions"), Some(AuthScheme::None));
-		assert_eq!(lookup_auth("GET", "/_matrix/client/v3/login"), Some(AuthScheme::None));
-		assert_eq!(
-			lookup_auth("GET", "/_matrix/client/v3/publicRooms"),
-			Some(AuthScheme::AccessTokenOptional)
-		);
-		assert_eq!(
-			lookup_auth("GET", "/_matrix/client/v3/account/whoami"),
-			Some(AuthScheme::AccessToken)
-		);
+	fn anonymous_access_per_endpoint() {
+		let cases = [
+			("POST", "/_matrix/client/v3/login", true),
+			("POST", "/_matrix/client/v3/register", true),
+			("POST", "/_matrix/client/v1/login/get_token", false),
+			("POST", "/_matrix/client/v3/logout", false),
+			("POST", "/_matrix/client/v3/logout/all", false),
+			("GET", "/_matrix/client/v1/room_summary/{room_id_or_alias}", true),
+			("GET", "/_matrix/client/v3/publicRooms", true),
+			("GET", "/_matrix/client/v3/profile/{user_id}", true),
+			("PUT", "/_matrix/client/v3/profile/{user_id}/displayname", false),
+			("PUT", "/_matrix/federation/v2/send_join/{room_id}/{event_id}", false),
+		];
+		for (method, path, anonymous) in cases {
+			let scheme = lookup_auth(method, path).expect("declared");
+			assert_eq!(scheme.allows_anonymous(), anonymous, "{method} {path}: {scheme:?}");
+		}
+	}
+
+	#[test]
+	fn reviewed_endpoint_authentication() {
+		let cases = [
+			("GET", "/_matrix/client/versions", AuthScheme::AccessTokenOptional),
+			("GET", "/_matrix/client/v3/login", AuthScheme::None),
+			// Appservices may log in; `router/auth.rs` still lets everyone reach /login.
+			("POST", "/_matrix/client/v3/login", AuthScheme::AppserviceToken),
+			// Appservice registration; with no token the router treats it as unauthenticated.
+			("POST", "/_matrix/client/v3/register", AuthScheme::AppserviceToken),
+			// Spec requires an access token; it must never be exempted like /login.
+			("POST", "/_matrix/client/v1/login/get_token", AuthScheme::AccessToken),
+			// Profile reads are unauthenticated in the spec; the router may tighten them by
+			// config (`require_auth_for_profile_requests`).
+			("GET", "/_matrix/client/v3/profile/{user_id}", AuthScheme::None),
+			("GET", "/_matrix/client/v3/profile/{user_id}/displayname", AuthScheme::None),
+			("GET", "/_matrix/client/v3/profile/{user_id}/avatar_url", AuthScheme::None),
+			("PUT", "/_matrix/client/v3/profile/{user_id}/displayname", AuthScheme::AccessToken),
+			("GET", "/_matrix/client/v3/publicRooms", AuthScheme::None),
+			("POST", "/_matrix/client/v3/publicRooms", AuthScheme::AccessToken),
+			("GET", "/_matrix/client/v3/account/whoami", AuthScheme::AccessToken),
+			(
+				"GET",
+				"/_matrix/client/v1/room_summary/{room_id_or_alias}",
+				AuthScheme::AccessTokenOptional,
+			),
+			(
+				"PUT",
+				"/_matrix/federation/v2/send_join/{room_id}/{event_id}",
+				AuthScheme::ServerSignatures,
+			),
+		];
+		for (method, path, expected) in cases {
+			assert_eq!(lookup_auth(method, path), Some(expected), "{method} {path}");
+		}
 	}
 }

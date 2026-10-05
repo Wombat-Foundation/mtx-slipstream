@@ -131,6 +131,8 @@ pub mod get_server_keys {
 			}
 		}
 
+		const _: crate::endpoint::Metadata =
+			crate::endpoint::Metadata::new("GET", "/_matrix/key/v2/server");
 		impl EndpointRequest for Request {
 			type Response = Response;
 

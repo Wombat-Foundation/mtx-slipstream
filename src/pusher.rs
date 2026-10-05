@@ -234,6 +234,8 @@ pub mod set_pusher {
 			}
 		}
 
+		const _: crate::endpoint::Metadata =
+			crate::endpoint::Metadata::new("POST", "/_matrix/client/v3/pushers/set");
 		impl EndpointRequest for Request {
 			type Response = Response;
 

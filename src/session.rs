@@ -221,6 +221,8 @@ pub mod login {
 			pub refresh_token: bool,
 		}
 
+		const _: crate::endpoint::Metadata =
+			crate::endpoint::Metadata::new("POST", "/_matrix/client/v3/login");
 		impl EndpointRequest for Request {
 			type Response = Response;
 

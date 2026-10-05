@@ -319,6 +319,8 @@ pub mod v3 {
 		}
 	}
 
+	const _: crate::endpoint::Metadata =
+		crate::endpoint::Metadata::new("GET", "/_matrix/client/v3/sync");
 	impl EndpointRequest for Request {
 		type Response = Response;
 
@@ -717,10 +719,15 @@ pub mod v5 {
 	}
 	sync_basics!(Request);
 
+	const _: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
+		"POST",
+		"/_matrix/client/unstable/org.matrix.simplified_msc3575/sync",
+	);
 	impl EndpointRequest for Request {
 		type Response = Response;
 
-		const METADATA: Metadata = Metadata::new("POST", "/_matrix/client/unstable/org.matrix.simplified_msc3575/sync");
+		const METADATA: Metadata =
+			Metadata::new("POST", "/_matrix/client/unstable/org.matrix.simplified_msc3575/sync");
 
 		fn path_args(&self) -> Vec<String> {
 			Vec::new()
@@ -1052,10 +1059,15 @@ pub mod v4 {
 	}
 	sync_basics!(Request);
 
+	const _: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
+		"POST",
+		"/_matrix/client/unstable/org.matrix.msc3575/sync",
+	);
 	impl EndpointRequest for Request {
 		type Response = Response;
 
-		const METADATA: Metadata = Metadata::new("POST", "/_matrix/client/unstable/org.matrix.msc3575/sync");
+		const METADATA: Metadata =
+			Metadata::new("POST", "/_matrix/client/unstable/org.matrix.msc3575/sync");
 
 		fn path_args(&self) -> Vec<String> {
 			Vec::new()

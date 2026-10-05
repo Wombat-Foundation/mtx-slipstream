@@ -170,6 +170,7 @@ macro_rules! filtered_request {
 			pub room_network: $crate::directory::RoomNetwork,
 		}
 
+		const _: $crate::endpoint::Metadata = $crate::endpoint::Metadata::new($method, $path);
 		impl $crate::endpoint::EndpointRequest for Request {
 			type Response = Response;
 			const METADATA: $crate::endpoint::Metadata =

@@ -166,7 +166,11 @@ pub(super) const SPEC_AUTH: &[(&str, &str, AuthScheme)] = &[
 	("GET", "/_matrix/federation/v1/backfill/{}", AuthScheme::ServerSignatures),
 	("GET", "/_matrix/federation/v1/event/{}", AuthScheme::ServerSignatures),
 	("GET", "/_matrix/federation/v1/event_auth/{}/{}", AuthScheme::ServerSignatures),
-	("PUT", "/_matrix/federation/v1/exchange_third_party_invite/{}", AuthScheme::ServerSignatures),
+	(
+		"PUT",
+		"/_matrix/federation/v1/exchange_third_party_invite/{}",
+		AuthScheme::ServerSignatures,
+	),
 	("POST", "/_matrix/federation/v1/get_missing_events/{}", AuthScheme::ServerSignatures),
 	("GET", "/_matrix/federation/v1/hierarchy/{}", AuthScheme::ServerSignatures),
 	("PUT", "/_matrix/federation/v1/invite/{}/{}", AuthScheme::ServerSignatures),

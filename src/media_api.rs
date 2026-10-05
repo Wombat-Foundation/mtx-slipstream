@@ -36,6 +36,7 @@ macro_rules! media_request {
 			$(pub $rf: $rt,)*
 		}
 
+		const _: $crate::endpoint::Metadata = $crate::endpoint::Metadata::new($method, $path);
 		impl $crate::endpoint::EndpointRequest for Request {
 			type Response = $resp;
 			const METADATA: $crate::endpoint::Metadata =
@@ -586,6 +587,8 @@ pub mod legacy {
 				}
 			}
 
+			const _: crate::endpoint::Metadata =
+				crate::endpoint::Metadata::new("POST", "/_matrix/media/v3/upload");
 			impl OutgoingRequest for Request {
 				type EndpointError = Error;
 				type IncomingResponse = Response;
@@ -684,11 +687,16 @@ pub mod legacy {
 				}
 			}
 
+			const _: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
+				"PUT",
+				"/_matrix/media/v3/upload/{server_name}/{media_id}",
+			);
 			impl OutgoingRequest for Request {
 				type EndpointError = Error;
 				type IncomingResponse = Response;
 
-				const METADATA: Metadata = Metadata::new("PUT", "/_matrix/media/v3/upload/{server_name}/{media_id}");
+				const METADATA: Metadata =
+					Metadata::new("PUT", "/_matrix/media/v3/upload/{server_name}/{media_id}");
 
 				fn try_into_http_request<B: Default + bytes::BufMut>(
 					self,
