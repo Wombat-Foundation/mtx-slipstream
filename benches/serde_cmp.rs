@@ -41,7 +41,7 @@ fn small_pdu() -> simd_json::OwnedValue {
 	})
 }
 
-/// Deeply nested sync v3 response with many rooms (~100 KB+).
+/// Deeply nested sync v3 response with many rooms (~12 MB).
 #[allow(clippy::arithmetic_side_effects)]
 fn huge_sync_response() -> simd_json::OwnedValue {
 	let mut rooms_json = String::with_capacity(12 * 1024 * 1024);

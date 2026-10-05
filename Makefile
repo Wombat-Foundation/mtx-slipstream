@@ -15,7 +15,7 @@ _help:
 format: check-cargo-sort ##H Format code
 	prettier -w $$(git ls-files '*.md' '*.y*ml')
 	pre-commit run --all-files
-	$(CARGO) fmt
+	$(CARGO) +nightly fmt --all
 	$(CARGO) sort --workspace --grouped
 
 .PHONY: check-cargo-sort
@@ -26,7 +26,8 @@ check-cargo-sort:
 
 .PHONY: all
 all:	##H Run all main targets
-all: check doc format lint test
+all: format
+	$(MAKE) check doc lint test
 
 
 .PHONY: check

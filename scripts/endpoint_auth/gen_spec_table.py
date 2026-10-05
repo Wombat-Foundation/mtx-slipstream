@@ -129,6 +129,8 @@ def main():
     parser.add_argument("--out", default=str(here.parents[1] / "src/endpoint_auth_spec.rs"))
     args = parser.parse_args()
     rows = collect(args.root)
+    if not rows:
+        parser.error(f"No API operations found under {args.root!r}")
     final, unresolved = resolve(rows, load_overrides(args.overrides))
     print(len(final), "endpoints", Counter(final.values()), file=sys.stderr)
     if unresolved:
