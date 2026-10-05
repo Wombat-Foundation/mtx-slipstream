@@ -720,6 +720,13 @@ pub fn path_args_from(args: &mut [String]) -> Strs {
 	args.iter_mut().map(core::mem::take).collect()
 }
 
+/// A field value for a generated encoder.
+#[doc(hidden)]
+#[must_use]
+pub fn enc<T: Serialize + ?Sized>(value: &T) -> Value {
+	value.to_json()
+}
+
 /// Opaque `Debug` for generated request and response types.
 #[doc(hidden)]
 pub fn opaque_debug(f: &mut Fmt<'_>, name: &str) -> FmtResult {

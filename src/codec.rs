@@ -301,21 +301,19 @@ macro_rules! impl_codec_struct {
 	) => {
 		impl $crate::codec::Serialize for $t {
 			fn to_json(&self) -> $crate::json::Value {
-				$crate::json::Value::Object($crate::endpoint::object_from(::alloc::vec![
-					$((stringify!($field), $crate::codec::Serialize::to_json(&self.$field)),)*
-					$($((stringify!($dfield), $crate::codec::Serialize::to_json(&self.$dfield)),)*)?
-				]))
+				$crate::endpoint::body_object(&mut [
+					$((stringify!($field), $crate::endpoint::enc(&self.$field)),)*
+					$($((stringify!($dfield), $crate::endpoint::enc(&self.$dfield)),)*)?
+				])
 			}
 		}
 		impl $crate::codec::Deserialize for $t {
-			fn from_json(value: &$crate::json::Value) -> Result<Self, $crate::codec::DeError> {
-				let input = $crate::endpoint::Input::new(&[], &[], Some(value));
-				let parsed = Self {
-					$($field: input.body::<$ty>(stringify!($field))?,)*
-					$($($dfield: input.body_or_default::<$dty>(stringify!($dfield))?,)*)?
-				};
-				input.finish()?;
-				Ok(parsed)
+			fn from_json(value: &$crate::json::Value) -> $crate::endpoint::Parsed<Self> {
+				let _input = $crate::endpoint::Input::body_only(value);
+				Ok(Self {
+					$($field: _input.body(stringify!($field))?,)*
+					$($($dfield: _input.body_or_default(stringify!($dfield))?,)*)?
+				})
 			}
 		}
 	};
