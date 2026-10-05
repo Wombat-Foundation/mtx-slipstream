@@ -174,7 +174,18 @@ impl ErrorKind {
 			Self::GuestAccessForbidden => "M_GUEST_ACCESS_FORBIDDEN",
 			Self::SenderIgnored {
 				..
-			} => "M_SENDER_IGNORED",
+			} => "UK.TIMEDOUT.MSC4406.SENDER_IGNORED",
+			Self::NotJson => "M_NOT_JSON",
+			Self::UserInUse => "M_USER_IN_USE",
+			Self::ThreepidMediumNotSupported => "M_THREEPID_MEDIUM_NOT_SUPPORTED",
+			Self::ThreepidNotFound => "M_THREEPID_NOT_FOUND",
+			Self::UnableToAuthorizeJoin => "M_UNABLE_TO_AUTHORIZE_JOIN",
+			Self::UnableToGrantJoin => "M_UNABLE_TO_GRANT_JOIN",
+			Self::IncompatibleRoomVersion {
+				..
+			} => "M_INCOMPATIBLE_ROOM_VERSION",
+			Self::MissingParam => "M_MISSING_PARAM",
+			Self::UrlNotSet => "M_URL_NOT_SET",
 			Self::WrongRoomKeysVersion {
 				..
 			} => "M_WRONG_ROOM_KEYS_VERSION",
@@ -229,8 +240,19 @@ impl ErrorKind {
 			"M_USER_LOCKED" => Self::UserLocked,
 			"M_USER_SUSPENDED" => Self::UserSuspended,
 			"M_GUEST_ACCESS_FORBIDDEN" => Self::GuestAccessForbidden,
-			"M_SENDER_IGNORED" => Self::SenderIgnored {
+			"UK.TIMEDOUT.MSC4406.SENDER_IGNORED" | "M_SENDER_IGNORED" => Self::SenderIgnored {
 				sender: None,
+			},
+			"M_MISSING_PARAM" => Self::MissingParam,
+			"M_URL_NOT_SET" => Self::UrlNotSet,
+			"M_NOT_JSON" => Self::NotJson,
+			"M_USER_IN_USE" => Self::UserInUse,
+			"M_THREEPID_MEDIUM_NOT_SUPPORTED" => Self::ThreepidMediumNotSupported,
+			"M_THREEPID_NOT_FOUND" => Self::ThreepidNotFound,
+			"M_UNABLE_TO_AUTHORIZE_JOIN" => Self::UnableToAuthorizeJoin,
+			"M_UNABLE_TO_GRANT_JOIN" => Self::UnableToGrantJoin,
+			"M_INCOMPATIBLE_ROOM_VERSION" => Self::IncompatibleRoomVersion {
+				room_version: crate::RoomVersionId::V1,
 			},
 			"M_WRONG_ROOM_KEYS_VERSION" => Self::WrongRoomKeysVersion {
 				_value: (),

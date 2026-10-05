@@ -2,7 +2,7 @@
 
 use std::io;
 
-use crate::simd_json::prelude::*;
+use crate::slipstream_json::prelude::*;
 use bytes::BytesMut;
 
 /// Adapter that implements [`io::Write`] for a [`BytesMut`] buffer.
@@ -31,7 +31,7 @@ impl io::Write for BufWriter<'_> {
 ///
 /// Returns `io::Error` if serialization fails.
 #[inline]
-pub fn to_bytes(value: &crate::simd_json::OwnedValue) -> io::Result<BytesMut> {
+pub fn to_bytes(value: &crate::slipstream_json::OwnedValue) -> io::Result<BytesMut> {
 	let mut buf = BytesMut::with_capacity(8192);
 	let mut writer = BufWriter(&mut buf);
 	value.write(&mut writer)?;
@@ -41,8 +41,8 @@ pub fn to_bytes(value: &crate::simd_json::OwnedValue) -> io::Result<BytesMut> {
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
-	use crate::simd_json;
-	use crate::simd_json::json;
+	use crate::slipstream_json;
+	use crate::slipstream_json::json;
 
 	use super::*;
 
@@ -50,17 +50,20 @@ mod tests {
 	fn test_to_bytes_primitives() {
 		let bytes = to_bytes(&json!(true)).unwrap();
 		let mut input = bytes.to_vec();
-		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
+		let parsed: slipstream_json::OwnedValue =
+			slipstream_json::to_owned_value(&mut input).unwrap();
 		assert_eq!(parsed, json!(true));
 
 		let bytes = to_bytes(&json!(42)).unwrap();
 		let mut input = bytes.to_vec();
-		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
+		let parsed: slipstream_json::OwnedValue =
+			slipstream_json::to_owned_value(&mut input).unwrap();
 		assert_eq!(parsed, json!(42));
 
 		let bytes = to_bytes(&json!("hello")).unwrap();
 		let mut input = bytes.to_vec();
-		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
+		let parsed: slipstream_json::OwnedValue =
+			slipstream_json::to_owned_value(&mut input).unwrap();
 		assert_eq!(parsed, json!("hello"));
 	}
 
@@ -68,7 +71,8 @@ mod tests {
 	fn test_to_bytes_map() {
 		let bytes = to_bytes(&json!({"a": 1, "b": "two"})).unwrap();
 		let mut input = bytes.to_vec();
-		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
+		let parsed: slipstream_json::OwnedValue =
+			slipstream_json::to_owned_value(&mut input).unwrap();
 		assert_eq!(parsed, json!({"a": 1, "b": "two"}));
 	}
 
@@ -85,7 +89,8 @@ mod tests {
 		}))
 		.unwrap();
 		let mut input = bytes.to_vec();
-		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
+		let parsed: slipstream_json::OwnedValue =
+			slipstream_json::to_owned_value(&mut input).unwrap();
 		let events = parsed["rooms"]["join"]["!room:example.com"]["timeline"]["events"]
 			.as_array()
 			.unwrap();

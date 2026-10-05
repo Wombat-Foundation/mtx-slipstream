@@ -52,10 +52,15 @@ impl Credentials for XMatrix {
 	}
 
 	fn encode(&self) -> HeaderValue {
+		let destination = self
+			.destination
+			.as_ref()
+			.map(|d| alloc::format!(",destination=\"{}\"", d))
+			.unwrap_or_default();
 		HeaderValue::from_str(&alloc::format!(
-			"X-Matrix origin=\"{}\",destination=\"{}\",key=\"{}\",sig=\"{}\"",
+			"X-Matrix origin=\"{}\"{},key=\"{}\",sig=\"{}\"",
 			self.origin,
-			self.destination.as_deref().unwrap_or(""),
+			destination,
 			self.key,
 			self.sig
 		))
@@ -77,5 +82,18 @@ mod tests {
 			sig: "signature".into(),
 		};
 		assert_eq!(codec::from_value::<XMatrix>(&codec::to_value(&value)).unwrap(), value);
+	}
+
+	#[test]
+	fn x_matrix_omits_optional_destination() {
+		let value = XMatrix {
+			origin: OwnedServerName::from("origin.example"),
+			destination: None,
+			key: OwnedServerSigningKeyId::from("ed25519:auto"),
+			sig: "signature".into(),
+		};
+		let encoded = value.encode();
+		assert!(!encoded.to_str().unwrap().contains("destination="));
+		assert_eq!(XMatrix::decode(&encoded), Some(value));
 	}
 }

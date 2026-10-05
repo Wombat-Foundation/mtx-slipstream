@@ -10,7 +10,8 @@
 //! ruma Response → simd_json::to_owned_value → OwnedValue → patch → JsonWriter → bytes
 //! ```
 
-use crate::simd_json::{self, OwnedValue, prelude::*};
+use crate::slipstream_json as simd_json;
+use crate::slipstream_json::{OwnedValue, prelude::*};
 use bytes::BytesMut;
 
 use crate::writer::BufWriter;

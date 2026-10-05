@@ -1,6 +1,7 @@
 //! High-performance sync v5 (sliding sync) response builder.
 
-use crate::simd_json::{self, OwnedValue, prelude::*};
+use crate::slipstream_json as simd_json;
+use crate::slipstream_json::{OwnedValue, prelude::*};
 use bytes::BytesMut;
 
 use alloc::vec::Vec;

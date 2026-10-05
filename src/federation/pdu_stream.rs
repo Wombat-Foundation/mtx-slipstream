@@ -4,8 +4,8 @@
 //! serializing, this module provides a `PduStreamWriter` that serializes
 //! PDUs incrementally into a growing byte buffer.
 
-use crate::simd_json;
-use crate::simd_json::prelude::*;
+use crate::slipstream_json as simd_json;
+use crate::slipstream_json::prelude::*;
 use bytes::{BufMut, BytesMut};
 
 use crate::writer::BufWriter;

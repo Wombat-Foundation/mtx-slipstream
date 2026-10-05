@@ -14,7 +14,8 @@
 
 use std::io;
 
-use crate::simd_json::{self, OwnedValue, prelude::*};
+use crate::slipstream_json as simd_json;
+use crate::slipstream_json::{OwnedValue, prelude::*};
 use bytes::{BufMut, BytesMut};
 
 use crate::writer::BufWriter;

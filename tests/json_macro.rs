@@ -158,11 +158,15 @@ fn error_codes_round_trip_for_every_named_kind() {
 		"M_NOT_YET_UPLOADED",
 		"M_CANNOT_OVERWRITE_MEDIA",
 		"M_FEATURE_DISABLED",
-		"M_SENDER_IGNORED",
+		"UK.TIMEDOUT.MSC4406.SENDER_IGNORED",
 		"M_WRONG_ROOM_KEYS_VERSION",
 		"M_EXCLUSIVE",
 	] {
 		assert_eq!(ErrorKind::from_errcode(code).errcode(), code);
 	}
 	assert_eq!(ErrorKind::from_errcode("M_SOMETHING_ELSE").errcode(), "M_UNKNOWN");
+	assert_eq!(
+		ErrorKind::from_errcode("M_SENDER_IGNORED").errcode(),
+		"UK.TIMEDOUT.MSC4406.SENDER_IGNORED"
+	);
 }
