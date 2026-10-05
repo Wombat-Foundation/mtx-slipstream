@@ -43,13 +43,21 @@ impl Credentials for XMatrix {
 				_ => {}
 			}
 		}
-		Some(Self { origin: origin?, destination: destination?, key: key?, sig: sig? })
+		Some(Self {
+			origin: origin?,
+			destination: destination?,
+			key: key?,
+			sig: sig?,
+		})
 	}
 
 	fn encode(&self) -> HeaderValue {
 		HeaderValue::from_str(&alloc::format!(
 			"X-Matrix origin=\"{}\",destination=\"{}\",key=\"{}\",sig=\"{}\"",
-			self.origin, self.destination, self.key, self.sig
+			self.origin,
+			self.destination,
+			self.key,
+			self.sig
 		))
 		.expect("X-Matrix fields must be valid header values")
 	}

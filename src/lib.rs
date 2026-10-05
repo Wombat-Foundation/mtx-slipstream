@@ -819,7 +819,9 @@ pub mod api {
 				ThreepidNotFound,
 				UnableToAuthorizeJoin,
 				UnableToGrantJoin,
-				IncompatibleRoomVersion { room_version: crate::RoomVersionId },
+				IncompatibleRoomVersion {
+					room_version: crate::RoomVersionId,
+				},
 			}
 			#[derive(Clone, Debug)]
 			pub enum ErrorBody {

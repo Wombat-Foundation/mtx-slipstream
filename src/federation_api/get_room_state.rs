@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 use crate::{OwnedEventId, OwnedRoomId, endpoint, federation_api::RawPdu};
 
 pub mod v1 {
-	use super::{endpoint, OwnedRoomId, OwnedEventId, Vec, RawPdu};
+	use super::{OwnedEventId, OwnedRoomId, RawPdu, Vec, endpoint};
 
 	endpoint! {
 		method: "GET", path: "/_matrix/federation/v1/state/{room_id}",
