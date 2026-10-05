@@ -735,11 +735,11 @@ pub mod api {
 		}
 		pub mod discovery {
 			pub mod discover_homeserver {
-				#[derive(Debug, Default)]
+				#[derive(Clone, Debug, Default)]
 				pub struct RtcFocusInfo(pub crate::json::Value);
 			}
 			pub mod discover_support {
-				#[derive(Debug, Default)]
+				#[derive(Clone, Debug, Default)]
 				pub struct ContactRole(pub crate::json::Value);
 			}
 			pub mod get_capabilities {
