@@ -89,8 +89,12 @@ pub mod create_room {
 			pub room_version: Option<RoomVersionId>,
 			pub topic: Option<String>,
 			pub visibility: Visibility,
-			/// Requested room ID, for appservices that may choose it.
-			pub room_id: Option<OwnedRoomId>,
+			/// Requested room ID (local part or fully qualified), for
+			/// appservices that may choose it. Also read from `fi.mau.room_id`.
+			pub room_id: Option<String>,
+			/// Requested PDU timestamp, to permit custom v12 hash prefixes.
+			/// Also read from `fi.mau.origin_server_ts`.
+			pub origin_server_ts: Option<crate::MilliSecondsSinceUnixEpoch>,
 		}
 
 		impl Request {
@@ -113,7 +117,8 @@ pub mod create_room {
 			room_version: Option<RoomVersionId>,
 			topic: Option<String>,
 			visibility: Visibility,
-			room_id: Option<OwnedRoomId>,
+			room_id: Option<String>,
+			origin_server_ts: Option<crate::MilliSecondsSinceUnixEpoch>,
 		});
 
 		const _: crate::endpoint::Metadata =
@@ -140,7 +145,19 @@ pub mod create_room {
 				_query: &[(String, String)],
 				body: Option<&Value>,
 			) -> Result<Self, DeError> {
-				body.map_or_else(|| Ok(Self::default()), Self::from_json)
+				let Some(Value::Object(fields)) = body else {
+					return body.map_or_else(|| Ok(Self::default()), Self::from_json);
+				};
+				// Appservices may use the namespaced spellings; the plain key wins.
+				let mut fields = fields.clone();
+				for (alias, key) in
+					[("fi.mau.room_id", "room_id"), ("fi.mau.origin_server_ts", "origin_server_ts")]
+				{
+					if let Some(value) = fields.remove(alias) {
+						fields.entry(key.into()).or_insert(value);
+					}
+				}
+				Self::from_json(&Value::Object(fields))
 			}
 		}
 
@@ -499,6 +516,20 @@ mod room_endpoint_tests {
 		assert_eq!(request.preset, Some(RoomPreset::TrustedPrivateChat));
 		assert!(request.is_direct && request.initial_state.is_empty());
 		assert_eq!(request.visibility, Visibility::Private);
+		let aliased = from_str::<crate::json::Value>(
+			r#"{"fi.mau.room_id":"custom","fi.mau.origin_server_ts":42}"#,
+		)
+		.unwrap();
+		let aliased = create_room::v3::Request::from_parts(&[], &[], Some(&aliased)).unwrap();
+		assert_eq!(aliased.room_id.as_deref(), Some("custom"));
+		assert_eq!(aliased.origin_server_ts, Some(MilliSecondsSinceUnixEpoch(42)));
+		let plain = from_str::<crate::json::Value>(
+			r#"{"room_id":"a","fi.mau.room_id":"b","origin_server_ts":7}"#,
+		)
+		.unwrap();
+		let plain = create_room::v3::Request::from_parts(&[], &[], Some(&plain)).unwrap();
+		assert_eq!(plain.room_id.as_deref(), Some("a"));
+		assert_eq!(plain.origin_server_ts, Some(MilliSecondsSinceUnixEpoch(7)));
 		let bare = create_room::v3::Request::from_parts(&[], &[], None).unwrap();
 		assert!(bare.invite.is_empty() && bare.room_id.is_none());
 	}

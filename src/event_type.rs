@@ -104,6 +104,7 @@ event_type!(StateEventType {
 	RoomTombstone => "m.room.tombstone",
 	RoomPolicy => "m.policy.rule.room",
 	SpaceChild => "m.space.child",
+	SpaceParent => "m.space.parent",
 });
 
 event_type!(MessageLikeEventType {

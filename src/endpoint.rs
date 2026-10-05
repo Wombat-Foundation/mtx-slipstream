@@ -707,7 +707,7 @@ impl<'a> Input<'a> {
 	///
 	/// Returns an error if the request carries unexpected path arguments.
 	pub fn finish(self) -> Result<(), DeError> {
-		if self.next.get() == self.path.len() {
+		if self.next.get() >= self.path.len() {
 			Ok(())
 		} else {
 			Err(DeError("unexpected path arguments".to_string()))

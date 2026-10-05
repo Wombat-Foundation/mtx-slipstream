@@ -8,7 +8,9 @@ use crate::{
 		encryption::RoomEncryptionEventContent,
 		guest_access::RoomGuestAccessEventContent,
 		history_visibility::RoomHistoryVisibilityEventContent,
-		join_rules::{AllowRule, JoinRule, RestrictedRule, RoomJoinRulesEventContent, RoomMembership},
+		join_rules::{
+			AllowRule, JoinRule, RestrictedRule, RoomJoinRulesEventContent, RoomMembership,
+		},
 		member::{RoomMemberEventContent, ThirdPartyInvite},
 		name::RoomNameEventContent,
 		policy::RoomPolicyEventContent,
@@ -166,7 +168,8 @@ fn field<T: Deserialize>(object: &Object, name: &str) -> Result<Option<T>, DeErr
 }
 
 fn level(object: &Object, name: &str, default: crate::Int) -> Result<crate::Int, DeError> {
-	object.get(name).filter(|v| !v.is_null()).map_or(Ok(default), deserialize_v1_powerlevel)
+	// A present `null` is an error, as with the serde field it replaces.
+	object.get(name).map_or(Ok(default), deserialize_v1_powerlevel)
 }
 
 fn insert<T: Serialize>(object: &mut Object, name: &str, value: &T) {
@@ -229,7 +232,7 @@ fn level_map<K: Deserialize + Ord>(
 	object: &Object,
 	name: &str,
 ) -> Result<alloc::collections::BTreeMap<K, crate::Int>, DeError> {
-	object.get(name).filter(|v| !v.is_null()).map_or_else(
+	object.get(name).map_or_else(
 		|| Ok(alloc::collections::BTreeMap::new()),
 		|v| {
 			object_of(v)?
@@ -275,7 +278,7 @@ impl Deserialize for RoomPowerLevelsEventContent {
 			state_default: level(o, "state_default", 50)?,
 			users: level_map(o, "users")?,
 			users_default: level(o, "users_default", 0)?,
-			notifications: field(o, "notifications")?.unwrap_or_default(),
+			notifications: o.get("notifications").map_or_else(|| Ok(Default::default()), from_value)?,
 		})
 	}
 }
@@ -284,8 +287,10 @@ impl Serialize for ThirdPartyInvite {
 	fn to_json(&self) -> Value {
 		let mut signed = Object::new();
 		insert(&mut signed, "mxid", &self.signed.mxid);
+		insert(&mut signed, "signatures", &self.signed.signatures);
 		insert(&mut signed, "token", &self.signed.token);
 		let mut o = Object::new();
+		insert(&mut o, "display_name", &self.display_name);
 		o.insert("signed".into(), Value::Object(signed));
 		Value::Object(o)
 	}
@@ -298,12 +303,12 @@ impl Serialize for RoomMemberEventContent {
 		let optional: [(&str, Value); 8] = [
 			("displayname", self.displayname.to_json()),
 			("avatar_url", self.avatar_url.to_json()),
-			("blurhash", self.blurhash.to_json()),
+			("xyz.amorgan.blurhash", self.blurhash.to_json()),
 			("reason", self.reason.to_json()),
 			("is_direct", self.is_direct.to_json()),
 			("third_party_invite", self.third_party_invite.to_json()),
-			("redact_events", self.redact_events.to_json()),
-			("join_authorized_via_users_server", self.join_authorized_via_users_server.to_json()),
+			("org.matrix.msc4293.redact_events", self.redact_events.to_json()),
+			("join_authorised_via_users_server", self.join_authorized_via_users_server.to_json()),
 		];
 		for (name, value) in optional {
 			if !value.is_null() {
@@ -319,13 +324,17 @@ impl Deserialize for RoomMemberEventContent {
 		Ok(Self {
 			membership: field(o, "membership")?.ok_or_else(|| DeError::expected("membership"))?,
 			displayname: field(o, "displayname")?,
-			avatar_url: field(o, "avatar_url")?,
-			blurhash: field(o, "blurhash")?,
+			avatar_url: match o.get("avatar_url") {
+				// `compat-empty-string-null` in the old build: "" meant no avatar.
+				Some(Value::String(url)) if url.is_empty() => None,
+				_ => field(o, "avatar_url")?,
+			},
+			blurhash: field(o, "xyz.amorgan.blurhash")?,
 			reason: field(o, "reason")?,
 			is_direct: field(o, "is_direct")?,
 			third_party_invite: field(o, "third_party_invite")?,
-			redact_events: field(o, "redact_events")?,
-			join_authorized_via_users_server: field(o, "join_authorized_via_users_server")?,
+			redact_events: field(o, "org.matrix.msc4293.redact_events")?,
+			join_authorized_via_users_server: field(o, "join_authorised_via_users_server")?,
 		})
 	}
 }
@@ -425,7 +434,9 @@ impl Deserialize for RoomJoinRulesEventContent {
 			field(o, "join_rule")?.ok_or_else(|| DeError::expected("join_rule"))?;
 		let allow = || -> Result<RestrictedRule, DeError> {
 			Ok(RestrictedRule {
-				allow: o.get("allow").map_or(Ok(alloc::vec::Vec::new()), Deserialize::from_json)?,
+				allow: o
+					.get("allow")
+					.map_or(Ok(alloc::vec::Vec::new()), Deserialize::from_json)?,
 			})
 		};
 		let join_rule = match rule.as_str() {
@@ -489,7 +500,7 @@ mod member_tests {
 
 	#[test]
 	fn member_content_round_trips_all_fields() {
-		let text = r#"{"membership":"invite","displayname":"A","avatar_url":"mxc://x/y","reason":"hi","is_direct":true,"third_party_invite":{"signed":{"mxid":"@a:x","token":"t"}},"redact_events":false}"#;
+		let text = r#"{"membership":"invite","displayname":"A","avatar_url":"mxc://x/y","reason":"hi","is_direct":true,"third_party_invite":{"display_name":"A","signed":{"mxid":"@a:x","signatures":{"x":{"ed25519:1":"s"}},"token":"t"}},"org.matrix.msc4293.redact_events":false}"#;
 		let content = from_str::<RoomMemberEventContent>(text).unwrap();
 		assert_eq!(content.reason.as_deref(), Some("hi"));
 		assert_eq!(content.redact_events, Some(false));
@@ -497,5 +508,67 @@ mod member_tests {
 		assert_eq!(again.displayname.as_deref(), Some("A"));
 		assert!(again.third_party_invite.is_some());
 		assert!(!to_string(&RoomMemberEventContent::default()).contains("reason"));
+	}
+
+	#[test]
+	fn power_levels_golden_default_output() {
+		assert_eq!(
+			to_string(&RoomPowerLevelsEventContent::new()),
+			r#"{"ban":50,"events":{},"events_default":0,"invite":0,"kick":50,"notifications":{"room":50},"redact":50,"state_default":50,"users":{},"users_default":0}"#
+		);
+	}
+
+	#[test]
+	fn power_levels_golden_round_trip_keeps_typical_payload() {
+		let text = r#"{"ban":50,"events":{"m.room.name":50,"m.room.power_levels":100},"events_default":0,"invite":0,"kick":50,"notifications":{"room":50},"redact":50,"state_default":50,"users":{"@a:b":100},"users_default":0}"#;
+		let content: RoomPowerLevelsEventContent = from_str(text).unwrap();
+		assert_eq!(to_string(&content), text);
+	}
+
+	#[test]
+	fn power_levels_reject_null_and_out_of_range_like_serde() {
+		for body in [
+			r#"{"ban":null}"#,
+			r#"{"users":null}"#,
+			r#"{"events":null}"#,
+			r#"{"notifications":null}"#,
+			r#"{"ban":9007199254740992}"#,
+			r#"{"ban":"fifty"}"#,
+		] {
+			assert!(from_str::<RoomPowerLevelsEventContent>(body).is_err(), "{body}");
+		}
+		let padded: RoomPowerLevelsEventContent = from_str(r#"{"ban":" 70 ","kick":"+5"}"#).unwrap();
+		assert_eq!((padded.ban, padded.kick), (70, 5));
+	}
+
+	#[test]
+	fn member_golden_minimal_and_full_output() {
+		let minimal: RoomMemberEventContent = from_str(r#"{"membership":"join"}"#).unwrap();
+		assert_eq!(to_string(&minimal), r#"{"membership":"join"}"#);
+
+		let text = r#"{"avatar_url":"mxc://a/b","displayname":"D","is_direct":true,"join_authorised_via_users_server":"@u:s","membership":"invite","org.matrix.msc4293.redact_events":false,"reason":"r","third_party_invite":{"display_name":"Bob","signed":{"mxid":"@b:s","signatures":{"s":{"ed25519:1":"sig"}},"token":"t"}},"xyz.amorgan.blurhash":"h"}"#;
+		let full: RoomMemberEventContent = from_str(text).unwrap();
+		assert_eq!(to_string(&full), text);
+	}
+
+	#[test]
+	fn member_null_empty_and_unknown_values() {
+		let nulls: RoomMemberEventContent = from_str(
+			r#"{"membership":"leave","displayname":null,"avatar_url":null,"reason":null,"is_direct":null}"#,
+		)
+		.unwrap();
+		assert_eq!(to_string(&nulls), r#"{"membership":"leave"}"#);
+		let empty_avatar: RoomMemberEventContent =
+			from_str(r#"{"membership":"join","avatar_url":""}"#).unwrap();
+		assert!(empty_avatar.avatar_url.is_none());
+		for body in [
+			r#"{"membership":null}"#,
+			r#"{}"#,
+			// The closed set of membership values: unknown strings are rejected.
+			r#"{"membership":"custom"}"#,
+			r#"{"membership":"join","third_party_invite":{"signed":{"mxid":"@b:s","token":"t"}}}"#,
+		] {
+			assert!(from_str::<RoomMemberEventContent>(body).is_err(), "{body}");
+		}
 	}
 }

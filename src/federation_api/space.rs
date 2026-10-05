@@ -90,8 +90,9 @@ impl JoinRule {
 			_ => None,
 		};
 		rule.into_iter().flat_map(|rule| rule.allow.iter()).filter_map(|allow| match allow {
-			crate::events::room::join_rules::AllowRule::RoomMembership(membership) =>
-				Some(membership.room_id.clone()),
+			crate::events::room::join_rules::AllowRule::RoomMembership(membership) => {
+				Some(membership.room_id.clone())
+			}
 			_ => None,
 		})
 	}

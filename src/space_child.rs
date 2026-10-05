@@ -5,7 +5,7 @@ use alloc::{string::String, vec::Vec};
 use crate::{
 	OwnedServerName,
 	codec::{DeError, Deserialize, Serialize},
-	impl_codec_struct,
+	endpoint::Input,
 	json::{Object, Value},
 };
 
@@ -30,10 +30,37 @@ impl SpaceChildEventContent {
 	}
 }
 
-impl_codec_struct!(SpaceChildEventContent { via: Vec<OwnedServerName> } default {
-	order: Option<String>,
-	suggested: bool,
-});
+impl Serialize for SpaceChildEventContent {
+	fn to_json(&self) -> Value {
+		let mut object = Object::new();
+		object.insert("via".into(), self.via.to_json());
+		// Absent and default values stay off the wire, as signed PDUs expect.
+		if let Some(order) = &self.order {
+			object.insert("order".into(), order.to_json());
+		}
+		if self.suggested {
+			object.insert("suggested".into(), Value::Bool(true));
+		}
+		Value::Object(object)
+	}
+}
+
+impl Deserialize for SpaceChildEventContent {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		let input = Input::new(&[], &[], Some(value));
+		Ok(Self {
+			via: input.body("via")?,
+			order: input.body("order")?,
+			// Like the serde `default` field: absent is false, but `null` or a
+			// non-bool is an error.
+			suggested: match value.get("suggested") {
+				| Some(Value::Bool(suggested)) => *suggested,
+				| Some(_) => return Err(DeError::expected("bool")),
+				| None => false,
+			},
+		})
+	}
+}
 
 impl crate::events::EventContent for SpaceChildEventContent {
 	type EventType = crate::events::StateEventType;
@@ -69,6 +96,24 @@ mod tests {
 		let content: SpaceChildEventContent = from_str(r#"{"via":["a.org"]}"#).unwrap();
 		assert!(!content.suggested);
 		assert_eq!(from_str::<SpaceChildEventContent>(&to_string(&content)).unwrap(), content);
+	}
+
+	#[test]
+	fn golden_omits_absent_order_and_false_suggested() {
+		let bare = SpaceChildEventContent::new(alloc::vec!["a.org".into()]);
+		assert_eq!(to_string(&bare), r#"{"via":["a.org"]}"#);
+		let full = SpaceChildEventContent {
+			via: alloc::vec!["a.org".into(), "b.org".into()],
+			order: Some("01".into()),
+			suggested: true,
+		};
+		assert_eq!(to_string(&full), r#"{"order":"01","suggested":true,"via":["a.org","b.org"]}"#);
+		assert_eq!(from_str::<SpaceChildEventContent>(&to_string(&full)).unwrap(), full);
+	}
+
+	#[test]
+	fn redacted_child_is_exactly_an_empty_object() {
+		assert_eq!(to_string(&RedactedSpaceChildEventContent {}), "{}");
 	}
 }
 

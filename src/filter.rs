@@ -169,15 +169,48 @@ pub struct FilterDefinition {
 	pub presence: Filter,
 	pub account_data: Filter,
 	pub room: RoomFilter,
+	/// Unstable extension fields (for example MSC4429 profile filters): every
+	/// key that is not one of the fields above, kept as sent.
+	pub extensions: alloc::collections::BTreeMap<String, Value>,
 }
 
-impl_codec_struct!(FilterDefinition {} default {
-	event_fields: Option<Vec<String>>,
-	event_format: EventFormat,
-	presence: Filter,
-	account_data: Filter,
-	room: RoomFilter,
-});
+const FILTER_DEFINITION_KEYS: [&str; 5] =
+	["event_fields", "event_format", "presence", "account_data", "room"];
+
+impl Serialize for FilterDefinition {
+	fn to_json(&self) -> Value {
+		let mut object = object_from(alloc::vec![
+			("event_fields", self.event_fields.to_json()),
+			("event_format", self.event_format.to_json()),
+			("presence", self.presence.to_json()),
+			("account_data", self.account_data.to_json()),
+			("room", self.room.to_json()),
+		]);
+		for (key, value) in &self.extensions {
+			object.entry(key.clone()).or_insert_with(|| value.clone());
+		}
+		Value::Object(object)
+	}
+}
+
+impl Deserialize for FilterDefinition {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		let object = value.as_object().ok_or_else(|| DeError::expected("filter object"))?;
+		let input = Input::new(&[], &[], Some(value));
+		Ok(Self {
+			event_fields: input.body("event_fields")?,
+			event_format: input.body_or_default("event_format")?,
+			presence: input.body_or_default("presence")?,
+			account_data: input.body_or_default("account_data")?,
+			room: input.body_or_default("room")?,
+			extensions: object
+				.iter()
+				.filter(|(key, _)| !FILTER_DEFINITION_KEYS.contains(&key.as_str()))
+				.map(|(key, value)| (key.clone(), value.clone()))
+				.collect(),
+		})
+	}
+}
 
 pub mod get_filter {
 	pub mod v3 {
@@ -233,6 +266,18 @@ pub mod create_filter {
 mod tests {
 	use super::*;
 	use crate::codec::from_str;
+
+	#[test]
+	fn unknown_filter_keys_survive_a_round_trip() {
+		let text = r#"{"org.matrix.msc4429.profile_fields":{"ids":["a","b"]},"room":{"limit":1}}"#;
+		let filter: FilterDefinition = from_str(text).unwrap();
+		let fields = &filter.extensions["org.matrix.msc4429.profile_fields"];
+		assert_eq!(fields.get("ids").and_then(Value::as_array).map(Vec::len), Some(2));
+		assert!(!filter.extensions.contains_key("room"));
+		let encoded = crate::codec::to_value(&filter);
+		assert!(encoded.get("org.matrix.msc4429.profile_fields").is_some());
+		assert_eq!(from_str::<FilterDefinition>(&crate::codec::to_string(&filter)).unwrap().extensions, filter.extensions);
+	}
 
 	#[test]
 	fn lazy_load_and_url_filter_round_trip() {

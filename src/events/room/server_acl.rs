@@ -36,11 +36,56 @@ impl RoomServerAclEventContent {
 			return false;
 		}
 		let host = server_name.host();
-		if self.deny.iter().any(|pattern| glob_match(pattern, host)) {
-			return false;
-		}
-		self.allow.iter().any(|pattern| glob_match(pattern, host))
+		!self.deny_matches(host) && self.allow_matches(host)
 	}
+
+	/// Whether `host` matches a glob in the allow list; hosts compare
+	/// case-insensitively.
+	#[must_use]
+	pub fn allow_matches(&self, host: &str) -> bool {
+		matches_any(&self.allow, host)
+	}
+
+	/// Whether `host` matches a glob in the deny list; hosts compare
+	/// case-insensitively.
+	#[must_use]
+	pub fn deny_matches(&self, host: &str) -> bool {
+		matches_any(&self.deny, host)
+	}
+
+	/// Whether `host` equals (ignoring case) an entry of the allow list.
+	#[must_use]
+	pub fn allow_contains(&self, host: &str) -> bool {
+		contains_any(&self.allow, host)
+	}
+
+	/// Whether `host` equals (ignoring case) an entry of the deny list.
+	#[must_use]
+	pub fn deny_contains(&self, host: &str) -> bool {
+		contains_any(&self.deny, host)
+	}
+
+	#[must_use]
+	pub fn allow_is_empty(&self) -> bool {
+		self.allow.is_empty()
+	}
+
+	#[must_use]
+	pub fn deny_is_empty(&self) -> bool {
+		self.deny.is_empty()
+	}
+}
+
+fn matches_any(patterns: &[String], host: &str) -> bool {
+	let host = host.to_lowercase();
+	patterns
+		.iter()
+		.any(|pattern| glob_match(&pattern.to_lowercase(), &host))
+}
+
+fn contains_any(entries: &[String], host: &str) -> bool {
+	let host = host.to_lowercase();
+	entries.iter().any(|entry| entry.to_lowercase() == host)
 }
 
 /// Matches `*` (any run) and `?` (any one character).
@@ -96,6 +141,21 @@ mod tests {
 		assert!(!acl.is_allowed(&crate::OwnedServerName::from("1.2.3.4:8448")));
 		assert!(!acl.is_allowed(&crate::OwnedServerName::from("[::1]:8448")));
 		assert!(!acl.is_allowed(&crate::OwnedServerName::from("bad1.net:8448")));
+	}
+
+	#[test]
+	fn hosts_and_patterns_compare_case_insensitively() {
+		let acl = RoomServerAclEventContent::new(
+			true,
+			alloc::vec!["*".into()],
+			alloc::vec!["*.Evil.ORG".into()],
+		);
+		assert!(!acl.is_allowed(&crate::OwnedServerName::from("A.EVIL.org")));
+		assert!(acl.deny_matches("a.evil.org"));
+		assert!(acl.deny_contains("*.evil.org"));
+		assert!(acl.allow_contains("*"));
+		assert!(!acl.allow_is_empty());
+		assert!(RoomServerAclEventContent::default().allow_is_empty());
 	}
 
 	#[test]

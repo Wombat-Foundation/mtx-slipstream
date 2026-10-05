@@ -73,7 +73,11 @@ impl crate::codec::Deserialize for PresenceEventContent {
 		let object = value.as_object().ok_or_else(|| DeError::expected("object"))?;
 		let get = |name: &str| object.get(name).filter(|v| !v.is_null());
 		Ok(Self {
-			avatar_url: get("avatar_url").map(from_value).transpose()?,
+			// `compat-empty-string-null` in the old build: "" meant no avatar.
+			avatar_url: get("avatar_url")
+				.filter(|v| v.as_str() != Some(""))
+				.map(from_value)
+				.transpose()?,
 			displayname: get("displayname").map(from_value).transpose()?,
 			last_active_ago: get("last_active_ago").map(from_value).transpose()?,
 			currently_active: get("currently_active").map(from_value).transpose()?,

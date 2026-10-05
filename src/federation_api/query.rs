@@ -112,7 +112,7 @@ pub mod get_profile_information {
 				for (key, value) in [
 					("displayname", self.displayname.to_json()),
 					("avatar_url", self.avatar_url.to_json()),
-					("blurhash", self.blurhash.to_json()),
+					("xyz.amorgan.blurhash", self.blurhash.to_json()),
 				] {
 					if !value.is_null() {
 						object.insert(key.into(), value);
@@ -127,14 +127,14 @@ pub mod get_profile_information {
 				let custom_profile_fields = object
 					.iter()
 					.filter(|(key, _)| {
-						!matches!(key.as_str(), "displayname" | "avatar_url" | "blurhash")
+						!matches!(key.as_str(), "displayname" | "avatar_url" | "xyz.amorgan.blurhash")
 					})
 					.map(|(key, value)| (key.clone(), value.clone()))
 					.collect();
 				let response = Self {
 					displayname: input.body("displayname")?,
 					avatar_url: input.body("avatar_url")?,
-					blurhash: input.body("blurhash")?,
+					blurhash: input.body("xyz.amorgan.blurhash")?,
 					custom_profile_fields,
 				};
 				input.finish()?;

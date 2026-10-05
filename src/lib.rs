@@ -21,6 +21,7 @@ pub mod membership;
 pub mod room_api;
 pub mod search;
 pub mod session;
+pub mod state_api;
 pub mod threads;
 mod uiaa;
 pub use antispam::{draupnir as draupnir_antispam, meowlnir as meowlnir_antispam};
@@ -651,6 +652,11 @@ pub mod api {
 		pub mod knock {
 			pub use crate::membership::knock_room;
 		}
+		pub mod state {
+			pub use crate::state_api::{
+				get_state_events, get_state_events_for_key, send_state_event,
+			};
+		}
 		pub mod session {
 			pub use crate::session::{
 				get_login_token, get_login_types, login, logout, logout_all,
@@ -774,6 +780,9 @@ pub mod api {
 				Exclusive,
 				BadAlias,
 				InvalidUsername,
+				UnsupportedRoomVersion,
+				RoomInUse,
+				UnknownPos,
 				CannotOverwriteMedia,
 				NotYetUploaded,
 				GuestAccessForbidden,
@@ -1141,29 +1150,25 @@ pub mod events {
 			#[derive(Clone, Debug)]
 			pub struct ThirdPartyInviteSigned {
 				pub mxid: crate::OwnedUserId,
+				pub signatures: crate::Signatures,
 				pub token: alloc::string::String,
 			}
 			#[derive(Clone, Debug)]
 			pub struct ThirdPartyInvite {
+				pub display_name: alloc::string::String,
 				pub signed: ThirdPartyInviteSigned,
 			}
 			impl crate::codec::Deserialize for ThirdPartyInvite {
 				fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
-					let signed = value
-						.get("signed")
-						.ok_or_else(|| crate::codec::DeError::expected("signed"))?;
+					let input = crate::endpoint::Input::new(&[], &[], Some(value));
+					let signed = input.body::<crate::json::Value>("signed")?;
+					let signed_input = crate::endpoint::Input::new(&[], &[], Some(&signed));
 					Ok(Self {
+						display_name: input.body("display_name")?,
 						signed: ThirdPartyInviteSigned {
-							mxid: crate::codec::from_value(
-								signed
-									.get("mxid")
-									.ok_or_else(|| crate::codec::DeError::expected("mxid"))?,
-							)?,
-							token: crate::codec::from_value(
-								signed
-									.get("token")
-									.ok_or_else(|| crate::codec::DeError::expected("token"))?,
-							)?,
+							mxid: signed_input.body("mxid")?,
+							signatures: signed_input.body("signatures")?,
+							token: signed_input.body("token")?,
 						},
 					})
 				}
@@ -1171,7 +1176,7 @@ pub mod events {
 		}
 		pub mod power_levels {
 			pub use crate::room_power_levels::RoomPowerLevels;
-			#[derive(Clone, Debug, Default)]
+			#[derive(Clone, Debug)]
 			pub struct RoomPowerLevelsEventContent {
 				pub ban: crate::Int,
 				pub events:
@@ -1186,16 +1191,27 @@ pub mod events {
 				pub notifications: crate::power_levels::NotificationPowerLevels,
 			}
 			impl RoomPowerLevelsEventContent {
+				/// All-default values from the specification: `events_default`,
+				/// `users_default` and `invite` are 0, the rest are 50.
 				#[must_use]
 				pub fn new() -> Self {
 					Self {
 						ban: 50,
+						events: alloc::collections::BTreeMap::new(),
+						events_default: 0,
 						invite: 0,
 						kick: 50,
 						redact: 50,
 						state_default: 50,
-						..Self::default()
+						users: alloc::collections::BTreeMap::new(),
+						users_default: 0,
+						notifications: crate::power_levels::NotificationPowerLevels::new(),
 					}
+				}
+			}
+			impl Default for RoomPowerLevelsEventContent {
+				fn default() -> Self {
+					Self::new()
 				}
 			}
 			impl crate::events::EventContent for RoomPowerLevelsEventContent {
@@ -1239,7 +1255,9 @@ pub mod events {
 				/// Allows joining by membership of `room_id`.
 				#[must_use]
 				pub fn room_membership(room_id: crate::OwnedRoomId) -> Self {
-					Self::RoomMembership(RoomMembership { room_id })
+					Self::RoomMembership(RoomMembership {
+						room_id,
+					})
 				}
 			}
 			#[derive(Clone, Debug, Default)]
@@ -1324,7 +1342,7 @@ pub mod room {
 }
 
 pub mod power_levels {
-	#[derive(Clone, Debug, Default)]
+	#[derive(Clone, Debug)]
 	pub struct NotificationPowerLevels {
 		pub room: crate::Int,
 	}
@@ -1334,6 +1352,11 @@ pub mod power_levels {
 			Self {
 				room: 50,
 			}
+		}
+	}
+	impl Default for NotificationPowerLevels {
+		fn default() -> Self {
+			Self::new()
 		}
 	}
 	#[must_use]
@@ -1459,9 +1482,13 @@ pub mod serde {
 	///
 	/// Returns an error if the value is neither an integer nor a numeric string.
 	pub fn deserialize_v1_powerlevel(value: &Value) -> Result<Int, DeError> {
+		// Integers are limited to the canonical JSON range, as in ruma's `Int`;
+		// strings may carry surrounding whitespace.
+		const MAX: Int = 9_007_199_254_740_991;
 		value
 			.as_i64()
-			.or_else(|| value.as_str().and_then(|s| s.parse().ok()))
+			.or_else(|| value.as_str().and_then(|s| s.trim().parse().ok()))
+			.filter(|level| (-MAX..=MAX).contains(level))
 			.ok_or_else(|| DeError::expected("power level"))
 	}
 
