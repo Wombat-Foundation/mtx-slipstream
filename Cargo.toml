@@ -2,6 +2,7 @@
 name = "mtx-slipstream"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.90.0"
 license = "MIT OR Apache-2.0"
 authors = ["Shane Jaroch <chown_tee@proton.me>"]
 description = "High-performance serialization for hottest Matrix federation and C2S endpoints."
@@ -35,7 +36,7 @@ http = "1.3.1"
 mimalloc = { version = "0.1", optional = true, default-features = false }
 rand_core = { version = "0.6", features = ["getrandom"] }
 rezzy = { path = "../rezzy", features = ["signing-core"] }
-simd-json = { version = "0.15", default-features = false, features = ["runtime-detection", "swar-number-parsing"] }
+simd-json = { version = "0.18", default-features = false, features = ["runtime-detection", "swar-number-parsing"] }
 
 [lints.rust]
 unsafe_code = "warn"
