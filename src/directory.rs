@@ -29,6 +29,27 @@ pub enum RoomNetwork {
 	ThirdParty(String),
 }
 
+impl Serialize for RoomNetwork {
+	fn to_json(&self) -> Value {
+		Value::String(match self {
+			Self::Matrix => "matrix".into(),
+			Self::All => "all".into(),
+			Self::ThirdParty(id) => id.clone(),
+		})
+	}
+}
+
+impl Deserialize for RoomNetwork {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		match value.as_str() {
+			Some("matrix") => Ok(Self::Matrix),
+			Some("all") => Ok(Self::All),
+			Some(id) => Ok(Self::ThirdParty(id.to_owned())),
+			None => Err(DeError::expected("room network")),
+		}
+	}
+}
+
 impl RoomNetwork {
 	fn fields(&self) -> (bool, Option<&str>) {
 		match self {
@@ -271,8 +292,7 @@ pub mod federation {
 					query {
 						limit: Option<crate::UInt>,
 						since: Option<alloc::string::String>,
-						include_all_networks: Option<bool>,
-						third_party_instance_id: Option<alloc::string::String>
+						room_network: crate::directory::RoomNetwork
 					}
 					body {}
 				}

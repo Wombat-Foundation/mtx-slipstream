@@ -952,6 +952,16 @@ pub mod api {
 						})
 					}
 				}
+				impl Capabilities {
+					pub fn set(
+						&mut self,
+						name: impl Into<String>,
+						value: crate::json::Value,
+					) -> Result<(), crate::codec::DeError> {
+						self.extra.insert(name.into(), value);
+						Ok(())
+					}
+				}
 				crate::endpoint! { method: "GET", path: "/_matrix/client/v3/capabilities", request { path {} query {} body {} } response { capabilities: Capabilities } }
 			}
 			pub mod get_supported_versions {

@@ -320,6 +320,9 @@ impl Serialize for RoomMemberEventContent {
 		Value::Object(o)
 	}
 }
+impl RoomMemberEventContent {
+	pub const TYPE: &'static str = "m.room.member";
+}
 impl Deserialize for RoomMemberEventContent {
 	fn from_json(value: &Value) -> Result<Self, DeError> {
 		let o = object(value)?;
