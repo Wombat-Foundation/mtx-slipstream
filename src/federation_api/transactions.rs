@@ -147,7 +147,7 @@ pub mod edu {
 	});
 
 	/// A device targeted by a to-device message, or all of a user's devices.
-	#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+	#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 	pub enum DeviceIdOrAllDevices {
 		DeviceId(OwnedDeviceId),
 		AllDevices,
