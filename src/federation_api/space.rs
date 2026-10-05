@@ -15,7 +15,7 @@ use crate::{
 };
 
 /// How a room in a space hierarchy can be joined.
-#[derive(Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub enum SpaceRoomJoinRule {
 	Invite,
 	Knock,
