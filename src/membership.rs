@@ -3,7 +3,7 @@
 //! Wire details (field names, optionality, legacy `server_name` query) follow the
 //! pinned ruwuma definitions; only the `v3` paths are declared here.
 
-use alloc::{string::String, vec::Vec};
+use alloc::string::String;
 
 use crate::{
 	OwnedMxcUri, OwnedRoomId, OwnedRoomOrAliasId, OwnedServerName, OwnedUserId, Signatures,

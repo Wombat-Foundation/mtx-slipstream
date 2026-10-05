@@ -8,7 +8,7 @@ use crate::{
 		encryption::RoomEncryptionEventContent,
 		guest_access::RoomGuestAccessEventContent,
 		history_visibility::RoomHistoryVisibilityEventContent,
-		join_rules::{JoinRule, RestrictedRule, RoomJoinRulesEventContent},
+		join_rules::{AllowRule, JoinRule, RestrictedRule, RoomJoinRulesEventContent, RoomMembership},
 		member::{RoomMemberEventContent, ThirdPartyInvite},
 		name::RoomNameEventContent,
 		policy::RoomPolicyEventContent,
@@ -369,6 +369,37 @@ impl Deserialize for RoomThirdPartyInviteEventContent {
 	}
 }
 
+impl Serialize for AllowRule {
+	fn to_json(&self) -> Value {
+		let mut o = Object::new();
+		match self {
+			Self::RoomMembership(m) => {
+				o.insert("type".into(), Value::String("m.room_membership".into()));
+				o.insert("room_id".into(), m.room_id.to_json());
+			}
+			Self::UnstableSpamChecker => {
+				o.insert("type".into(), Value::String("fi.mau.spam_checker".into()));
+			}
+			Self::_Custom(value) => return value.clone(),
+		}
+		Value::Object(o)
+	}
+}
+impl Deserialize for AllowRule {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		let o = object(value)?;
+		let kind: alloc::string::String =
+			field(o, "type")?.ok_or_else(|| DeError::expected("type"))?;
+		Ok(match kind.as_str() {
+			"m.room_membership" => Self::RoomMembership(RoomMembership {
+				room_id: field(o, "room_id")?.ok_or_else(|| DeError::expected("room_id"))?,
+			}),
+			"fi.mau.spam_checker" => Self::UnstableSpamChecker,
+			_ => Self::_Custom(value.clone()),
+		})
+	}
+}
+
 impl Serialize for RoomJoinRulesEventContent {
 	fn to_json(&self) -> Value {
 		let (rule, allow) = match &self.join_rule {
@@ -382,7 +413,7 @@ impl Serialize for RoomJoinRulesEventContent {
 		let mut o = Object::new();
 		o.insert("join_rule".into(), Value::String(rule.into()));
 		if let Some(r) = allow {
-			o.insert("allow".into(), Value::Array(r.allow.clone()));
+			o.insert("allow".into(), r.allow.to_json());
 		}
 		Value::Object(o)
 	}
@@ -392,16 +423,18 @@ impl Deserialize for RoomJoinRulesEventContent {
 		let o = object(value)?;
 		let rule: alloc::string::String =
 			field(o, "join_rule")?.ok_or_else(|| DeError::expected("join_rule"))?;
-		let allow = || RestrictedRule {
-			allow: o.get("allow").and_then(Value::as_array).cloned().unwrap_or_default(),
+		let allow = || -> Result<RestrictedRule, DeError> {
+			Ok(RestrictedRule {
+				allow: o.get("allow").map_or(Ok(alloc::vec::Vec::new()), Deserialize::from_json)?,
+			})
 		};
 		let join_rule = match rule.as_str() {
 			"public" => JoinRule::Public,
 			"knock" => JoinRule::Knock,
 			"invite" => JoinRule::Invite,
 			"private" => JoinRule::Private,
-			"restricted" => JoinRule::Restricted(allow()),
-			"knock_restricted" => JoinRule::KnockRestricted(allow()),
+			"restricted" => JoinRule::Restricted(allow()?),
+			"knock_restricted" => JoinRule::KnockRestricted(allow()?),
 			_ => return Err(DeError::expected("join rule")),
 		};
 		Ok(Self {

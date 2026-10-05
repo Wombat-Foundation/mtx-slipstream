@@ -89,10 +89,10 @@ impl JoinRule {
 			Self::Restricted(rule) | Self::KnockRestricted(rule) => Some(rule),
 			_ => None,
 		};
-		rule.into_iter().flat_map(|rule| rule.allow.iter()).filter_map(|allow| {
-			(allow.get("type").and_then(Value::as_str) == Some("m.room_membership"))
-				.then(|| allow.get("room_id").and_then(Value::as_str).map(OwnedRoomId::from))
-				.flatten()
+		rule.into_iter().flat_map(|rule| rule.allow.iter()).filter_map(|allow| match allow {
+			crate::events::room::join_rules::AllowRule::RoomMembership(membership) =>
+				Some(membership.room_id.clone()),
+			_ => None,
 		})
 	}
 }

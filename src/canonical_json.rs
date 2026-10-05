@@ -36,6 +36,18 @@ pub fn try_from_json_map(map: JsonMap) -> Result<Object, crate::CanonicalJsonErr
 	Ok(map)
 }
 
+/// Serializes `value` into a canonical JSON value.
+///
+/// # Errors
+///
+/// Currently infallible; the `Result` mirrors ruma's signature. Unlike ruma's, this does
+/// not reject floats or integers outside the canonical `[-2^53 + 1, 2^53 - 1]` range.
+pub fn to_canonical_value<T: crate::codec::Serialize>(
+	value: T,
+) -> Result<Value, crate::CanonicalJsonError> {
+	Ok(crate::codec::to_value(&value))
+}
+
 /// Redacts `content` in place according to the room version's rules.
 ///
 /// # Errors

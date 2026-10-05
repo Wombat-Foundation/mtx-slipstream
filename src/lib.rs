@@ -1218,7 +1218,29 @@ pub mod events {
 			}
 			#[derive(Clone, Debug, Default, PartialEq, Eq)]
 			pub struct RestrictedRule {
-				pub allow: alloc::vec::Vec<crate::json::Value>,
+				pub allow: alloc::vec::Vec<AllowRule>,
+			}
+			/// One way a restricted room lets a user join.
+			#[derive(Clone, Debug, PartialEq, Eq)]
+			pub enum AllowRule {
+				/// The user is a member of another room.
+				RoomMembership(RoomMembership),
+				/// The antispam service decides (`fi.mau.spam_checker`).
+				UnstableSpamChecker,
+				/// Any other rule type, kept as received.
+				_Custom(crate::json::Value),
+			}
+			/// Membership of the room `room_id`.
+			#[derive(Clone, Debug, PartialEq, Eq)]
+			pub struct RoomMembership {
+				pub room_id: crate::OwnedRoomId,
+			}
+			impl AllowRule {
+				/// Allows joining by membership of `room_id`.
+				#[must_use]
+				pub fn room_membership(room_id: crate::OwnedRoomId) -> Self {
+					Self::RoomMembership(RoomMembership { room_id })
+				}
 			}
 			#[derive(Clone, Debug, Default)]
 			pub struct RoomJoinRulesEventContent {
@@ -1324,6 +1346,9 @@ pub mod signatures;
 
 pub mod serde {
 	use core::marker::PhantomData;
+
+	/// A JSON object, as `serde_json::Map<String, Value>`.
+	pub type JsonObject = crate::json::Object;
 
 	#[must_use]
 	pub fn default_true() -> bool {
