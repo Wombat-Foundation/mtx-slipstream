@@ -782,7 +782,7 @@ pub mod api {
 					retry_after: Option<RetryAfter>,
 				},
 				SenderIgnored {
-					room_id: Option<crate::OwnedRoomId>,
+					sender: Option<crate::OwnedUserId>,
 				},
 				WrongRoomKeysVersion {
 					_value: (),
@@ -796,6 +796,8 @@ pub mod api {
 				NotImplemented,
 				FeatureDisabled,
 				NotFound,
+				MissingParam,
+				UrlNotSet,
 				TooLarge,
 				Unrecognized,
 				Exclusive,
@@ -1177,6 +1179,18 @@ pub mod events {
 				Ban => "ban",
 				Knock => "knock",
 			});
+			impl MembershipState {
+				#[must_use]
+				pub const fn as_str(&self) -> &'static str {
+					match self {
+						Self::Join => "join",
+						Self::Invite => "invite",
+						Self::Leave => "leave",
+						Self::Ban => "ban",
+						Self::Knock => "knock",
+					}
+				}
+			}
 			#[derive(Clone, Debug)]
 			pub struct ThirdPartyInviteSigned {
 				pub mxid: crate::OwnedUserId,

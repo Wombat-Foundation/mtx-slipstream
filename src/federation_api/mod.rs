@@ -81,7 +81,7 @@ pub mod event {
 		pub mod unstable {
 			use alloc::{string::String, vec::Vec};
 
-			use crate::{OwnedEventId, OwnedRoomId, UInt, endpoint, federation_api::RawPdu};
+			use crate::{OwnedEventId, OwnedRoomId, endpoint, federation_api::RawPdu};
 
 			endpoint! {
 				method: "POST", path: "/_matrix/federation/unstable/event_relationships",
@@ -91,9 +91,9 @@ pub mod event {
 					body {
 						event_id: OwnedEventId,
 						room_id: Option<OwnedRoomId>,
-						max_depth: Option<UInt>,
-						max_breadth: Option<UInt>,
-						limit: Option<UInt>,
+					max_depth: Option<i64>,
+					max_breadth: Option<i64>,
+					limit: Option<i64>,
 						depth_first: Option<bool>,
 						recent_first: Option<bool>,
 						include_parent: Option<bool>,
@@ -126,6 +126,19 @@ pub mod event {
 					body {}
 				}
 				response { event_id: OwnedEventId, origin_server_ts: MilliSecondsSinceUnixEpoch }
+			}
+
+			impl Response {
+				#[must_use]
+				pub fn new(
+					event_id: OwnedEventId,
+					origin_server_ts: MilliSecondsSinceUnixEpoch,
+				) -> Self {
+					Self {
+						event_id,
+						origin_server_ts,
+					}
+				}
 			}
 
 			impl Request {

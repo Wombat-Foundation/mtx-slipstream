@@ -250,6 +250,26 @@ impl From<SpaceHierarchyParentSummary> for SpaceHierarchyRoomsChunk {
 	}
 }
 
+impl From<SpaceHierarchyParentSummary> for SpaceHierarchyChildSummary {
+	fn from(summary: SpaceHierarchyParentSummary) -> Self {
+		Self {
+			canonical_alias: summary.canonical_alias,
+			name: summary.name,
+			num_joined_members: summary.num_joined_members,
+			room_id: summary.room_id,
+			topic: summary.topic,
+			world_readable: summary.world_readable,
+			guest_can_join: summary.guest_can_join,
+			avatar_url: summary.avatar_url,
+			join_rule: summary.join_rule,
+			room_type: summary.room_type,
+			allowed_room_ids: summary.allowed_room_ids,
+			encryption: summary.encryption,
+			room_version: summary.room_version,
+		}
+	}
+}
+
 /// The client-server hierarchy endpoint.
 pub mod client {
 	pub mod get_hierarchy {
@@ -295,6 +315,16 @@ pub mod get_hierarchy {
 				room: SpaceHierarchyParentSummary,
 				children: Vec<SpaceHierarchyChildSummary>,
 				inaccessible_children: Vec<OwnedRoomId>
+			}
+		}
+
+		impl Request {
+			#[must_use]
+			pub fn new(room_id: OwnedRoomId, suggested_only: bool) -> Self {
+				Self {
+					room_id,
+					suggested_only,
+				}
 			}
 		}
 	}

@@ -11,14 +11,14 @@ use crate::{OwnedServerName, OwnedServerSigningKeyId};
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct XMatrix {
 	pub origin: OwnedServerName,
-	pub destination: OwnedServerName,
+	pub destination: Option<OwnedServerName>,
 	pub key: OwnedServerSigningKeyId,
 	pub sig: String,
 }
 
 crate::impl_codec_struct!(XMatrix {
 	origin: OwnedServerName,
-	destination: OwnedServerName,
+	destination: Option<OwnedServerName>,
 	key: OwnedServerSigningKeyId,
 	sig: String,
 });
@@ -45,7 +45,7 @@ impl Credentials for XMatrix {
 		}
 		Some(Self {
 			origin: origin?,
-			destination: destination?,
+			destination,
 			key: key?,
 			sig: sig?,
 		})
@@ -55,7 +55,7 @@ impl Credentials for XMatrix {
 		HeaderValue::from_str(&alloc::format!(
 			"X-Matrix origin=\"{}\",destination=\"{}\",key=\"{}\",sig=\"{}\"",
 			self.origin,
-			self.destination,
+			self.destination.as_deref().unwrap_or(""),
 			self.key,
 			self.sig
 		))
@@ -72,7 +72,7 @@ mod tests {
 	fn x_matrix_round_trips() {
 		let value = XMatrix {
 			origin: OwnedServerName::from("origin.example"),
-			destination: OwnedServerName::from("destination.example"),
+			destination: Some(OwnedServerName::from("destination.example")),
 			key: OwnedServerSigningKeyId::from("ed25519:auto"),
 			sig: "signature".into(),
 		};

@@ -230,7 +230,7 @@ impl ErrorKind {
 			"M_USER_SUSPENDED" => Self::UserSuspended,
 			"M_GUEST_ACCESS_FORBIDDEN" => Self::GuestAccessForbidden,
 			"M_SENDER_IGNORED" => Self::SenderIgnored {
-				room_id: None,
+				sender: None,
 			},
 			"M_WRONG_ROOM_KEYS_VERSION" => Self::WrongRoomKeysVersion {
 				_value: (),
