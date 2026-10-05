@@ -173,7 +173,6 @@ impl ErrorKind {
 			Self::ThreepidDenied => "M_THREEPID_DENIED",
 			Self::ThreepidInUse => "M_THREEPID_IN_USE",
 			Self::InviteBlocked => "M_INVITE_BLOCKED",
-			Self::NotImplemented | Self::Unknown => "M_UNKNOWN",
 			_ => "M_UNKNOWN",
 		}
 	}
