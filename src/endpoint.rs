@@ -409,12 +409,72 @@ pub trait EndpointRequest: Sized {
 	fn body(&self) -> Option<Value>;
 	/// # Errors
 	///
+	/// Returns an error if the request cannot be encoded.
+	fn try_into_http_request_raw<B: Default + BufMut>(
+		self,
+		base_url: &str,
+		access_token: SendAccessToken<'_>,
+		considering_versions: &[MatrixVersion],
+	) -> Result<http::Request<B>, IntoHttpError> {
+		let mut url = alloc::format!(
+			"{}{}",
+			base_url.trim_end_matches('/'),
+			build_path(Self::METADATA.path, &self.path_args())
+		);
+		let query = self.query();
+		if !query.is_empty() {
+			let pairs: Vec<String> = query
+				.iter()
+				.map(|(k, v)| alloc::format!("{}={}", percent_encode(k), percent_encode(v)))
+				.collect();
+			url.push('?');
+			url.push_str(&pairs.join("&"));
+		}
+		let mut builder = http::Request::builder().method(Self::METADATA.method).uri(url);
+		if let Some(token) = access_token.get_required_for_endpoint() {
+			builder =
+				builder.header(http::header::AUTHORIZATION, alloc::format!("Bearer {token}"));
+		}
+		let mut buf = B::default();
+		if let Some(body) = self.body() {
+			builder = builder.header(http::header::CONTENT_TYPE, "application/json");
+			buf.put_slice(crate::codec::to_string(&body).as_bytes());
+		}
+		let _ = considering_versions;
+		builder.body(buf).map_err(|e| IntoHttpError(e.to_string()))
+	}
+	/// # Errors
+	///
 	/// Returns an error if a required value is missing or malformed.
 	fn from_parts(
 		path: &[String],
 		query: &[(String, String)],
 		body: Option<&Value>,
 	) -> Result<Self, DeError>;
+
+	/// Parses an incoming request body. Endpoints with non-JSON bodies may override this.
+	///
+	/// # Errors
+	///
+	/// Returns an error if the method, body, or endpoint parameters are invalid.
+	fn from_http_parts<B: AsRef<[u8]>, S: AsRef<str>>(
+		request: &http::Request<B>,
+		path_args: &[S],
+	) -> Result<Self, FromHttpRequestError> {
+		if request.method().as_str() != Self::METADATA.method {
+			return Err(FromHttpRequestError::MethodMismatch);
+		}
+		let path: Vec<String> = path_args.iter().map(|s| s.as_ref().to_string()).collect();
+		let query = parse_query(request.uri());
+		let bytes = request.body().as_ref();
+		let body = if bytes.is_empty() {
+			None
+		} else {
+			let text = core::str::from_utf8(bytes).map_err(|e| DeError(e.to_string()))?;
+			Some(Value::parse(text).map_err(|e| DeError(e.to_string()))?)
+		};
+		Ok(Self::from_parts(&path, &query, body.as_ref())?)
+	}
 }
 
 /// Response half of an endpoint, implemented by [`endpoint!`](macro@crate::endpoint).
@@ -547,8 +607,15 @@ impl<T: EndpointRequest> OutgoingRequest for T {
 		self,
 		base_url: &str,
 		access_token: SendAccessToken<'_>,
-		_considering_versions: &[MatrixVersion],
+		considering_versions: &[MatrixVersion],
 	) -> Result<http::Request<B>, IntoHttpError> {
+		EndpointRequest::try_into_http_request_raw(
+			self,
+			base_url,
+			access_token,
+			considering_versions,
+		)
+		/*
 		let mut url = alloc::format!(
 			"{}{}",
 			base_url.trim_end_matches('/'),
@@ -573,7 +640,7 @@ impl<T: EndpointRequest> OutgoingRequest for T {
 			builder = builder.header(http::header::CONTENT_TYPE, "application/json");
 			buf.put_slice(crate::codec::to_string(&body).as_bytes());
 		}
-		builder.body(buf).map_err(|e| IntoHttpError(e.to_string()))
+		builder.body(buf).map_err(|e| IntoHttpError(e.to_string()))*/
 	}
 }
 
@@ -601,19 +668,7 @@ impl<T: EndpointRequest> IncomingRequest for T {
 		request: http::Request<B>,
 		path_args: &[S],
 	) -> Result<Self, FromHttpRequestError> {
-		if request.method().as_str() != T::METADATA.method {
-			return Err(FromHttpRequestError::MethodMismatch);
-		}
-		let path: Vec<String> = path_args.iter().map(|s| s.as_ref().to_string()).collect();
-		let query = parse_query(request.uri());
-		let bytes = request.body().as_ref();
-		let body = if bytes.is_empty() {
-			None
-		} else {
-			let text = core::str::from_utf8(bytes).map_err(|e| DeError(e.to_string()))?;
-			Some(Value::parse(text).map_err(|e| DeError(e.to_string()))?)
-		};
-		Ok(T::from_parts(&path, &query, body.as_ref())?)
+		T::from_http_parts(&request, path_args)
 	}
 }
 

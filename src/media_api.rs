@@ -519,12 +519,9 @@ pub mod legacy {
 			use super::super::{RawUpload, upload_request, upload_url_query};
 			use crate::{
 				OwnedMxcUri,
-				api::{client::error::Error, error::IntoHttpError},
+				api::error::IntoHttpError,
 				codec::{DeError, Deserialize, Serialize},
-				endpoint::{
-					FromHttpRequestError, IncomingRequest, Metadata, OutgoingRequest,
-					SendAccessToken,
-				},
+				endpoint::{EndpointRequest, FromHttpRequestError, Metadata, SendAccessToken},
 				json::Value,
 			};
 
@@ -589,22 +586,29 @@ pub mod legacy {
 
 			const _: crate::endpoint::Metadata =
 				crate::endpoint::Metadata::new("POST", "/_matrix/media/v3/upload");
-			impl OutgoingRequest for Request {
-				type EndpointError = Error;
-				type IncomingResponse = Response;
-
+			impl EndpointRequest for Request {
+				type Response = Response;
 				const METADATA: Metadata = Metadata::new("POST", "/_matrix/media/v3/upload");
 
-				fn try_into_http_request<B: Default + bytes::BufMut>(
+				fn path_args(&self) -> Vec<String> {
+					Vec::new()
+				}
+				fn query(&self) -> Vec<(String, String)> {
+					upload_url_query(self.filename.as_deref(), self.generate_blurhash)
+				}
+				fn body(&self) -> Option<Value> {
+					None
+				}
+				fn try_into_http_request_raw<B: Default + bytes::BufMut>(
 					self,
 					base_url: &str,
 					access_token: SendAccessToken<'_>,
-					_considering_versions: &[crate::endpoint::MatrixVersion],
+					_versions: &[crate::endpoint::MatrixVersion],
 				) -> Result<http::Request<B>, IntoHttpError> {
 					let query =
 						upload_url_query(self.filename.as_deref(), self.generate_blurhash);
 					upload_request(
-						Self::METADATA,
+						<Request as EndpointRequest>::METADATA,
 						base_url,
 						&[],
 						&query,
@@ -615,14 +619,16 @@ pub mod legacy {
 						},
 					)
 				}
-			}
+				fn from_parts(
+					_path: &[String],
+					_query: &[(String, String)],
+					_body: Option<&Value>,
+				) -> Result<Self, DeError> {
+					Err(DeError::expected("raw upload body"))
+				}
 
-			impl IncomingRequest for Request {
-				type EndpointError = Error;
-				type OutgoingResponse = Response;
-
-				fn try_from_http_request<B: AsRef<[u8]>, S: AsRef<str>>(
-					request: http::Request<B>,
+				fn from_http_parts<B: AsRef<[u8]>, S: AsRef<str>>(
+					request: &http::Request<B>,
 					_path_args: &[S],
 				) -> Result<Self, FromHttpRequestError> {
 					if request.method() != http::Method::POST {
@@ -656,11 +662,11 @@ pub mod legacy {
 			use super::super::{RawUpload, upload_request, upload_url_query};
 			use crate::{
 				OwnedServerName,
-				api::{client::error::Error, error::IntoHttpError},
+				api::error::IntoHttpError,
 				codec::DeError,
 				endpoint::{
-					EndpointResponse, FromHttpRequestError, IncomingRequest, Metadata,
-					OutgoingRequest, SendAccessToken,
+					EndpointRequest, EndpointResponse, FromHttpRequestError, Metadata,
+					SendAccessToken,
 				},
 				json::{Object, Value},
 			};
@@ -691,22 +697,29 @@ pub mod legacy {
 				"PUT",
 				"/_matrix/media/v3/upload/{server_name}/{media_id}",
 			);
-			impl OutgoingRequest for Request {
-				type EndpointError = Error;
-				type IncomingResponse = Response;
-
+			impl EndpointRequest for Request {
+				type Response = Response;
 				const METADATA: Metadata =
 					Metadata::new("PUT", "/_matrix/media/v3/upload/{server_name}/{media_id}");
 
-				fn try_into_http_request<B: Default + bytes::BufMut>(
+				fn path_args(&self) -> Vec<String> {
+					vec![self.server_name.as_str().into(), self.media_id.clone()]
+				}
+				fn query(&self) -> Vec<(String, String)> {
+					upload_url_query(self.filename.as_deref(), false)
+				}
+				fn body(&self) -> Option<Value> {
+					None
+				}
+				fn try_into_http_request_raw<B: Default + bytes::BufMut>(
 					self,
 					base_url: &str,
 					access_token: SendAccessToken<'_>,
-					_considering_versions: &[crate::endpoint::MatrixVersion],
+					_versions: &[crate::endpoint::MatrixVersion],
 				) -> Result<http::Request<B>, IntoHttpError> {
 					let query = upload_url_query(self.filename.as_deref(), false);
 					upload_request(
-						Self::METADATA,
+						<Request as EndpointRequest>::METADATA,
 						base_url,
 						&[self.server_name.as_str().into(), self.media_id.clone()],
 						&query,
@@ -717,14 +730,16 @@ pub mod legacy {
 						},
 					)
 				}
-			}
+				fn from_parts(
+					_path: &[String],
+					_query: &[(String, String)],
+					_body: Option<&Value>,
+				) -> Result<Self, DeError> {
+					Err(DeError::expected("raw upload body"))
+				}
 
-			impl IncomingRequest for Request {
-				type EndpointError = Error;
-				type OutgoingResponse = Response;
-
-				fn try_from_http_request<B: AsRef<[u8]>, S: AsRef<str>>(
-					request: http::Request<B>,
+				fn from_http_parts<B: AsRef<[u8]>, S: AsRef<str>>(
+					request: &http::Request<B>,
 					path_args: &[S],
 				) -> Result<Self, FromHttpRequestError> {
 					if request.method() != http::Method::PUT {
