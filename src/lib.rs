@@ -953,6 +953,11 @@ pub mod api {
 					}
 				}
 				impl Capabilities {
+					/// Adds or replaces an extra capability.
+					///
+					/// # Errors
+					///
+					/// This currently never fails; the result is retained for API compatibility.
 					pub fn set(
 						&mut self,
 						name: impl Into<String>,

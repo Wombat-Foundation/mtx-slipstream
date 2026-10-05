@@ -308,8 +308,9 @@ pub mod federation {
 					body: Option<&crate::json::Value>,
 				) -> Result<Self, crate::codec::DeError> {
 					let input = crate::endpoint::Input::new(path, query, body);
-					let all = input.query::<Option<bool>>("include_all_networks")?.unwrap_or(false);
-					let third_party = input.query("third_party_instance_id")?;
+					let all =
+						input.query::<Option<bool>>("include_all_networks")?.unwrap_or(false);
+					let third_party: Option<String> = input.query("third_party_instance_id")?;
 					if all && third_party.is_some() {
 						return Err(crate::codec::DeError::expected("exclusive room network"));
 					}
@@ -405,7 +406,9 @@ mod tests {
 	fn federation_request_networks_round_trip() {
 		use federation::get_public_rooms::v1::Request;
 
-		for room_network in [RoomNetwork::Matrix, RoomNetwork::All, RoomNetwork::ThirdParty("example.org".into())] {
+		for room_network in
+			[RoomNetwork::Matrix, RoomNetwork::All, RoomNetwork::ThirdParty("example.org".into())]
+		{
 			let request = Request {
 				limit: None,
 				since: None,
