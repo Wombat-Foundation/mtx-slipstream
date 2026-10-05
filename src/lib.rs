@@ -23,6 +23,7 @@ pub mod search;
 pub mod session;
 pub mod state_api;
 pub mod threads;
+mod to_device_api;
 mod uiaa;
 pub use antispam::{draupnir as draupnir_antispam, meowlnir as meowlnir_antispam};
 pub mod directory;
@@ -43,6 +44,10 @@ mod event_type;
 mod events_codec;
 pub mod federation;
 pub mod federation_api;
+/// Shared to-device target identifier used by client and federation payloads.
+pub mod to_device {
+	pub use crate::room::federation::transactions::edu::DeviceIdOrAllDevices;
+}
 pub mod js_option;
 #[macro_use]
 pub mod media_api;
@@ -663,6 +668,9 @@ pub mod api {
 			pub use crate::session::{
 				get_login_token, get_login_types, login, logout, logout_all,
 			};
+		}
+		pub mod to_device {
+			pub use crate::to_device_api::send_event_to_device;
 		}
 		pub mod authenticated_media {
 			pub use crate::media_api::authenticated_client::{

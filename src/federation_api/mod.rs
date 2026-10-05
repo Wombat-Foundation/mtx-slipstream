@@ -204,6 +204,7 @@ pub mod authenticated_media {
 
 pub mod authorization;
 pub mod backfill;
+pub mod device;
 pub mod discovery;
 pub mod knock;
 pub mod membership;
