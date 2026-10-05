@@ -1,8 +1,16 @@
 pub mod account;
+pub mod alias;
+pub mod config;
+pub mod context;
 pub mod keys;
 pub mod message;
+pub mod message_events;
 pub mod presence;
 pub mod profile;
 pub mod redact;
+pub mod relations;
+pub mod report;
 pub mod tag;
 pub mod typing;
+pub mod user_directory;
+pub mod voip;

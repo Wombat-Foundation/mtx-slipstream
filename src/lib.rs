@@ -679,8 +679,12 @@ pub mod api {
 			crate::impl_codec_enum!(TokenType { Bearer => "Bearer" });
 		}
 		pub use crate::client_api::account;
-		pub use crate::client_api::profile;
-		pub use crate::client_api::{message, presence, redact, tag, typing};
+		pub use crate::client_api::message_events::get_message_events;
+		pub use crate::client_api::report::report_user;
+		pub use crate::client_api::{
+			alias, config, context, keys, message, presence, profile, redact, relations, report,
+			tag, typing, user_directory, voip,
+		};
 		pub use authentication::TokenType;
 		pub mod media {
 			pub use crate::media_api::legacy::{
@@ -736,6 +740,18 @@ pub mod api {
 		}
 		pub mod directory {
 			pub use crate::directory::{get_public_rooms, get_public_rooms_filtered};
+			pub mod get_room_visibility {
+				pub mod v3 {
+					use crate::{OwnedRoomId, directory::Visibility, endpoint};
+					endpoint! { method: "GET", path: "/_matrix/client/v3/directory/list/room/{roomId}", request { path { room_id: OwnedRoomId } query {} body {} } response { visibility: Visibility } }
+				}
+			}
+			pub mod set_room_visibility {
+				pub mod v3 {
+					use crate::{OwnedRoomId, directory::Visibility, endpoint};
+					endpoint! { method: "PUT", path: "/_matrix/client/v3/directory/list/room/{roomId}", request { path { room_id: OwnedRoomId } query {} body { visibility: Visibility } } response {} }
+				}
+			}
 		}
 		pub mod appservice {
 			pub use crate::appservice::request_ping;
@@ -757,6 +773,7 @@ pub mod api {
 			pub use crate::backup::*;
 		}
 		pub mod room {
+			pub use crate::client_api::report::room::{report_content, report_room};
 			pub use crate::room_api::*;
 		}
 		pub mod space {
@@ -796,6 +813,27 @@ pub mod api {
 				pub enum RoomVersionStability {
 					Stable,
 					Unstable,
+				}
+			}
+			pub mod get_supported_versions {
+				pub struct Request;
+				pub struct Response {
+					pub versions: alloc::vec::Vec<String>,
+					pub unstable_features: alloc::collections::BTreeMap<String, bool>,
+				}
+			}
+			pub mod get_rtc_transports {
+				pub struct Request;
+				pub struct Response {
+					pub transports: alloc::vec::Vec<crate::json::Value>,
+				}
+				impl Response {
+					#[must_use]
+					pub fn new(transports: alloc::vec::Vec<crate::json::Value>) -> Self {
+						Self {
+							transports,
+						}
+					}
 				}
 			}
 		}
@@ -908,6 +946,7 @@ pub mod events {
 	};
 	#[derive(Clone, Debug, Default)]
 	pub struct AnyGlobalAccountDataEvent;
+	pub type AnyGlobalAccountDataEventContent = AnyGlobalAccountDataEvent;
 	#[derive(Clone, Debug)]
 	pub enum AnyRawAccountDataEvent {
 		Room(crate::serde::Raw<AnyRoomAccountDataEvent>),
@@ -915,6 +954,7 @@ pub mod events {
 	}
 	#[derive(Clone, Debug, Default)]
 	pub struct AnyRoomAccountDataEvent;
+	pub type AnyRoomAccountDataEventContent = AnyRoomAccountDataEvent;
 	mod ephemeral;
 	pub use ephemeral::{AnySyncEphemeralRoomEvent, SyncReceiptEvent, SyncTypingEvent};
 	#[derive(Clone, Debug, Default)]

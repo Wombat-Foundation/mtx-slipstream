@@ -10,6 +10,13 @@ use crate::{
 	room::RoomType,
 };
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Visibility {
+	Public,
+	Private,
+}
+crate::impl_codec_enum!(Visibility { Public => "public", Private => "private" });
+
 /// Which network a directory query targets.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub enum RoomNetwork {
