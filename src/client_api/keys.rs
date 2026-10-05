@@ -87,6 +87,7 @@ pub mod upload_signing_keys {
 			request {
 				path {} query {}
 				body {
+					auth: Option<crate::uiaa::AuthData>,
 					master_key: Option<Raw<CrossSigningKey>>,
 					self_signing_key: Option<Raw<CrossSigningKey>>,
 					user_signing_key: Option<Raw<CrossSigningKey>>,

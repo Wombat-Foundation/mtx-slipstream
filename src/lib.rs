@@ -51,6 +51,22 @@ mod events_codec;
 pub mod federation;
 pub mod federation_api;
 pub mod thirdparty;
+pub mod continuwuity_admin_api {
+	pub mod rooms {
+		pub mod ban {
+			pub mod v1 {
+				use crate::{OwnedRoomId, endpoint};
+				endpoint! { method: "PUT", path: "/_continuwuity/admin/rooms/{room_id}/ban", request { path { room_id: OwnedRoomId } query {} body { banned: bool } } response { evicted: Vec<crate::OwnedUserId>, failed_evicted: Vec<crate::OwnedUserId>, aliases: Vec<crate::OwnedRoomAliasId> } }
+			}
+		}
+		pub mod list {
+			pub mod v1 {
+				use crate::{OwnedRoomId, endpoint};
+				endpoint! { method: "GET", path: "/_continuwuity/admin/rooms/list", request { path {} query {} body {} } response { rooms: Vec<OwnedRoomId> } }
+			}
+		}
+	}
+}
 /// Shared to-device target identifier used by client and federation payloads.
 pub mod to_device {
 	pub use crate::room::federation::transactions::edu::DeviceIdOrAllDevices;
@@ -610,14 +626,15 @@ pub mod api {
 		}
 		pub use crate::client_api::account;
 		pub use crate::client_api::admin;
+		pub use crate::client_api::compat::{read_marker, receipt, thirdparty};
 		pub use crate::client_api::message_events::get_message_events;
 		pub use crate::client_api::profile_keys::{
 			delete_profile_key, get_profile_key, set_profile_key,
 		};
 		pub use crate::client_api::report::report_user;
 		pub use crate::client_api::{
-			alias, config, context, keys, message, presence, profile, redact, relations, report,
-			tag, typing, user_directory, voip,
+			alias, compat, config, context, keys, message, presence, profile, redact, relations,
+			report, tag, typing, user_directory, voip,
 		};
 		pub use authentication::TokenType;
 		pub mod media {
@@ -736,11 +753,74 @@ pub mod api {
 		pub mod discovery {
 			pub mod discover_homeserver {
 				#[derive(Clone, Debug, Default)]
+				pub struct HomeserverInfo {
+					pub base_url: alloc::string::String,
+				}
+				crate::endpoint! { method: "GET", path: "/.well-known/matrix/client", request { path {} query {} body {} } response { homeserver: HomeserverInfo, identity_server: Option<crate::json::Value>, sliding_sync_proxy: Option<crate::json::Value>, tile_server: Option<crate::json::Value>, rtc_foci: alloc::vec::Vec<RtcFocusInfo> } }
+				#[derive(Clone, Debug, Default)]
 				pub struct RtcFocusInfo(pub crate::json::Value);
+				impl crate::codec::Serialize for HomeserverInfo {
+					fn to_json(&self) -> crate::json::Value {
+						crate::endpoint::object_from(vec![("base_url", self.base_url.to_json())])
+							.into()
+					}
+				}
+				impl crate::codec::Deserialize for HomeserverInfo {
+					fn from_json(v: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+						Ok(Self {
+							base_url: crate::codec::Deserialize::from_json(
+								v.as_object()
+									.and_then(|o| o.get("base_url"))
+									.ok_or_else(|| crate::codec::DeError::expected("base_url"))?,
+							)?,
+						})
+					}
+				}
 			}
 			pub mod discover_support {
 				#[derive(Clone, Debug, Default)]
+				pub struct Contact {
+					pub role: ContactRole,
+					pub email_address: Option<alloc::string::String>,
+					pub matrix_id: Option<alloc::string::String>,
+					pub pgp_key: Option<alloc::string::String>,
+				}
+				crate::endpoint! { method: "GET", path: "/.well-known/matrix/support", request { path {} query {} body {} } response { contacts: alloc::vec::Vec<Contact>, support_page: Option<alloc::string::String> } }
+				#[derive(Clone, Debug, Default)]
 				pub struct ContactRole(pub crate::json::Value);
+				impl crate::codec::Serialize for Contact {
+					fn to_json(&self) -> crate::json::Value {
+						crate::endpoint::object_from(vec![
+							("role", self.role.to_json()),
+							("email_address", self.email_address.to_json()),
+							("matrix_id", self.matrix_id.to_json()),
+							("pgp_key", self.pgp_key.to_json()),
+						])
+						.into()
+					}
+				}
+				impl crate::codec::Deserialize for Contact {
+					fn from_json(v: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+						let o = v
+							.as_object()
+							.ok_or_else(|| crate::codec::DeError::expected("object"))?;
+						Ok(Self {
+							role: crate::codec::Deserialize::from_json(
+								o.get("role")
+									.ok_or_else(|| crate::codec::DeError::expected("role"))?,
+							)?,
+							email_address: crate::codec::Deserialize::from_json(
+								o.get("email_address").unwrap_or(&crate::json::Value::Null),
+							)?,
+							matrix_id: crate::codec::Deserialize::from_json(
+								o.get("matrix_id").unwrap_or(&crate::json::Value::Null),
+							)?,
+							pgp_key: crate::codec::Deserialize::from_json(
+								o.get("pgp_key").unwrap_or(&crate::json::Value::Null),
+							)?,
+						})
+					}
+				}
 			}
 			pub mod get_capabilities {
 				#[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -748,6 +828,125 @@ pub mod api {
 					Stable,
 					Unstable,
 				}
+				crate::impl_codec_enum!(RoomVersionStability { Stable => "stable", Unstable => "unstable" });
+				#[derive(Clone, Debug, Default)]
+				pub struct Capabilities {
+					pub room_versions: RoomVersionsCapability,
+					pub thirdparty_id_changes: ThirdPartyIdChangesCapability,
+					pub get_login_token: GetLoginTokenCapability,
+					pub extra: alloc::collections::BTreeMap<String, crate::json::Value>,
+				}
+				#[derive(Clone, Debug, Default)]
+				pub struct RoomVersionsCapability {
+					pub available:
+						alloc::collections::BTreeMap<crate::RoomVersionId, RoomVersionStability>,
+					pub default: crate::RoomVersionId,
+				}
+				#[derive(Clone, Debug, Default)]
+				pub struct ThirdPartyIdChangesCapability {
+					pub enabled: bool,
+				}
+				#[derive(Clone, Debug, Default)]
+				pub struct GetLoginTokenCapability {
+					pub enabled: bool,
+				}
+				impl crate::codec::Serialize for RoomVersionsCapability {
+					fn to_json(&self) -> crate::json::Value {
+						crate::endpoint::object_from(vec![
+							("available", self.available.to_json()),
+							("default", self.default.to_json()),
+						])
+						.into()
+					}
+				}
+				impl crate::codec::Deserialize for RoomVersionsCapability {
+					fn from_json(v: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+						let o = v
+							.as_object()
+							.ok_or_else(|| crate::codec::DeError::expected("object"))?;
+						Ok(Self {
+							available: crate::codec::Deserialize::from_json(
+								o.get("available").ok_or_else(|| {
+									crate::codec::DeError::expected("available")
+								})?,
+							)?,
+							default: crate::codec::Deserialize::from_json(
+								o.get("default")
+									.ok_or_else(|| crate::codec::DeError::expected("default"))?,
+							)?,
+						})
+					}
+				}
+				impl crate::codec::Serialize for ThirdPartyIdChangesCapability {
+					fn to_json(&self) -> crate::json::Value {
+						crate::endpoint::object_from(vec![("enabled", self.enabled.to_json())])
+							.into()
+					}
+				}
+				impl crate::codec::Deserialize for ThirdPartyIdChangesCapability {
+					fn from_json(v: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+						Ok(Self {
+							enabled: crate::codec::Deserialize::from_json(
+								v.as_object()
+									.and_then(|o| o.get("enabled"))
+									.ok_or_else(|| crate::codec::DeError::expected("enabled"))?,
+							)?,
+						})
+					}
+				}
+				impl crate::codec::Serialize for GetLoginTokenCapability {
+					fn to_json(&self) -> crate::json::Value {
+						crate::endpoint::object_from(vec![("enabled", self.enabled.to_json())])
+							.into()
+					}
+				}
+				impl crate::codec::Deserialize for GetLoginTokenCapability {
+					fn from_json(v: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+						Ok(Self {
+							enabled: crate::codec::Deserialize::from_json(
+								v.as_object()
+									.and_then(|o| o.get("enabled"))
+									.ok_or_else(|| crate::codec::DeError::expected("enabled"))?,
+							)?,
+						})
+					}
+				}
+				impl crate::codec::Serialize for Capabilities {
+					fn to_json(&self) -> crate::json::Value {
+						crate::endpoint::object_from(vec![
+							("m.room_versions", self.room_versions.to_json()),
+							("m.3pid_changes", self.thirdparty_id_changes.to_json()),
+							("m.get_login_token", self.get_login_token.to_json()),
+						])
+						.into()
+					}
+				}
+				impl crate::codec::Deserialize for Capabilities {
+					fn from_json(v: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+						let o = v
+							.as_object()
+							.ok_or_else(|| crate::codec::DeError::expected("object"))?;
+						Ok(Self {
+							room_versions: crate::codec::Deserialize::from_json(
+								o.get("m.room_versions").ok_or_else(|| {
+									crate::codec::DeError::expected("m.room_versions")
+								})?,
+							)?,
+							thirdparty_id_changes: crate::codec::Deserialize::from_json(
+								o.get("m.3pid_changes").ok_or_else(|| {
+									crate::codec::DeError::expected("m.3pid_changes")
+								})?,
+							)?,
+							get_login_token: crate::codec::Deserialize::from_json(
+								o.get("m.get_login_token").ok_or_else(|| {
+									crate::codec::DeError::expected("m.get_login_token")
+								})?,
+							)?,
+							extra: alloc::collections::BTreeMap::new(),
+						})
+					}
+				}
+				crate::endpoint! { method: "GET", path: "/_matrix/client/v3/capabilities", request { path {} query {} body {} } response { capabilities: Capabilities } }
 			}
 			pub mod get_supported_versions {
 				pub struct Request;
@@ -890,6 +1089,7 @@ pub mod events {
 	pub struct AnyRoomAccountDataEvent;
 	pub type AnyRoomAccountDataEventContent = AnyRoomAccountDataEvent;
 	mod ephemeral;
+	pub mod fully_read;
 	pub use ephemeral::{AnySyncEphemeralRoomEvent, SyncReceiptEvent, SyncTypingEvent};
 	#[derive(Debug, Default)]
 	pub struct AnyToDeviceEvent;
@@ -1020,6 +1220,7 @@ pub mod events {
 			#[derive(Debug, Default)]
 			pub struct RoomRedactionEventContent {
 				pub redacts: Option<crate::OwnedEventId>,
+				pub reason: Option<String>,
 			}
 		}
 		pub mod create {

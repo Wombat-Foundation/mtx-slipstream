@@ -35,6 +35,23 @@ impl ReceiptThread {
 	}
 }
 
+impl Serialize for ReceiptThread {
+	fn to_json(&self) -> Value {
+		self.as_str().map_or(Value::Null, |value| Value::String(value.into()))
+	}
+}
+impl Deserialize for ReceiptThread {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		Ok(match value.as_str() {
+			None => Self::Unthreaded,
+			Some("main") => Self::Main,
+			Some(value) => Self::Thread(
+				OwnedEventId::parse(value).map_err(|_| DeError::expected("event id"))?,
+			),
+		})
+	}
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct Receipt {
 	pub ts: Option<UInt>,

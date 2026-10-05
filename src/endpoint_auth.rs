@@ -7,6 +7,8 @@ pub(super) const AUTH_TABLE: &[(&str, &str, AuthScheme)] = &[
 	("GET", "/.well-known/matrix/client", AuthScheme::None),
 	("GET", "/.well-known/matrix/server", AuthScheme::None),
 	("GET", "/.well-known/matrix/support", AuthScheme::None),
+	("GET", "/_continuwuity/admin/rooms/list", AuthScheme::AccessToken),
+	("PUT", "/_continuwuity/admin/rooms/{}/ban", AuthScheme::AccessToken),
 	("POST", "/_matrix/app/unstable/fi.mau.msc2659/ping", AuthScheme::AccessToken),
 	("POST", "/_matrix/app/v1/ping", AuthScheme::AccessToken),
 	("GET", "/_matrix/app/v1/rooms/{}", AuthScheme::AccessToken),
@@ -476,6 +478,7 @@ pub(super) const AUTH_TABLE: &[(&str, &str, AuthScheme)] = &[
 	("POST", "/_matrix/client/v4/sync", AuthScheme::AccessToken),
 	("POST", "/_matrix/client/v5/sync", AuthScheme::AccessToken),
 	("GET", "/_matrix/client/versions", AuthScheme::AccessTokenOptional),
+	("POST", "/_matrix/federation/unstable/event_relationships", AuthScheme::ServerSignatures),
 	("GET", "/_matrix/federation/unstable/io.fsky.vel/edutypes", AuthScheme::None),
 	(
 		"GET",

@@ -293,7 +293,7 @@ pub mod set_avatar_url {
 
 		endpoint! {
 			method: "PUT", path: "/_matrix/client/v3/profile/{userId}/avatar_url",
-			request { path { user_id: OwnedUserId } query {} body { avatar_url: Option<OwnedMxcUri> } }
+			request { path { user_id: OwnedUserId } query {} body { avatar_url: Option<OwnedMxcUri>, blurhash: Option<String> } }
 			response {}
 		}
 	}

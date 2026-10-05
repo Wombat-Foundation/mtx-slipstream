@@ -137,7 +137,7 @@ pub mod get_3pids {
 pub mod add_3pid {
 	pub mod v3 {
 		use crate::endpoint;
-		endpoint! { method: "POST", path: "/_matrix/client/v3/account/3pid/add", request { path {} query {} body { client_secret: String, sid: String, id_server: Option<String>, id_server_access_token: Option<String> } } response {} }
+		endpoint! { method: "POST", path: "/_matrix/client/v3/account/3pid/add", request { path {} query {} body { client_secret: String, sid: String, id_server: Option<String>, id_server_access_token: Option<String>, auth: Option<crate::uiaa::AuthData> } } response {} }
 	}
 }
 pub mod delete_3pid {

@@ -1,6 +1,7 @@
 pub mod account;
 pub mod admin;
 pub mod alias;
+pub mod compat;
 pub mod config;
 pub mod context;
 pub mod keys;

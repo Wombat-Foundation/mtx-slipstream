@@ -347,6 +347,9 @@ impl Serialize for RoomRedactionEventContent {
 		if let Some(redacts) = &self.redacts {
 			insert(&mut o, "redacts", redacts);
 		}
+		if let Some(reason) = &self.reason {
+			insert(&mut o, "reason", reason);
+		}
 		Value::Object(o)
 	}
 }
@@ -354,6 +357,7 @@ impl Deserialize for RoomRedactionEventContent {
 	fn from_json(value: &Value) -> Result<Self, DeError> {
 		Ok(Self {
 			redacts: field(object(value)?, "redacts")?,
+			reason: field(object(value)?, "reason")?,
 		})
 	}
 }

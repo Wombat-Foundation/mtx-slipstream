@@ -1,7 +1,7 @@
 pub mod get_relating_events {
 	pub mod v1 {
 		use crate::{OwnedEventId, OwnedRoomId, UInt, api::Direction, endpoint, serde::Raw};
-		endpoint! { method: "GET", path: "/_matrix/client/v1/rooms/{roomId}/relations/{eventId}", request { path { room_id: OwnedRoomId, event_id: OwnedEventId } query { from: Option<String>, to: Option<String>, limit: UInt, dir: Direction } body {} } response { chunk: Vec<Raw<crate::events::AnyTimelineEvent>>, next_batch: Option<String>, prev_batch: Option<String>, recursion_depth: Option<UInt> } }
+		endpoint! { method: "GET", path: "/_matrix/client/v1/rooms/{roomId}/relations/{eventId}", request { path { room_id: OwnedRoomId, event_id: OwnedEventId } query { from: Option<String>, to: Option<String>, limit: Option<UInt>, dir: Direction, recurse: bool } body {} } response { chunk: Vec<Raw<crate::events::AnyTimelineEvent>>, next_batch: Option<String>, prev_batch: Option<String>, recursion_depth: Option<UInt> } }
 	}
 }
 pub mod get_relating_events_with_rel_type {
