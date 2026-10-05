@@ -29,27 +29,6 @@ pub enum RoomNetwork {
 	ThirdParty(String),
 }
 
-impl Serialize for RoomNetwork {
-	fn to_json(&self) -> Value {
-		Value::String(match self {
-			Self::Matrix => "matrix".into(),
-			Self::All => "all".into(),
-			Self::ThirdParty(id) => id.clone(),
-		})
-	}
-}
-
-impl Deserialize for RoomNetwork {
-	fn from_json(value: &Value) -> Result<Self, DeError> {
-		match value.as_str() {
-			Some("matrix") => Ok(Self::Matrix),
-			Some("all") => Ok(Self::All),
-			Some(id) => Ok(Self::ThirdParty(id.to_owned())),
-			None => Err(DeError::expected("room network")),
-		}
-	}
-}
-
 impl RoomNetwork {
 	fn fields(&self) -> (bool, Option<&str>) {
 		match self {
@@ -285,22 +264,62 @@ pub mod get_public_rooms_filtered {
 pub mod federation {
 	pub mod get_public_rooms {
 		pub mod v1 {
-			crate::endpoint! {
-				method: "GET", path: "/_matrix/federation/v1/publicRooms",
-				request {
-					path {}
-					query {
-						limit: Option<crate::UInt>,
-						since: Option<alloc::string::String>,
-						room_network: crate::directory::RoomNetwork
-					}
-					body {}
-				}
-				response {
+			use crate::{directory::RoomNetwork, json::Value};
+
+			crate::endpoint_response! { response {
 					chunk: alloc::vec::Vec<crate::directory::PublicRoomsChunk>,
 					next_batch: Option<alloc::string::String>,
 					prev_batch: Option<alloc::string::String>,
 					total_room_count_estimate: Option<crate::UInt>,
+			} }
+			pub struct Request {
+				pub limit: Option<crate::UInt>,
+				pub since: Option<alloc::string::String>,
+				pub room_network: crate::directory::RoomNetwork,
+			}
+			impl crate::endpoint::EndpointRequest for Request {
+				type Response = Response;
+				const METADATA: crate::endpoint::Metadata =
+					crate::endpoint::Metadata::new("GET", "/_matrix/federation/v1/publicRooms");
+				fn path_args(&self) -> crate::endpoint::Strs {
+					alloc::vec::Vec::new()
+				}
+				fn query(&self) -> crate::endpoint::Pairs {
+					let (all, third_party) = self.room_network.fields();
+					let mut params = alloc::vec![
+						("limit", crate::codec::Serialize::to_json(&self.limit)),
+						("since", crate::codec::Serialize::to_json(&self.since)),
+						(
+							"third_party_instance_id",
+							crate::codec::Serialize::to_json(&third_party)
+						),
+					];
+					if all {
+						params.push(("include_all_networks", Value::Bool(true)));
+					}
+					crate::endpoint::query_pairs(params)
+				}
+				fn body(&self) -> Option<crate::json::Value> {
+					None
+				}
+				fn from_parts(
+					path: &[crate::endpoint::Str],
+					query: &[crate::endpoint::Pair],
+					body: Option<&crate::json::Value>,
+				) -> Result<Self, crate::codec::DeError> {
+					let input = crate::endpoint::Input::new(path, query, body);
+					let all = input.query::<Option<bool>>("include_all_networks")?.unwrap_or(false);
+					let third_party = input.query("third_party_instance_id")?;
+					if all && third_party.is_some() {
+						return Err(crate::codec::DeError::expected("exclusive room network"));
+					}
+					let value = Self {
+						limit: input.query("limit")?,
+						since: input.query("since")?,
+						room_network: RoomNetwork::from_fields(all, third_party),
+					};
+					input.finish()?;
+					Ok(value)
 				}
 			}
 		}
@@ -335,6 +354,68 @@ mod tests {
 			get_public_rooms_filtered::v3::Request::from_parts(&[], &[], Some(&body)).unwrap();
 		assert_eq!(back.room_network, RoomNetwork::All);
 		assert_eq!(back.limit, Some(5));
+	}
+
+	#[test]
+	fn federation_request_flattens_room_network() {
+		use federation::get_public_rooms::v1::Request;
+
+		let matrix = Request {
+			limit: None,
+			since: None,
+			room_network: RoomNetwork::Matrix,
+		};
+		assert!(matrix.query().is_empty());
+
+		let all = Request {
+			limit: None,
+			since: None,
+			room_network: RoomNetwork::All,
+		};
+		assert_eq!(all.query(), [("include_all_networks".into(), "true".into())]);
+
+		let third_party = Request {
+			limit: None,
+			since: None,
+			room_network: RoomNetwork::ThirdParty("example.org".into()),
+		};
+		assert_eq!(
+			third_party.query(),
+			[("third_party_instance_id".into(), "example.org".into())]
+		);
+
+		let parsed =
+			Request::from_parts(&[], &[("include_all_networks".into(), "true".into())], None)
+				.unwrap();
+		assert_eq!(parsed.room_network, RoomNetwork::All);
+		assert!(
+			Request::from_parts(
+				&[],
+				&[
+					("include_all_networks".into(), "true".into()),
+					("third_party_instance_id".into(), "example.org".into()),
+				],
+				None,
+			)
+			.is_err()
+		);
+	}
+
+	#[test]
+	fn federation_request_networks_round_trip() {
+		use federation::get_public_rooms::v1::Request;
+
+		for room_network in [RoomNetwork::Matrix, RoomNetwork::All, RoomNetwork::ThirdParty("example.org".into())] {
+			let request = Request {
+				limit: None,
+				since: None,
+				room_network,
+			};
+			let query = request.query();
+			let decoded = Request::from_parts(&[], &query, None).unwrap();
+			assert_eq!(decoded.room_network, request.room_network);
+			assert!(!query.iter().any(|(key, _)| key == "room_network"));
+		}
 	}
 
 	#[test]
