@@ -281,7 +281,10 @@ pub mod invite_user {
 		use alloc::{string::String, vec::Vec};
 
 		pub use super::super::InvitationRecipient;
-		use super::super::*;
+		use super::super::{
+			DeError, Deserialize, EndpointRequest, EndpointResponse, Input, Invite3pid, Metadata,
+			OwnedRoomId, Serialize, Value, object_from,
+		};
 
 		const _: Metadata = Metadata::new("POST", "/_matrix/client/v3/rooms/{room_id}/invite");
 
@@ -376,7 +379,7 @@ pub mod invite_user {
 
 		impl EndpointResponse for Response {
 			fn to_body(&self) -> Value {
-				Value::Object(Default::default())
+				Value::Object(crate::json::Object::default())
 			}
 
 			fn from_body(_body: &Value) -> Result<Self, DeError> {
@@ -390,7 +393,10 @@ pub mod join_room_by_id_or_alias {
 	pub mod v3 {
 		use alloc::{string::String, vec::Vec};
 
-		use super::super::*;
+		use super::super::{
+			DeError, EndpointRequest, EndpointResponse, Input, Metadata, OwnedRoomId,
+			OwnedRoomOrAliasId, OwnedServerName, Serialize, ThirdPartySigned, Value, object_from,
+		};
 
 		const _: Metadata = Metadata::new("POST", "/_matrix/client/v3/join/{room_id_or_alias}");
 
@@ -497,7 +503,10 @@ pub mod knock_room {
 	pub mod v3 {
 		use alloc::{string::String, vec::Vec};
 
-		use super::super::*;
+		use super::super::{
+			DeError, EndpointRequest, EndpointResponse, Input, Metadata, OwnedRoomId,
+			OwnedRoomOrAliasId, OwnedServerName, Serialize, Value, object_from,
+		};
 
 		const _: Metadata = Metadata::new("POST", "/_matrix/client/v3/knock/{room_id_or_alias}");
 
@@ -651,7 +660,7 @@ mod tests {
 			Some(&body),
 		)
 		.unwrap();
-		let via: Vec<&str> = request.via.iter().map(|server| server.as_str()).collect();
+		let via: Vec<&str> = request.via.iter().map(crate::OwnedServerName::as_str).collect();
 		assert_eq!(via, ["a.example", "b.example"]);
 		assert_eq!(request.reason.as_deref(), Some("because"));
 		assert!(request.third_party_signed.is_none());
@@ -676,7 +685,7 @@ mod tests {
 			Some(&json!({"reason": "let me in"})),
 		)
 		.unwrap();
-		let via: Vec<&str> = request.via.iter().map(|server| server.as_str()).collect();
+		let via: Vec<&str> = request.via.iter().map(crate::OwnedServerName::as_str).collect();
 		assert_eq!(via, ["new.example", "legacy.example"]);
 		assert_eq!(request.reason.as_deref(), Some("let me in"));
 	}

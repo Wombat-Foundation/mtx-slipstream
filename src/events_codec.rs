@@ -278,7 +278,9 @@ impl Deserialize for RoomPowerLevelsEventContent {
 			state_default: level(o, "state_default", 50)?,
 			users: level_map(o, "users")?,
 			users_default: level(o, "users_default", 0)?,
-			notifications: o.get("notifications").map_or_else(|| Ok(Default::default()), from_value)?,
+			notifications: o
+				.get("notifications")
+				.map_or_else(|| Ok(NotificationPowerLevels::default()), from_value)?,
 		})
 	}
 }
@@ -537,7 +539,8 @@ mod member_tests {
 		] {
 			assert!(from_str::<RoomPowerLevelsEventContent>(body).is_err(), "{body}");
 		}
-		let padded: RoomPowerLevelsEventContent = from_str(r#"{"ban":" 70 ","kick":"+5"}"#).unwrap();
+		let padded: RoomPowerLevelsEventContent =
+			from_str(r#"{"ban":" 70 ","kick":"+5"}"#).unwrap();
 		assert_eq!((padded.ban, padded.kick), (70, 5));
 	}
 
@@ -563,7 +566,7 @@ mod member_tests {
 		assert!(empty_avatar.avatar_url.is_none());
 		for body in [
 			r#"{"membership":null}"#,
-			r#"{}"#,
+			r"{}",
 			// The closed set of membership values: unknown strings are rejected.
 			r#"{"membership":"custom"}"#,
 			r#"{"membership":"join","third_party_invite":{"signed":{"mxid":"@b:s","token":"t"}}}"#,

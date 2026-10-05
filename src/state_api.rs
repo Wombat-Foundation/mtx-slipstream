@@ -42,7 +42,10 @@ pub mod get_state_events {
 
 pub mod get_state_events_for_key {
 	pub mod v3 {
-		use super::super::*;
+		use super::super::{
+			DeError, EndpointRequest, EndpointResponse, Input, Metadata, OwnedRoomId, Serialize,
+			StateEventType, String, Value, Vec, path_args, query_pairs,
+		};
 
 		const PATH: &str = "/_matrix/client/v3/rooms/{room_id}/state/{event_type}/{state_key}";
 		const _: Metadata = Metadata::new("GET", PATH);
@@ -147,7 +150,11 @@ pub mod get_state_events_for_key {
 
 pub mod send_state_event {
 	pub mod v3 {
-		use super::super::*;
+		use super::super::{
+			AnyStateEventContent, DeError, EndpointRequest, Input, Metadata,
+			MilliSecondsSinceUnixEpoch, OwnedEventId, OwnedRoomId, Raw, Serialize,
+			StateEventType, String, Value, Vec, path_args, query_pairs,
+		};
 
 		const PATH: &str = "/_matrix/client/v3/rooms/{room_id}/state/{event_type}/{state_key}";
 		const _: Metadata = Metadata::new("PUT", PATH);

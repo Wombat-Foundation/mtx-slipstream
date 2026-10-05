@@ -269,14 +269,18 @@ mod tests {
 
 	#[test]
 	fn unknown_filter_keys_survive_a_round_trip() {
-		let text = r#"{"org.matrix.msc4429.profile_fields":{"ids":["a","b"]},"room":{"limit":1}}"#;
+		let text =
+			r#"{"org.matrix.msc4429.profile_fields":{"ids":["a","b"]},"room":{"limit":1}}"#;
 		let filter: FilterDefinition = from_str(text).unwrap();
 		let fields = &filter.extensions["org.matrix.msc4429.profile_fields"];
 		assert_eq!(fields.get("ids").and_then(Value::as_array).map(Vec::len), Some(2));
 		assert!(!filter.extensions.contains_key("room"));
 		let encoded = crate::codec::to_value(&filter);
 		assert!(encoded.get("org.matrix.msc4429.profile_fields").is_some());
-		assert_eq!(from_str::<FilterDefinition>(&crate::codec::to_string(&filter)).unwrap().extensions, filter.extensions);
+		assert_eq!(
+			from_str::<FilterDefinition>(&crate::codec::to_string(&filter)).unwrap().extensions,
+			filter.extensions
+		);
 	}
 
 	#[test]

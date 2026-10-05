@@ -150,9 +150,10 @@ pub mod create_room {
 				};
 				// Appservices may use the namespaced spellings; the plain key wins.
 				let mut fields = fields.clone();
-				for (alias, key) in
-					[("fi.mau.room_id", "room_id"), ("fi.mau.origin_server_ts", "origin_server_ts")]
-				{
+				for (alias, key) in [
+					("fi.mau.room_id", "room_id"),
+					("fi.mau.origin_server_ts", "origin_server_ts"),
+				] {
 					if let Some(value) = fields.remove(alias) {
 						fields.entry(key.into()).or_insert(value);
 					}

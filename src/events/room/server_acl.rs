@@ -78,9 +78,7 @@ impl RoomServerAclEventContent {
 
 fn matches_any(patterns: &[String], host: &str) -> bool {
 	let host = host.to_lowercase();
-	patterns
-		.iter()
-		.any(|pattern| glob_match(&pattern.to_lowercase(), &host))
+	patterns.iter().any(|pattern| glob_match(&pattern.to_lowercase(), &host))
 }
 
 fn contains_any(entries: &[String], host: &str) -> bool {

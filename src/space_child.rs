@@ -54,9 +54,9 @@ impl Deserialize for SpaceChildEventContent {
 			// Like the serde `default` field: absent is false, but `null` or a
 			// non-bool is an error.
 			suggested: match value.get("suggested") {
-				| Some(Value::Bool(suggested)) => *suggested,
-				| Some(_) => return Err(DeError::expected("bool")),
-				| None => false,
+				Some(Value::Bool(suggested)) => *suggested,
+				Some(_) => return Err(DeError::expected("bool")),
+				None => false,
 			},
 		})
 	}
@@ -107,7 +107,10 @@ mod tests {
 			order: Some("01".into()),
 			suggested: true,
 		};
-		assert_eq!(to_string(&full), r#"{"order":"01","suggested":true,"via":["a.org","b.org"]}"#);
+		assert_eq!(
+			to_string(&full),
+			r#"{"order":"01","suggested":true,"via":["a.org","b.org"]}"#
+		);
 		assert_eq!(from_str::<SpaceChildEventContent>(&to_string(&full)).unwrap(), full);
 	}
 

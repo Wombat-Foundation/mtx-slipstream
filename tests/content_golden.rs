@@ -13,7 +13,9 @@ use mtx_slipstream::{
 	},
 };
 
-fn member(json: &str) -> RoomMemberEventContent { from_str(json).unwrap() }
+fn member(json: &str) -> RoomMemberEventContent {
+	from_str(json).unwrap()
+}
 
 #[test]
 fn member_minimal_omits_every_none() {
@@ -41,7 +43,10 @@ fn member_decodes_renamed_keys() {
 	let content = member(
 		r#"{"membership":"join","join_authorised_via_users_server":"@a:b","org.matrix.msc4293.redact_events":true,"xyz.amorgan.blurhash":"h"}"#,
 	);
-	assert_eq!(content.join_authorized_via_users_server.as_ref().map(ToString::to_string).as_deref(), Some("@a:b"));
+	assert_eq!(
+		content.join_authorized_via_users_server.as_ref().map(ToString::to_string).as_deref(),
+		Some("@a:b")
+	);
 	assert_eq!(content.redact_events, Some(true));
 	assert_eq!(content.blurhash.as_deref(), Some("h"));
 }
@@ -92,7 +97,9 @@ fn space_child_wrong_types_match_serde() {
 	assert!(from_str::<SpaceChildEventContent>(r#"{"suggested":null,"via":[]}"#).is_err());
 	assert!(from_str::<SpaceChildEventContent>(r#"{"suggested":"yes","via":[]}"#).is_err());
 	assert!(from_str::<SpaceChildEventContent>(r#"{"order":5,"via":[]}"#).is_err());
-	assert!(from_str::<SpaceChildEventContent>(r#"{"order":null,"via":[]}"#).unwrap().order.is_none());
+	assert!(
+		from_str::<SpaceChildEventContent>(r#"{"order":null,"via":[]}"#).unwrap().order.is_none()
+	);
 	assert!(from_str::<SpaceChildEventContent>(r#"{"suggested":true}"#).is_err());
 }
 

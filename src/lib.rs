@@ -77,11 +77,13 @@ pub mod json {
 macro_rules! json {
 	(null) => { $crate::json::Value::Null };
 	([ $($values:tt)* ]) => {{
+		#[allow(unused_mut)]
 		let mut values = $crate::alloc_vec();
 		$crate::json!(@array values; $($values)*);
 		$crate::json::Value::Array(values)
 	}};
 	({ $($values:tt)* }) => {{
+		#[allow(unused_mut)]
 		let mut object = $crate::json::Object::new();
 		$crate::json!(@object object; $($values)*);
 		$crate::json::Value::Object(object)

@@ -127,7 +127,10 @@ pub mod get_profile_information {
 				let custom_profile_fields = object
 					.iter()
 					.filter(|(key, _)| {
-						!matches!(key.as_str(), "displayname" | "avatar_url" | "xyz.amorgan.blurhash")
+						!matches!(
+							key.as_str(),
+							"displayname" | "avatar_url" | "xyz.amorgan.blurhash"
+						)
 					})
 					.map(|(key, value)| (key.clone(), value.clone()))
 					.collect();
