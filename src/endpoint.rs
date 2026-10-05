@@ -898,14 +898,14 @@ macro_rules! endpoint_request {
 
 			fn query(&self) -> $crate::endpoint::Pairs {
 				$crate::endpoint::query_pairs_mut(&mut [
-					$((stringify!($query_field), $crate::codec::Serialize::to_json(&self.$query_field))),*
+					$((stringify!($query_field), $crate::endpoint::enc(&self.$query_field))),*
 				])
 			}
 
 			fn body(&self) -> Option<$crate::json::Value> {
 				$crate::endpoint::body_value(
 					<Self as $crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [$((stringify!($body_field_name), $crate::codec::Serialize::to_json(&self.$body_field_name))),*],
+					&mut [$((stringify!($body_field_name), $crate::endpoint::enc(&self.$body_field_name))),*],
 				)
 			}
 
@@ -943,7 +943,7 @@ macro_rules! endpoint_response {
 		impl $crate::endpoint::EndpointResponse for Response {
 			fn to_body(&self) -> $crate::json::Value {
 				$crate::endpoint::body_object(&mut [
-					$((stringify!($resp_field), $crate::codec::Serialize::to_json(&self.$resp_field))),*
+					$((stringify!($resp_field), $crate::endpoint::enc(&self.$resp_field))),*
 				])
 			}
 
@@ -1019,12 +1019,12 @@ macro_rules! endpoint_request_raw {
 
 			fn query(&self) -> $crate::endpoint::Pairs {
 				$crate::endpoint::query_pairs_mut(&mut [
-					$((stringify!($query_field), $crate::codec::Serialize::to_json(&self.$query_field))),*
+					$((stringify!($query_field), $crate::endpoint::enc(&self.$query_field))),*
 				])
 			}
 
 			fn body(&self) -> Option<$crate::json::Value> {
-				Some($crate::codec::Serialize::to_json(&self.$body_field))
+				Some($crate::endpoint::enc(&self.$body_field))
 			}
 
 			fn from_parts(
@@ -1062,7 +1062,7 @@ macro_rules! endpoint_response_flat {
 
 		impl $crate::endpoint::EndpointResponse for Response {
 			fn to_body(&self) -> $crate::json::Value {
-				$crate::codec::Serialize::to_json(&self.$field)
+				$crate::endpoint::enc(&self.$field)
 			}
 
 			fn from_body(body: &$crate::json::Value) -> $crate::endpoint::Parsed<Self> {
@@ -1092,7 +1092,7 @@ macro_rules! endpoint_response_status_array {
 			fn to_body(&self) -> $crate::json::Value {
 				$crate::json::Value::Array(::alloc::vec![
 					$crate::codec::Serialize::to_json(&200_u64),
-					$crate::codec::Serialize::to_json(&self.$field),
+					$crate::endpoint::enc(&self.$field),
 				])
 			}
 
