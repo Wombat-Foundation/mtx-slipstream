@@ -98,7 +98,7 @@ macro_rules! sync_struct {
 		}
 	) => {
 		$(#[$meta])*
-		#[derive(Debug, Default)]
+		#[derive(Clone, Debug, Default)]
 		pub struct $name {
 			$($(#[$fmeta])* pub $field: $ty),*
 		}
@@ -670,7 +670,7 @@ pub mod v5 {
 		sync_basics!(Receipts);
 
 		/// Rooms a receipts extension covers: every subscribed room (`*`) or one room.
-		#[derive(Debug, Eq, PartialEq)]
+		#[derive(Clone, Debug, Eq, PartialEq)]
 		pub enum ReceiptsRoom {
 			AllSubscribed,
 			Room(OwnedRoomId),

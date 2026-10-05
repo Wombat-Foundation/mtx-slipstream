@@ -9,7 +9,7 @@ use crate::{
 };
 
 /// A namespace of user IDs, room aliases or room IDs an appservice claims.
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Namespace {
 	pub exclusive: bool,
 	pub regex: String,
@@ -17,7 +17,7 @@ pub struct Namespace {
 
 impl_codec_struct!(Namespace { regex: String } default { exclusive: bool });
 
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Namespaces {
 	pub users: Vec<Namespace>,
 	pub aliases: Vec<Namespace>,
@@ -31,7 +31,7 @@ impl_codec_struct!(Namespaces {} default {
 });
 
 /// An appservice registration file.
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Registration {
 	pub id: String,
 	/// Where the appservice listens; `None` (or the string `null`) for an

@@ -140,7 +140,7 @@ impl<A, K> Deserialize for OwnedKeyId<A, K> {
 }
 
 /// An algorithm for one-time keys.
-#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum OneTimeKeyAlgorithm {
 	Curve25519,
 	SignedCurve25519,

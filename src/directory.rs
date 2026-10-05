@@ -48,7 +48,7 @@ impl RoomNetwork {
 }
 
 /// A room type to filter the directory by.
-#[derive(Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub enum RoomTypeFilter {
 	/// Rooms without a type.
 	#[default]

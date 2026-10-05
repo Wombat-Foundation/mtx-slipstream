@@ -10,7 +10,7 @@ use crate::{
 
 macro_rules! event_type {
 	($name:ident { $($variant:ident => $wire:literal),* $(,)? }) => {
-		#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+		#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 		pub enum $name {
 			$($variant,)*
 			Custom(String),

@@ -778,7 +778,7 @@ pub mod api {
 			pub enum RetryAfter {
 				Delay(core::time::Duration),
 			}
-			#[derive(Debug)]
+			#[derive(Clone, Debug)]
 			pub enum ErrorKind {
 				LimitExceeded {
 					retry_after: Option<RetryAfter>,
@@ -878,7 +878,7 @@ pub mod events {
 		GlobalAccountDataEventType, MessageLikeEventType, RoomAccountDataEventType,
 		StateEventType, TimelineEventType,
 	};
-	#[derive(Debug, Default)]
+	#[derive(Debug, Default, Clone)]
 	pub struct AnyGlobalAccountDataEvent;
 	pub type AnyGlobalAccountDataEventContent = AnyGlobalAccountDataEvent;
 	#[derive(Debug)]
@@ -886,12 +886,12 @@ pub mod events {
 		Room(crate::serde::Raw<AnyRoomAccountDataEvent>),
 		Global(crate::serde::Raw<AnyGlobalAccountDataEvent>),
 	}
-	#[derive(Debug, Default)]
+	#[derive(Debug, Default, Clone)]
 	pub struct AnyRoomAccountDataEvent;
 	pub type AnyRoomAccountDataEventContent = AnyRoomAccountDataEvent;
 	mod ephemeral;
 	pub use ephemeral::{AnySyncEphemeralRoomEvent, SyncReceiptEvent, SyncTypingEvent};
-	#[derive(Debug, Default)]
+	#[derive(Debug, Default, Clone)]
 	pub struct AnyToDeviceEvent;
 	pub use mentions::Mentions;
 	pub mod direct;
@@ -1349,7 +1349,7 @@ pub mod events {
 	}
 	#[derive(Debug, Default)]
 	pub struct AnyTimelineEvent;
-	#[derive(Debug, Default)]
+	#[derive(Debug, Default, Clone)]
 	pub struct AnySyncTimelineEvent;
 	#[derive(Debug, Default)]
 	pub struct AnyMessageLikeEvent;
@@ -1359,9 +1359,9 @@ pub mod events {
 	pub struct AnyStateEventContent;
 	#[derive(Debug, Default)]
 	pub struct AnyStateEvent;
-	#[derive(Debug, Default)]
+	#[derive(Debug, Default, Clone)]
 	pub struct AnySyncStateEvent;
-	#[derive(Debug, Default)]
+	#[derive(Debug, Default, Clone)]
 	pub struct AnyStrippedStateEvent;
 	#[derive(Debug, Default)]
 	pub struct StateEvent<T>(pub core::marker::PhantomData<T>);
@@ -1428,6 +1428,11 @@ pub mod serde {
 
 	#[derive(Debug, Default)]
 	pub struct Raw<T>(pub alloc::string::String, pub PhantomData<T>);
+	impl<T> Clone for Raw<T> {
+		fn clone(&self) -> Self {
+			Self(self.0.clone(), PhantomData)
+		}
+	}
 
 	/// Raw JSON text backed by Slipstream's JSON codec.
 	pub type RawJsonValue = Raw<crate::json::Value>;
@@ -1520,7 +1525,7 @@ pub mod serde {
 		}
 	}
 
-	#[derive(Debug, Default, Eq, PartialEq)]
+	#[derive(Clone, Debug, Default, Eq, PartialEq)]
 	pub struct Base64(pub alloc::vec::Vec<u8>);
 	use crate::{Int, codec::DeError, json::Value};
 

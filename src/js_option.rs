@@ -6,7 +6,7 @@ use crate::{
 };
 
 /// Distinguishes `null` from a missing field, as Matrix avatars require.
-#[derive(Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub enum JsOption<T> {
 	Some(T),
 	Null,

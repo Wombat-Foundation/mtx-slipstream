@@ -17,7 +17,7 @@ pub mod discover_homeserver {
 }
 
 /// A server's current public signing key.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct VerifyKey {
 	pub key: Base64,
 }
@@ -36,7 +36,7 @@ crate::impl_codec_struct!(VerifyKey {
 });
 
 /// A server's expired public signing key.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct OldVerifyKey {
 	pub expired_ts: MilliSecondsSinceUnixEpoch,
 	pub key: Base64,
