@@ -20,3 +20,21 @@ pub mod send_knock {
 		crate::endpoint_response! { response { knock_room_state: Vec<Raw<Value>> } }
 	}
 }
+
+pub mod create_knock_event_template {
+	pub mod v1 {
+		use alloc::vec::Vec;
+
+		use crate::{OwnedRoomId, OwnedUserId, RoomVersionId, endpoint, federation_api::RawPdu};
+
+		endpoint! {
+			method: "GET", path: "/_matrix/federation/v1/make_knock/{room_id}/{user_id}",
+			request {
+				path { room_id: OwnedRoomId, user_id: OwnedUserId }
+				query { ver: Vec<RoomVersionId> }
+				body {}
+			}
+			response { room_version: RoomVersionId, event: RawPdu }
+		}
+	}
+}

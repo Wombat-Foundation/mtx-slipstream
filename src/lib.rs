@@ -17,6 +17,7 @@ pub mod codec;
 pub mod device;
 pub mod filter;
 pub mod id_validation;
+pub mod membership;
 pub mod room_api;
 pub mod search;
 pub mod session;
@@ -638,6 +639,17 @@ pub mod api {
 				get_content_as_filename, get_content_thumbnail, get_media_config,
 				get_media_preview,
 			};
+		}
+		pub mod membership {
+			pub use crate::membership::{
+				InvitationRecipient, MembershipEventFilter, RoomMember, ThirdPartySigned,
+				ban_user, forget_room, get_member_events, invite_user, join_room_by_id,
+				join_room_by_id_or_alias, joined_members, joined_rooms, kick_user, leave_room,
+				unban_user,
+			};
+		}
+		pub mod knock {
+			pub use crate::membership::knock_room;
 		}
 		pub mod session {
 			pub use crate::session::{
