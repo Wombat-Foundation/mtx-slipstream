@@ -8,9 +8,12 @@
 use std::collections::BTreeMap;
 
 use mtx_slipstream::{
-	client_api::keys::claim_keys,
+	client_api::{
+		keys::claim_keys,
+		profile_keys::{get_profile_key, set_profile_key},
+	},
 	codec::{from_str, to_string},
-	endpoint::EndpointResponse,
+	endpoint::{EndpointRequest, EndpointResponse},
 	json::Value,
 };
 
@@ -84,4 +87,23 @@ fn claim_keys_new_matches_ruwuma_defaults() {
 
 	assert!(response.failures.is_empty(), "ruwuma's new() starts with no failures");
 	assert_eq!(to_string(&response.to_body()), r#"{"failures":{},"one_time_keys":{}}"#);
+}
+
+#[test]
+fn get_profile_key_response_is_the_bare_map() {
+	let fixture = r#"{"m.example":{"a":1}}"#;
+	let response: get_profile_key::unstable::Response = golden(fixture);
+	assert_eq!(response.value.len(), 1);
+	assert!(response.value.contains_key("m.example"));
+}
+
+#[test]
+fn set_profile_key_body_is_the_bare_object() {
+	let kv_pair = BTreeMap::from([("m.example".to_owned(), from_str::<Value>("true").unwrap())]);
+	let request = set_profile_key::unstable::Request {
+		user_id: mtx_slipstream::user_id!("@a:example.org"),
+		key_name: "m.example".to_owned(),
+		kv_pair,
+	};
+	assert_eq!(to_string(&request.body().unwrap()), r#"{"m.example":true}"#);
 }

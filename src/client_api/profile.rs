@@ -1,3 +1,5 @@
+pub use crate::client_api::profile_keys::{delete_profile_key, get_profile_key, set_profile_key};
+
 pub mod get_profile {
 	pub mod v3 {
 		use crate::{OwnedMxcUri, OwnedUserId, endpoint};

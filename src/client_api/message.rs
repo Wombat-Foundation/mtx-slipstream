@@ -1,3 +1,5 @@
+pub use crate::client_api::message_events::get_message_events;
+
 pub mod send_message_event {
 	pub mod v3 {
 		use crate::{

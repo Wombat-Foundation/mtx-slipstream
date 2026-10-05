@@ -644,20 +644,34 @@ pub fn body_field<T: Deserialize>(body: Option<&Value>, name: &str) -> Result<T,
 
 /// Builds a JSON object from named values, omitting nulls.
 #[must_use]
-pub fn object_from(fields: Vec<(&str, Value)>) -> Object {
+pub fn object_from(mut fields: Vec<(&str, Value)>) -> Object {
+	object_from_mut(&mut fields)
+}
+
+/// Builds a JSON object from named values, omitting nulls and moving the rest out.
+#[doc(hidden)]
+#[must_use]
+pub fn object_from_mut(fields: &mut [(&str, Value)]) -> Object {
 	fields
-		.into_iter()
+		.iter_mut()
 		.filter(|(_, value)| !value.is_null())
-		.map(|(name, value)| (name.to_string(), value))
+		.map(|(name, value)| ((*name).to_string(), core::mem::replace(value, Value::Null)))
 		.collect()
 }
 
 /// Flattens named values into query pairs: nulls are dropped and arrays repeat the key.
 #[must_use]
-pub fn query_pairs(params: Vec<(&str, Value)>) -> Vec<(String, String)> {
+pub fn query_pairs(mut params: Vec<(&str, Value)>) -> Vec<(String, String)> {
+	query_pairs_mut(&mut params)
+}
+
+/// Flattens named values into query pairs, moving the values out.
+#[doc(hidden)]
+#[must_use]
+pub fn query_pairs_mut(params: &mut [(&str, Value)]) -> Pairs {
 	let mut pairs = Vec::new();
 	for (name, value) in params {
-		let items = match value {
+		let items = match core::mem::replace(value, Value::Null) {
 			Value::Array(items) => items,
 			other => alloc::vec![other],
 		};
@@ -667,11 +681,66 @@ pub fn query_pairs(params: Vec<(&str, Value)>) -> Vec<(String, String)> {
 				Value::String(text) => text,
 				other => crate::json::write_string_value(&other).unwrap_or_default(),
 			};
-			pairs.push((name.to_string(), rendered));
+			pairs.push(((*name).to_string(), rendered));
 		}
 	}
 	pairs
 }
+
+/// A request body of named fields; an empty `GET` body is omitted.
+#[doc(hidden)]
+#[must_use]
+pub fn body_value(method: &str, fields: &mut [(&str, Value)]) -> Option<Value> {
+	let object = object_from_mut(fields);
+	if object.is_empty() && method == "GET" {
+		None
+	} else {
+		Some(Value::Object(object))
+	}
+}
+
+/// A response body of named fields.
+#[doc(hidden)]
+#[must_use]
+pub fn body_object(fields: &mut [(&str, Value)]) -> Value {
+	Value::Object(object_from_mut(fields))
+}
+
+/// A path argument rendered for the URL; null renders empty.
+#[doc(hidden)]
+#[must_use]
+pub fn path_param<T: Serialize>(value: &T) -> String {
+	to_param(value).unwrap_or_default()
+}
+
+/// Collects rendered path arguments, moving the strings out.
+#[doc(hidden)]
+#[must_use]
+pub fn path_args_from(args: &mut [String]) -> Strs {
+	args.iter_mut().map(core::mem::take).collect()
+}
+
+/// Opaque `Debug` for generated request and response types.
+#[doc(hidden)]
+pub fn opaque_debug(f: &mut Fmt<'_>, name: &str) -> FmtResult {
+	f.write_str(name)
+}
+
+// Short names keep the generated impls small.
+#[doc(hidden)]
+pub type Str = String;
+#[doc(hidden)]
+pub type Strs = Vec<String>;
+#[doc(hidden)]
+pub type Pair = (String, String);
+#[doc(hidden)]
+pub type Pairs = Vec<(String, String)>;
+#[doc(hidden)]
+pub type Parsed<T> = Result<T, DeError>;
+#[doc(hidden)]
+pub type Fmt<'a> = fmt::Formatter<'a>;
+#[doc(hidden)]
+pub type FmtResult = fmt::Result;
 
 /// Reads typed values out of a request or response being decoded.
 pub struct Input<'a> {
@@ -694,6 +763,13 @@ impl<'a> Input<'a> {
 			body,
 			next: core::cell::Cell::new(0),
 		}
+	}
+
+	/// An input with only a body, as for a response.
+	#[doc(hidden)]
+	#[must_use]
+	pub fn body_only(body: &'a Value) -> Self {
+		Self::new(&[], &[], Some(body))
 	}
 
 	/// The next path argument.
@@ -795,8 +871,8 @@ macro_rules! endpoint_request {
 			$(pub $body_field_name: $bt,)*
 		}
 		impl ::core::fmt::Debug for Request {
-			fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-				f.debug_struct(stringify!(Request)).finish()
+			fn fmt(&self, f: &mut $crate::endpoint::Fmt<'_>) -> $crate::endpoint::FmtResult {
+				$crate::endpoint::opaque_debug(f, "Request")
 			}
 		}
 
@@ -807,32 +883,30 @@ macro_rules! endpoint_request {
 			const METADATA: $crate::endpoint::Metadata =
 				$crate::endpoint::Metadata::new($method, $path);
 
-			fn path_args(&self) -> ::alloc::vec::Vec<::alloc::string::String> {
-				::alloc::vec![$($crate::endpoint::to_param(&self.$path_field).unwrap_or_default()),*]
+			fn path_args(&self) -> $crate::endpoint::Strs {
+				$crate::endpoint::path_args_from(&mut [
+					$($crate::endpoint::path_param(&self.$path_field)),*
+				])
 			}
 
-			fn query(&self) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)> {
-				$crate::endpoint::query_pairs(::alloc::vec![
+			fn query(&self) -> $crate::endpoint::Pairs {
+				$crate::endpoint::query_pairs_mut(&mut [
 					$((stringify!($query_field), $crate::codec::Serialize::to_json(&self.$query_field))),*
 				])
 			}
 
 			fn body(&self) -> Option<$crate::json::Value> {
-				let object = $crate::endpoint::object_from(::alloc::vec![
-					$((stringify!($body_field_name), $crate::codec::Serialize::to_json(&self.$body_field_name))),*
-				]);
-				if object.is_empty() && <Self as $crate::endpoint::EndpointRequest>::METADATA.method == "GET" {
-					None
-				} else {
-					Some($crate::json::Value::Object(object))
-				}
+				$crate::endpoint::body_value(
+					<Self as $crate::endpoint::EndpointRequest>::METADATA.method,
+					&mut [$((stringify!($body_field_name), $crate::codec::Serialize::to_json(&self.$body_field_name))),*],
+				)
 			}
 
 			fn from_parts(
-				path: &[::alloc::string::String],
-				query: &[(::alloc::string::String, ::alloc::string::String)],
+				path: &[$crate::endpoint::Str],
+				query: &[$crate::endpoint::Pair],
 				body: Option<&$crate::json::Value>,
-			) -> Result<Self, $crate::codec::DeError> {
+			) -> $crate::endpoint::Parsed<Self> {
 				let input = $crate::endpoint::Input::new(path, query, body);
 				let value = Self {
 					$($path_field: input.path()?,)*
@@ -854,25 +928,23 @@ macro_rules! endpoint_response {
 			$(pub $resp_field: $rt,)*
 		}
 		impl ::core::fmt::Debug for Response {
-			fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-				f.debug_struct(stringify!(Response)).finish()
+			fn fmt(&self, f: &mut $crate::endpoint::Fmt<'_>) -> $crate::endpoint::FmtResult {
+				$crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
 
 		impl $crate::endpoint::EndpointResponse for Response {
 			fn to_body(&self) -> $crate::json::Value {
-				$crate::json::Value::Object($crate::endpoint::object_from(::alloc::vec![
+				$crate::endpoint::body_object(&mut [
 					$((stringify!($resp_field), $crate::codec::Serialize::to_json(&self.$resp_field))),*
-				]))
+				])
 			}
 
-			fn from_body(body: &$crate::json::Value) -> Result<Self, $crate::codec::DeError> {
-				let input = $crate::endpoint::Input::new(&[], &[], Some(body));
-				let value = Self {
-					$($resp_field: input.body(stringify!($resp_field))?,)*
-				};
-				input.finish()?;
-				Ok(value)
+			fn from_body(body: &$crate::json::Value) -> $crate::endpoint::Parsed<Self> {
+				let _input = $crate::endpoint::Input::body_only(body);
+				Ok(Self {
+					$($resp_field: _input.body(stringify!($resp_field))?,)*
+				})
 			}
 		}
 	};
@@ -920,8 +992,8 @@ macro_rules! endpoint_request_raw {
 			pub $body_field: $bt,
 		}
 		impl ::core::fmt::Debug for Request {
-			fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-				f.debug_struct(stringify!(Request)).finish()
+			fn fmt(&self, f: &mut $crate::endpoint::Fmt<'_>) -> $crate::endpoint::FmtResult {
+				$crate::endpoint::opaque_debug(f, "Request")
 			}
 		}
 
@@ -932,12 +1004,14 @@ macro_rules! endpoint_request_raw {
 			const METADATA: $crate::endpoint::Metadata =
 				$crate::endpoint::Metadata::new($method, $path);
 
-			fn path_args(&self) -> ::alloc::vec::Vec<::alloc::string::String> {
-				::alloc::vec![$($crate::endpoint::to_param(&self.$path_field).unwrap_or_default()),*]
+			fn path_args(&self) -> $crate::endpoint::Strs {
+				$crate::endpoint::path_args_from(&mut [
+					$($crate::endpoint::path_param(&self.$path_field)),*
+				])
 			}
 
-			fn query(&self) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)> {
-				$crate::endpoint::query_pairs(::alloc::vec![
+			fn query(&self) -> $crate::endpoint::Pairs {
+				$crate::endpoint::query_pairs_mut(&mut [
 					$((stringify!($query_field), $crate::codec::Serialize::to_json(&self.$query_field))),*
 				])
 			}
@@ -947,10 +1021,10 @@ macro_rules! endpoint_request_raw {
 			}
 
 			fn from_parts(
-				path: &[::alloc::string::String],
-				query: &[(::alloc::string::String, ::alloc::string::String)],
+				path: &[$crate::endpoint::Str],
+				query: &[$crate::endpoint::Pair],
 				body: Option<&$crate::json::Value>,
-			) -> Result<Self, $crate::codec::DeError> {
+			) -> $crate::endpoint::Parsed<Self> {
 				let input = $crate::endpoint::Input::new(path, query, body);
 				let value = Self {
 					$($path_field: input.path()?,)*
@@ -974,8 +1048,8 @@ macro_rules! endpoint_response_flat {
 			pub $field: $ty,
 		}
 		impl ::core::fmt::Debug for Response {
-			fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-				f.debug_struct(stringify!(Response)).finish()
+			fn fmt(&self, f: &mut $crate::endpoint::Fmt<'_>) -> $crate::endpoint::FmtResult {
+				$crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
 
@@ -984,7 +1058,7 @@ macro_rules! endpoint_response_flat {
 				$crate::codec::Serialize::to_json(&self.$field)
 			}
 
-			fn from_body(body: &$crate::json::Value) -> Result<Self, $crate::codec::DeError> {
+			fn from_body(body: &$crate::json::Value) -> $crate::endpoint::Parsed<Self> {
 				Ok(Self {
 					$field: $crate::codec::Deserialize::from_json(body)?,
 				})
@@ -1002,8 +1076,8 @@ macro_rules! endpoint_response_status_array {
 			pub $field: $ty,
 		}
 		impl ::core::fmt::Debug for Response {
-			fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-				f.debug_struct(stringify!(Response)).finish()
+			fn fmt(&self, f: &mut $crate::endpoint::Fmt<'_>) -> $crate::endpoint::FmtResult {
+				$crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
 
@@ -1015,7 +1089,7 @@ macro_rules! endpoint_response_status_array {
 				])
 			}
 
-			fn from_body(body: &$crate::json::Value) -> Result<Self, $crate::codec::DeError> {
+			fn from_body(body: &$crate::json::Value) -> $crate::endpoint::Parsed<Self> {
 				let items =
 					body.as_array().ok_or_else(|| $crate::codec::DeError::expected("array"))?;
 				let status = items

@@ -3,7 +3,7 @@ pub mod get_profile_key {
 		use crate::{OwnedUserId, json::Value};
 		use std::collections::BTreeMap;
 
-		crate::endpoint! {
+		crate::endpoint_request! {
 			method: "GET",
 			path: "/_matrix/client/unstable/uk.tcpip.msc4133/profile/{userId}/{keyName}",
 			request {
@@ -11,8 +11,9 @@ pub mod get_profile_key {
 				query {}
 				body {}
 			}
-			response { value: BTreeMap<String, Value> }
 		}
+		// The wire body is the bare `{"<keyName>": <value>}` map, not `{"value": ..}`.
+		crate::endpoint_response_flat!(value: BTreeMap<String, Value>);
 	}
 }
 pub mod set_profile_key {
