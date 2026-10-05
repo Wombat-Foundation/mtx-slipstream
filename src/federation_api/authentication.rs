@@ -2,7 +2,6 @@
 
 use alloc::string::String;
 
-use headers::authorization::Credentials;
 use http::HeaderValue;
 
 use crate::{OwnedServerName, OwnedServerSigningKeyId};
@@ -23,10 +22,10 @@ crate::impl_codec_struct!(XMatrix {
 	sig: String,
 });
 
-impl Credentials for XMatrix {
-	const SCHEME: &'static str = "X-Matrix";
-
-	fn decode(value: &HeaderValue) -> Option<Self> {
+impl XMatrix {
+	/// Decodes an `X-Matrix` authorization header.
+	#[must_use]
+	pub fn decode(value: &HeaderValue) -> Option<Self> {
 		let text = core::str::from_utf8(value.as_bytes()).ok()?;
 		let mut origin = None;
 		let mut destination = None;
@@ -51,7 +50,9 @@ impl Credentials for XMatrix {
 		})
 	}
 
-	fn encode(&self) -> HeaderValue {
+	/// Encodes this credential as an `X-Matrix` authorization header.
+	#[must_use]
+	pub fn encode(&self) -> HeaderValue {
 		let destination = self
 			.destination
 			.as_ref()
@@ -72,7 +73,6 @@ impl Credentials for XMatrix {
 mod tests {
 	use super::XMatrix;
 	use crate::{OwnedServerName, OwnedServerSigningKeyId, codec};
-	use headers::authorization::Credentials;
 
 	#[test]
 	fn x_matrix_round_trips() {
