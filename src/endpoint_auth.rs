@@ -407,7 +407,7 @@ pub(super) const AUTH_TABLE: &[(&str, &str, AuthScheme)] = &[
 	("GET", "/_matrix/client/v3/pushrules/global/{}/{}/enabled", AuthScheme::AccessToken),
 	("PUT", "/_matrix/client/v3/pushrules/global/{}/{}/enabled", AuthScheme::AccessToken),
 	("POST", "/_matrix/client/v3/refresh", AuthScheme::None),
-	("POST", "/_matrix/client/v3/register", AuthScheme::AppserviceToken),
+	("POST", "/_matrix/client/v3/register", AuthScheme::None),
 	("GET", "/_matrix/client/v3/register/available", AuthScheme::None),
 	("POST", "/_matrix/client/v3/register/email/requestToken", AuthScheme::None),
 	("GET", "/_matrix/client/v3/register/m.login.registration_token/validity", AuthScheme::None),

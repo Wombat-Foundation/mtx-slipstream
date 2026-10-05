@@ -679,6 +679,7 @@ pub mod api {
 			crate::impl_codec_enum!(TokenType { Bearer => "Bearer" });
 		}
 		pub use crate::client_api::account;
+		pub use crate::client_api::profile;
 		pub mod media {
 			pub use crate::media_api::legacy::{
 				create_content, create_content_async, create_mxc_uri, get_content,

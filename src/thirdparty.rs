@@ -52,3 +52,28 @@ impl From<ThirdPartyIdentifierInit> for ThirdPartyIdentifier {
 		}
 	}
 }
+
+#[cfg(test)]
+mod tests {
+	use super::{Medium, ThirdPartyIdentifier};
+	use crate::{
+		MilliSecondsSinceUnixEpoch,
+		codec::{from_str, to_string},
+	};
+
+	#[test]
+	fn third_party_identifier_literal_json_golden() {
+		let json =
+			r#"{"added_at":42,"address":"a@example.org","medium":"email","validated_at":7}"#;
+		let value: ThirdPartyIdentifier = from_str(json).expect("valid third-party identifier");
+		assert_eq!(value.medium, Medium::Email);
+		assert_eq!(value.validated_at, MilliSecondsSinceUnixEpoch(7));
+		assert_eq!(to_string(&value), json);
+	}
+
+	#[test]
+	fn medium_literal_json_golden() {
+		assert_eq!(to_string(&Medium::Msisdn), "\"msisdn\"");
+		assert_eq!(from_str::<Medium>("\"email\"").unwrap(), Medium::Email);
+	}
+}

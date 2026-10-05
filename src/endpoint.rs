@@ -789,7 +789,7 @@ macro_rules! endpoint_request {
 			body { $($body_field_name:ident : $bt:ty),* $(,)? }
 		}
 	) => {
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct Request {
 			$(pub $path_field: $pt,)*
 			$(pub $query_field: $qt,)*
@@ -846,7 +846,7 @@ macro_rules! endpoint_request {
 #[macro_export]
 macro_rules! endpoint_response {
 	(response { $($resp_field:ident : $rt:ty),* $(,)? }) => {
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct Response {
 			$(pub $resp_field: $rt,)*
 		}
@@ -906,7 +906,7 @@ macro_rules! endpoint_request_raw {
 			raw_body { $body_field:ident : $bt:ty }
 		}
 	) => {
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct Request {
 			$(pub $path_field: $pt,)*
 			$(pub $query_field: $qt,)*
@@ -958,7 +958,7 @@ macro_rules! endpoint_request_raw {
 #[macro_export]
 macro_rules! endpoint_response_flat {
 	($field:ident : $ty:ty) => {
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct Response {
 			pub $field: $ty,
 		}
@@ -982,7 +982,7 @@ macro_rules! endpoint_response_flat {
 #[macro_export]
 macro_rules! endpoint_response_status_array {
 	($field:ident : $ty:ty) => {
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct Response {
 			pub $field: $ty,
 		}
@@ -1056,12 +1056,6 @@ mod auth_tests {
 			"/_matrix/client/v3/login",
 			AuthScheme::AppserviceToken,
 			"ruwuma wins: appservices may log in; `router/auth.rs` overrides every /login path to unauthenticated",
-		),
-		(
-			"POST",
-			"/_matrix/client/v3/register",
-			AuthScheme::AppserviceToken,
-			"ruwuma wins: appservice registration; with no token the router treats it as unauthenticated",
 		),
 		(
 			"POST",
@@ -1292,8 +1286,7 @@ mod auth_tests {
 			("GET", "/_matrix/client/v3/login", AuthScheme::None),
 			// Appservices may log in; `router/auth.rs` still lets everyone reach /login.
 			("POST", "/_matrix/client/v3/login", AuthScheme::AppserviceToken),
-			// Appservice registration; with no token the router treats it as unauthenticated.
-			("POST", "/_matrix/client/v3/register", AuthScheme::AppserviceToken),
+			("POST", "/_matrix/client/v3/register", AuthScheme::None),
 			// Spec requires an access token; it must never be exempted like /login.
 			("POST", "/_matrix/client/v1/login/get_token", AuthScheme::AccessToken),
 			// Profile reads are unauthenticated in the spec; the router may tighten them by

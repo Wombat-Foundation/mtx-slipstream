@@ -14,20 +14,38 @@ crate::impl_codec_enum!(RegistrationKind { Guest => "guest", User => "user" });
 
 pub mod request_openid_token {
 	pub mod v3 {
-		use crate::endpoint;
-		endpoint! { method: "POST", path: "/_matrix/client/v3/user/{userId}/openid/request_token", request { path { user_id: crate::OwnedUserId } query {} body {} } response { access_token: String, token_type: crate::api::client::authentication::TokenType, matrix_server_name: crate::OwnedServerName, expires_in: std::time::Duration } }
+		use crate::{OwnedServerName, OwnedUserId, endpoint};
+		use std::time::Duration;
+		endpoint! {
+			method: "POST", path: "/_matrix/client/v3/user/{userId}/openid/request_token",
+			request { path { user_id: OwnedUserId } query {} body {} }
+			response {
+				access_token: String,
+				token_type: crate::api::client::authentication::TokenType,
+				matrix_server_name: OwnedServerName,
+				expires_in: Duration,
+			}
+		}
 	}
 }
 pub mod change_password {
 	pub mod v3 {
 		use crate::endpoint;
-		endpoint! { method: "POST", path: "/_matrix/client/v3/account/password", request { path {} query {} body { new_password: String, logout_devices: bool, auth: crate::uiaa::AuthData } } response {} }
+		endpoint! {
+			method: "POST", path: "/_matrix/client/v3/account/password",
+			request { path {} query {} body { new_password: String, logout_devices: bool, auth: crate::uiaa::AuthData } }
+			response {}
+		}
 	}
 }
 pub mod deactivate {
 	pub mod v3 {
 		use crate::endpoint;
-		endpoint! { method: "POST", path: "/_matrix/client/v3/account/deactivate", request { path {} query {} body { auth: Option<crate::uiaa::AuthData>, id_server: Option<String>, id_server_access_token: Option<String>, erase: Option<bool> } } response { id_server_unbind_result: Option<super::super::ThirdPartyIdRemovalStatus> } }
+		endpoint! {
+			method: "POST", path: "/_matrix/client/v3/account/deactivate",
+			request { path {} query {} body { auth: Option<crate::uiaa::AuthData>, id_server: Option<String>, id_server_access_token: Option<String>, erase: Option<bool> } }
+			response { id_server_unbind_result: Option<super::super::ThirdPartyIdRemovalStatus> }
+		}
 	}
 }
 pub mod get_username_availability {

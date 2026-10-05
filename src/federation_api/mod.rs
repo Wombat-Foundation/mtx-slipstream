@@ -384,7 +384,9 @@ mod tests {
 			.status(404)
 			.body(br#"{"errcode":"M_NOT_FOUND","error":"nope"}"#.to_vec())
 			.unwrap();
-		let err = get_room_state_ids::v1::Response::try_from_http_response(response).unwrap_err();
+		let Err(err) = get_room_state_ids::v1::Response::try_from_http_response(response) else {
+			panic!("expected error response");
+		};
 		assert!(err.to_string().contains("nope"));
 		let _ = get_server_version::v1::Request {};
 	}
