@@ -361,6 +361,7 @@ impl MilliSecondsSinceUnixEpoch {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::UInt;
 	use crate::codec::{from_str, to_string};
 
 	#[test]
@@ -379,6 +380,22 @@ mod tests {
 			.unwrap();
 		assert_eq!(c.room_version, crate::RoomVersionId::V11);
 		assert!(c.additional_creators.is_none());
+	}
+
+	#[test]
+	fn contact_role_round_trips_as_a_string() {
+		let role: ContactRole = "m.role.admin".into();
+		assert_eq!(to_string(&role), "\"m.role.admin\"");
+		assert_eq!(from_str::<ContactRole>(&to_string(&role)).unwrap().0, role.0);
+	}
+
+	#[test]
+	fn timestamp_to_system_time_handles_large_values() {
+		assert_eq!(
+			MilliSecondsSinceUnixEpoch(1234).to_system_time(),
+			std::time::UNIX_EPOCH + std::time::Duration::from_millis(1234)
+		);
+		let _ = MilliSecondsSinceUnixEpoch(UInt::MAX).to_system_time();
 	}
 
 	#[test]

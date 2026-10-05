@@ -155,23 +155,23 @@ macro_rules! int_impl {
 }
 int_impl!(i64 => as_i64, u64 => as_u64, i32 => as_i64, u32 => as_u64, u16 => as_u64, i16 => as_i64, u8 => as_u64);
 
+impl Serialize for usize {
+	fn to_json(&self) -> Value {
+		u64::try_from(*self).expect("usize fits in u64").to_json()
+	}
+}
+impl Deserialize for usize {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		usize::try_from(u64::from_json(value)?).map_err(|_| DeError::expected("usize"))
+	}
+}
+
 impl Serialize for f64 {
 	fn to_json(&self) -> Value {
 		crate::json::Number::from_f64(*self).map_or(Value::Null, Value::Number)
 	}
 }
 
-impl Serialize for usize {
-	fn to_json(&self) -> Value {
-		u64::try_from(*self).unwrap_or(u64::MAX).to_json()
-	}
-}
-
-impl Deserialize for usize {
-	fn from_json(value: &Value) -> Result<Self, DeError> {
-		usize::try_from(u64::from_json(value)?).map_err(|_| DeError::expected("usize"))
-	}
-}
 impl Deserialize for f64 {
 	fn from_json(value: &Value) -> Result<Self, DeError> {
 		value.as_f64().ok_or_else(|| DeError::expected("number"))
@@ -390,6 +390,21 @@ impl<A: Deserialize, B: Deserialize> Deserialize for (A, B) {
 		match value.as_array().map(Vec::as_slice) {
 			Some([a, b]) => Ok((A::from_json(a)?, B::from_json(b)?)),
 			_ => Err(DeError::expected("two-element array")),
+		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::{Deserialize, from_value, to_value};
+
+	#[test]
+	fn usize_codec_validates_integer_input() {
+		assert_eq!(usize::from_json(&to_value(&42_usize)).unwrap(), 42);
+		assert!(usize::from_json(&crate::json::Value::parse("-1").unwrap()).is_err());
+		assert!(usize::from_json(&crate::json::Value::parse("1.5").unwrap()).is_err());
+		if usize::BITS == 64 {
+			assert_eq!(from_value::<usize>(&to_value(&u64::MAX)).unwrap(), usize::MAX);
 		}
 	}
 }

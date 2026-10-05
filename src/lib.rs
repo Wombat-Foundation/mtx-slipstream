@@ -417,7 +417,9 @@ impl MilliSecondsSinceUnixEpoch {
 	}
 	#[must_use]
 	pub fn to_system_time(self) -> std::time::SystemTime {
-		std::time::UNIX_EPOCH + std::time::Duration::from_millis(self.0)
+		std::time::UNIX_EPOCH
+			.checked_add(std::time::Duration::from_millis(self.0))
+			.unwrap_or(std::time::UNIX_EPOCH)
 	}
 }
 
@@ -1441,17 +1443,6 @@ pub mod serde {
 	}
 
 	impl<T> Raw<T> {
-		/// Compatibility alias for callers using the older raw JSON API.
-		pub fn from_string(input: alloc::string::String) -> Result<Self, crate::codec::DeError> {
-			Self::from_json_string(input)
-		}
-
-		/// Consumes the raw value and parses its JSON representation.
-		pub fn into_json(self) -> Result<crate::json::Value, crate::codec::DeError> {
-			crate::json::Value::parse(&self.0)
-				.map_err(|error| crate::codec::DeError(error.to_string()))
-		}
-
 		/// Wraps already-serialized JSON text, validating that it parses.
 		///
 		/// # Errors
