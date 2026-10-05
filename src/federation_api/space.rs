@@ -141,7 +141,7 @@ macro_rules! summary {
 		$($extra:ident : $extra_ty:ty),*
 	) => {
 		$(#[$doc])*
-		#[derive(Debug)]
+		#[derive(Clone, Debug)]
 		pub struct $summary {
 			pub canonical_alias: Option<OwnedRoomAliasId>,
 			pub name: Option<String>,

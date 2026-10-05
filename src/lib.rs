@@ -1390,7 +1390,7 @@ pub mod room {
 }
 
 pub mod power_levels {
-	#[derive(Debug)]
+	#[derive(Clone, Debug)]
 	pub struct NotificationPowerLevels {
 		pub room: crate::Int,
 	}

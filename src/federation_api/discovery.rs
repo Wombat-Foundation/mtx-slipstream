@@ -212,7 +212,7 @@ pub mod get_remote_server_keys_batch {
 		};
 
 		/// Constraints on the keys a notary returns for one server.
-		#[derive(Debug, Default)]
+		#[derive(Clone, Debug, Default)]
 		pub struct QueryCriteria {
 			pub minimum_valid_until_ts: Option<MilliSecondsSinceUnixEpoch>,
 		}
