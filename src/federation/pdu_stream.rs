@@ -49,7 +49,7 @@ impl PduStreamWriter {
 
 	/// Serialize an `OwnedValue` PDU into the stream.
 	///
-	/// The value is serialized via simd-json's native [`Writable`] serializer
+	/// The value is serialized via `Self::Writable`
 	/// and a comma separator is inserted before the PDU if the stream is not
 	/// empty.
 	///

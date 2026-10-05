@@ -7,7 +7,7 @@ use bytes::BytesMut;
 
 /// Adapter that implements [`io::Write`] for a [`BytesMut`] buffer.
 ///
-/// Used with [`Writable::write`] to serialize values directly into a
+/// Used with `Self::Writable::write` to serialize values directly into a
 /// growable byte buffer without intermediate heap allocations.
 pub struct BufWriter<'a>(pub &'a mut BytesMut);
 
@@ -24,8 +24,8 @@ impl io::Write for BufWriter<'_> {
 
 /// Serialize an `OwnedValue` directly to a `BytesMut` buffer.
 ///
-/// Allocates an 8 KiB buffer, serializes the value via simd-json's native
-/// [`Writable`] serializer, and returns the result.
+/// Allocates an 8 KiB buffer, serializes the value via `Self::Writable`, and
+/// returns the result.
 ///
 /// # Errors
 ///

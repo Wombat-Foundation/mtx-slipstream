@@ -302,6 +302,18 @@ matrix_id!(RoomId, OwnedRoomId, crate::id_validation::room_id);
 matrix_id!(RoomAliasId, OwnedRoomAliasId, crate::id_validation::room_alias_id);
 matrix_id!(ServerName, OwnedServerName, crate::id_validation::server_name);
 matrix_id!(UserId, OwnedUserId, crate::id_validation::user_id);
+
+impl OwnedUserId {
+	/// Validates an owned user ID that may have been constructed from an
+	/// unchecked database or wire string.
+	///
+	/// # Errors
+	///
+	/// Returns an error when the identifier does not match the Matrix user ID grammar.
+	pub fn validate_strict(&self) -> Result<(), MatrixIdParseError> {
+		crate::id_validation::user_id(self.as_str()).then_some(()).ok_or(MatrixIdParseError)
+	}
+}
 matrix_id!(RoomOrAliasId, OwnedRoomOrAliasId, crate::id_validation::room_or_alias_id);
 matrix_id!(ServerSigningKeyId, OwnedServerSigningKeyId);
 matrix_id!(SigningKeyId, OwnedSigningKeyId);

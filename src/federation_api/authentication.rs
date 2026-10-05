@@ -55,7 +55,7 @@ impl Credentials for XMatrix {
 		let destination = self
 			.destination
 			.as_ref()
-			.map(|d| alloc::format!(",destination=\"{}\"", d))
+			.map(|d| alloc::format!(",destination=\"{d}\""))
 			.unwrap_or_default();
 		HeaderValue::from_str(&alloc::format!(
 			"X-Matrix origin=\"{}\"{},key=\"{}\",sig=\"{}\"",
@@ -72,6 +72,7 @@ impl Credentials for XMatrix {
 mod tests {
 	use super::XMatrix;
 	use crate::{OwnedServerName, OwnedServerSigningKeyId, codec};
+	use headers::authorization::Credentials;
 
 	#[test]
 	fn x_matrix_round_trips() {
