@@ -9,7 +9,7 @@ use crate::{
 	json::Value,
 };
 
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub struct Mentions {
 	pub user_ids: BTreeSet<OwnedUserId>,
 	pub room: bool,

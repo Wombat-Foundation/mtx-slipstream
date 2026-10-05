@@ -9,7 +9,7 @@ use crate::{
 };
 
 /// Identifies a pusher: one app instance on one device.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct PusherIds {
 	pub pushkey: String,
 	pub app_id: String,
@@ -26,7 +26,7 @@ impl PusherIds {
 }
 
 /// Delivery settings for an HTTP pusher.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct HttpPusherData {
 	pub url: String,
 	pub format: Option<PushFormat>,
@@ -45,7 +45,7 @@ impl HttpPusherData {
 	}
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum PusherKind {
 	Http(HttpPusherData),
 	Email(Object),
@@ -109,7 +109,7 @@ impl PusherKind {
 	}
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Pusher {
 	pub ids: PusherIds,
 	pub kind: PusherKind,
@@ -197,20 +197,20 @@ pub mod set_pusher {
 			pusher::{Pusher, PusherIds},
 		};
 
-		#[derive(Clone, Debug, Eq, PartialEq)]
+		#[derive(Debug, Eq, PartialEq)]
 		pub struct PusherPostData {
 			pub pusher: Pusher,
 			/// Whether to keep other pushers with the same app ID.
 			pub append: bool,
 		}
 
-		#[derive(Clone, Debug, Eq, PartialEq)]
+		#[derive(Debug, Eq, PartialEq)]
 		pub enum PusherAction {
 			Post(PusherPostData),
 			Delete(PusherIds),
 		}
 
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct Request {
 			pub action: PusherAction,
 		}
@@ -298,7 +298,7 @@ pub mod set_pusher {
 			}
 		}
 
-		#[derive(Clone, Debug, Default)]
+		#[derive(Debug, Default)]
 		pub struct Response {}
 
 		impl Response {
@@ -375,7 +375,7 @@ pub mod send_event_notification {
 		impl_codec_struct!(NotificationCounts {} default { unread: UInt, missed_calls: UInt });
 
 		/// The `data` object a gateway receives for a device.
-		#[derive(Clone, Debug, Default, Eq, PartialEq)]
+		#[derive(Debug, Default, Eq, PartialEq)]
 		pub struct PusherData {
 			pub format: Option<PushFormat>,
 			pub data: Object,
@@ -405,7 +405,7 @@ pub mod send_event_notification {
 			}
 		}
 
-		#[derive(Clone, Debug, Eq, PartialEq)]
+		#[derive(Debug, Eq, PartialEq)]
 		pub struct Device {
 			pub app_id: String,
 			pub pushkey: String,
@@ -435,7 +435,7 @@ pub mod send_event_notification {
 			}
 		}
 
-		#[derive(Clone, Debug, Default)]
+		#[derive(Debug, Default)]
 		pub struct Notification {
 			pub event_id: Option<crate::OwnedEventId>,
 			pub room_id: Option<OwnedRoomId>,

@@ -18,7 +18,7 @@ pub const ALGORITHM_WITH_INPUTS: &str =
 /// The `state_hashes` object of a `/send` transaction.
 ///
 /// One `algorithm` governs every entry; `entries` is keyed by PDU ID.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub struct StateHashes {
 	pub algorithm: String,
 	pub entries: BTreeMap<OwnedEventId, StateHashEntry>,
@@ -45,7 +45,7 @@ impl StateHashes {
 /// omits both `after` fields. `resolution_inputs_before` is omitted under the
 /// base algorithm; under the input algorithm it is a string, or `null` when
 /// the sender has no assertion for that component.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub struct StateHashEntry {
 	pub before: Option<String>,
 	pub after: Option<String>,

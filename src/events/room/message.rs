@@ -12,7 +12,7 @@ use crate::{
 };
 
 /// How a formatted body is encoded.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum MessageFormat {
 	Html,
 	Custom(String),
@@ -39,7 +39,7 @@ impl From<&str> for MessageFormat {
 }
 
 /// A body in a rich format, such as HTML.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct FormattedBody {
 	pub format: MessageFormat,
 	pub body: String,
@@ -56,7 +56,7 @@ impl FormattedBody {
 }
 
 /// A text or notice message body.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub struct TextMessageEventContent {
 	pub body: String,
 	pub formatted: Option<FormattedBody>,
@@ -83,12 +83,12 @@ impl TextMessageEventContent {
 pub type NoticeMessageEventContent = TextMessageEventContent;
 
 /// Where a file's bytes live.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum MediaSource {
 	Plain(String),
 }
 
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub struct FileInfo {
 	pub mimetype: Option<String>,
 	pub size: Option<UInt>,
@@ -96,7 +96,7 @@ pub struct FileInfo {
 	pub thumbnail_source: Option<MediaSource>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct FileMessageEventContent {
 	pub body: String,
 	pub source: MediaSource,
@@ -105,7 +105,7 @@ pub struct FileMessageEventContent {
 	pub formatted: Option<FormattedBody>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum MessageType {
 	Text(TextMessageEventContent),
 	Notice(NoticeMessageEventContent),
@@ -137,7 +137,7 @@ impl MessageType {
 	}
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 pub struct RoomMessageEventContent {
 	pub msgtype: MessageType,
 	pub relates_to: Option<Relation>,

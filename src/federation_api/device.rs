@@ -33,7 +33,7 @@ pub mod get_devices {
 			}
 		}
 
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct UserDevice {
 			pub device_id: OwnedDeviceId,
 			pub keys: Raw<DeviceKeys>,

@@ -1,4 +1,4 @@
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct RoomPreviewUrlsEventContent {
 	pub disabled: bool,
 }

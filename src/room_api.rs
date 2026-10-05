@@ -20,15 +20,15 @@ impl_codec_enum!(Direction { Forward => "f", Backward => "b" });
 
 /// An initial state event of a new room; kept raw because only `type`,
 /// `state_key` and `content` are read.
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 pub struct AnyInitialStateEvent;
 
 /// Extra `m.room.create` content a client supplies.
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 pub struct CreationContent;
 
 /// A third-party invite in a room creation request.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub struct Invite3pid {
 	pub id_server: String,
 	pub id_access_token: String,
@@ -75,7 +75,7 @@ pub mod create_room {
 
 		pub use super::super::{Invite3pid, RoomPreset};
 
-		#[derive(Clone, Debug, Default)]
+		#[derive(Debug, Default)]
 		pub struct Request {
 			pub creation_content: Option<Raw<CreationContent>>,
 			pub initial_state: Vec<Raw<AnyInitialStateEvent>>,
@@ -341,7 +341,7 @@ pub mod get_summary {
 			}
 		}
 
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct Response {
 			pub room_id: OwnedRoomId,
 			pub canonical_alias: Option<OwnedRoomAliasId>,
@@ -443,7 +443,7 @@ pub mod initial_sync {
 		}
 
 		/// A page of room events.
-		#[derive(Clone, Debug, Default)]
+		#[derive(Debug, Default)]
 		pub struct PaginationChunk {
 			pub start: Option<String>,
 			pub end: String,
@@ -455,7 +455,7 @@ pub mod initial_sync {
 			chunk: Vec<Raw<AnyMessageLikeEvent>>,
 		});
 
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct Response {
 			pub room_id: OwnedRoomId,
 			pub account_data: Option<Vec<Raw<AnyRoomAccountDataEvent>>>,

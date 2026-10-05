@@ -1,13 +1,13 @@
 use crate::MilliSecondsSinceUnixEpoch;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum Medium {
 	Email,
 	Msisdn,
 }
 crate::impl_codec_enum!(Medium { Email => "email", Msisdn => "msisdn" });
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct ThirdPartyIdentifier {
 	pub address: String,
 	pub medium: Medium,
@@ -15,7 +15,7 @@ pub struct ThirdPartyIdentifier {
 	pub added_at: MilliSecondsSinceUnixEpoch,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct ThirdPartyIdentifierInit {
 	pub address: String,
 	pub medium: Medium,

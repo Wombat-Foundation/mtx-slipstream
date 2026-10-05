@@ -1,6 +1,6 @@
 use crate::{MilliSecondsSinceUnixEpoch, OwnedUserId};
 
-#[derive(Clone, Debug, Eq, PartialEq, Default)]
+#[derive(Debug, Eq, PartialEq, Default)]
 pub enum PresenceState {
 	Online,
 	Unavailable,
@@ -28,7 +28,7 @@ crate::impl_codec_enum!(PresenceState {
 	Online => "online", Unavailable => "unavailable", Offline => "offline", Busy => "busy",
 });
 
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 pub struct PresenceEventContent {
 	pub avatar_url: Option<crate::OwnedMxcUri>,
 	pub displayname: Option<String>,
@@ -38,7 +38,7 @@ pub struct PresenceEventContent {
 	pub status_msg: Option<String>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct PresenceEvent {
 	pub sender: OwnedUserId,
 	pub content: PresenceEventContent,

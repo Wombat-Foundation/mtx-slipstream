@@ -32,7 +32,7 @@ static_content! {
 macro_rules! content_event {
 	($(#[$doc:meta])* $name:ident) => {
 		$(#[$doc])*
-		#[derive(Clone, Debug, Default, Eq, PartialEq)]
+		#[derive(Debug, Default, Eq, PartialEq)]
 		pub struct $name<T> {
 			pub content: T,
 		}
@@ -71,7 +71,7 @@ content_event!(
 );
 
 /// An ephemeral room event with its room.
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 pub struct EphemeralRoomEvent<T> {
 	pub content: T,
 	pub room_id: OwnedRoomId,

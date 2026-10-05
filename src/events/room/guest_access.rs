@@ -5,7 +5,7 @@ pub enum GuestAccess {
 	CanJoin,
 }
 crate::impl_codec_enum!(GuestAccess { Forbidden => "forbidden", CanJoin => "can_join" });
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 pub struct RoomGuestAccessEventContent {
 	pub guest_access: GuestAccess,
 }

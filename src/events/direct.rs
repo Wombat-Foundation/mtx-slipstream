@@ -10,7 +10,7 @@ use crate::{
 };
 
 /// The direct-message rooms for each user.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub struct DirectEventContent(pub BTreeMap<OwnedUserId, Vec<OwnedRoomId>>);
 
 impl Serialize for DirectEventContent {

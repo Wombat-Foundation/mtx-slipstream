@@ -12,7 +12,7 @@ pub type Array = alloc::vec::Vec<Value>;
 pub type JsonMap = Object;
 
 /// Error returned when redaction fails.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum RedactionError {
 	/// The room version has no known redaction rules.
 	UnsupportedRoomVersion(String),

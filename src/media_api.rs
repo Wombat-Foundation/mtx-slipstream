@@ -29,7 +29,7 @@ macro_rules! media_request {
 			required { $($rf:ident : $rt:ty),* $(,)? }
 		}
 	) => {
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct Request {
 			$(pub $pf: $pt,)*
 			$(pub $qf: $qt,)*
@@ -86,7 +86,7 @@ macro_rules! media_request {
 /// headers.
 macro_rules! file_response {
 	() => {
-		#[derive(Clone, Debug, Default)]
+		#[derive(Debug, Default)]
 		pub struct Response {
 			pub file: ::alloc::vec::Vec<u8>,
 			pub content_type: Option<::alloc::string::String>,
@@ -238,7 +238,7 @@ macro_rules! preview_endpoint {
 		}
 
 		/// The preview is arbitrary JSON (Open Graph data), passed through.
-		#[derive(Clone, Debug, Default)]
+		#[derive(Debug, Default)]
 		pub struct Response {
 			pub data: $crate::serde::Raw<$crate::json::Value>,
 		}
@@ -528,7 +528,7 @@ pub mod legacy {
 				json::Value,
 			};
 
-			#[derive(Clone, Debug, Default)]
+			#[derive(Debug, Default)]
 			pub struct Request {
 				pub filename: Option<String>,
 				pub content_type: Option<String>,
@@ -547,7 +547,7 @@ pub mod legacy {
 				}
 			}
 
-			#[derive(Clone, Debug)]
+			#[derive(Debug)]
 			pub struct Response {
 				pub content_uri: OwnedMxcUri,
 				pub blurhash: Option<String>,
@@ -665,7 +665,7 @@ pub mod legacy {
 				json::{Object, Value},
 			};
 
-			#[derive(Clone, Debug)]
+			#[derive(Debug)]
 			pub struct Request {
 				pub server_name: OwnedServerName,
 				pub media_id: String,
@@ -674,7 +674,7 @@ pub mod legacy {
 				pub file: Vec<u8>,
 			}
 
-			#[derive(Clone, Debug, Default)]
+			#[derive(Debug, Default)]
 			pub struct Response {}
 
 			impl EndpointResponse for Response {
@@ -816,7 +816,7 @@ pub mod federation {
 	};
 
 	/// A file with the headers that describe it.
-	#[derive(Clone, Debug, Default, Eq, PartialEq)]
+	#[derive(Debug, Default, Eq, PartialEq)]
 	pub struct Content {
 		pub file: Vec<u8>,
 		pub content_type: Option<String>,
@@ -824,7 +824,7 @@ pub mod federation {
 	}
 
 	/// The second part of a federation media response.
-	#[derive(Clone, Debug, Eq, PartialEq)]
+	#[derive(Debug, Eq, PartialEq)]
 	pub enum FileOrLocation {
 		File(Content),
 		/// A URL the file can be downloaded from instead.
@@ -832,7 +832,7 @@ pub mod federation {
 	}
 
 	/// The first part of a federation media response; currently empty.
-	#[derive(Clone, Debug, Default, Eq, PartialEq)]
+	#[derive(Debug, Default, Eq, PartialEq)]
 	pub struct ContentMetadata {}
 
 	impl ContentMetadata {
@@ -993,7 +993,7 @@ pub mod federation {
 
 	macro_rules! multipart_response {
 		() => {
-			#[derive(Clone, Debug)]
+			#[derive(Debug)]
 			pub struct Response {
 				pub content: $crate::media_api::federation::FileOrLocation,
 				pub metadata: $crate::media_api::federation::ContentMetadata,

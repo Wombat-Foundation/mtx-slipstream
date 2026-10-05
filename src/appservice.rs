@@ -9,7 +9,7 @@ use crate::{
 };
 
 /// A namespace of user IDs, room aliases or room IDs an appservice claims.
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 pub struct Namespace {
 	pub exclusive: bool,
 	pub regex: String,
@@ -17,7 +17,7 @@ pub struct Namespace {
 
 impl_codec_struct!(Namespace { regex: String } default { exclusive: bool });
 
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 pub struct Namespaces {
 	pub users: Vec<Namespace>,
 	pub aliases: Vec<Namespace>,
@@ -31,7 +31,7 @@ impl_codec_struct!(Namespaces {} default {
 });
 
 /// An appservice registration file.
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 pub struct Registration {
 	pub id: String,
 	/// Where the appservice listens; `None` (or the string `null`) for an
@@ -64,7 +64,7 @@ impl_codec_struct!(Registration {
 });
 
 /// One ephemeral event (typing, receipt or presence) for an appservice.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct EphemeralData(pub Value);
 
 impl From<Value> for EphemeralData {
@@ -177,7 +177,7 @@ pub mod request_ping {
 		}
 
 		/// How long the appservice took to answer, in the `duration_ms` field.
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct Response {
 			pub duration: Duration,
 		}

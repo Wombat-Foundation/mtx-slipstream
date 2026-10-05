@@ -10,7 +10,7 @@ use crate::{
 };
 
 /// The name of a room tag, such as `m.favourite` or `u.custom`.
-#[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct TagName(pub String);
 
 impl TagName {
@@ -47,7 +47,7 @@ impl Deserialize for TagName {
 }
 
 /// Extra data attached to a tag.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 pub struct TagInfo {
 	pub order: Option<f64>,
 }
@@ -94,7 +94,7 @@ impl Deserialize for TagInfo {
 }
 
 /// The tags a user has put on a room.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 pub struct TagEventContent {
 	pub tags: BTreeMap<TagName, TagInfo>,
 }

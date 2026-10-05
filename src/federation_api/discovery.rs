@@ -17,7 +17,7 @@ pub mod discover_homeserver {
 }
 
 /// A server's current public signing key.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct VerifyKey {
 	pub key: Base64,
 }
@@ -36,7 +36,7 @@ crate::impl_codec_struct!(VerifyKey {
 });
 
 /// A server's expired public signing key.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct OldVerifyKey {
 	pub expired_ts: MilliSecondsSinceUnixEpoch,
 	pub key: Base64,
@@ -58,7 +58,7 @@ crate::impl_codec_struct!(OldVerifyKey {
 });
 
 /// A server's published signing keys.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct ServerSigningKeys {
 	pub server_name: OwnedServerName,
 	pub verify_keys: BTreeMap<OwnedServerSigningKeyId, VerifyKey>,
@@ -95,7 +95,7 @@ pub mod get_server_version {
 		use crate::endpoint;
 
 		/// Server software name and version.
-		#[derive(Clone, Debug, Default)]
+		#[derive(Debug, Default)]
 		pub struct Server {
 			pub name: Option<String>,
 			pub version: Option<String>,
@@ -122,11 +122,11 @@ pub mod get_server_keys {
 		};
 
 		/// Request for this server's own signing keys.
-		#[derive(Clone, Debug, Default)]
+		#[derive(Debug, Default)]
 		pub struct Request;
 
 		/// The keys document is the whole response body.
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct Response {
 			pub server_key: Raw<ServerSigningKeys>,
 		}
@@ -212,7 +212,7 @@ pub mod get_remote_server_keys_batch {
 		};
 
 		/// Constraints on the keys a notary returns for one server.
-		#[derive(Clone, Debug, Default)]
+		#[derive(Debug, Default)]
 		pub struct QueryCriteria {
 			pub minimum_valid_until_ts: Option<MilliSecondsSinceUnixEpoch>,
 		}

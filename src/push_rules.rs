@@ -338,7 +338,7 @@ impl<T: Deserialize> Deserialize for SimplePushRule<T> {
 }
 
 /// An owned rule of any kind.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum AnyPushRule {
 	Override(ConditionalPushRule),
 	Content(PatternedPushRule),
@@ -416,7 +416,7 @@ impl Serialize for AnyPushRule {
 pub type PushRule = AnyPushRule;
 
 /// A rule to be created by `PUT /pushrules/global/{kind}/{ruleId}`.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum NewPushRule {
 	Override(NewConditionalPushRule),
 	Content(NewPatternedPushRule),
@@ -425,21 +425,21 @@ pub enum NewPushRule {
 	Underride(NewConditionalPushRule),
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct NewConditionalPushRule {
 	pub rule_id: String,
 	pub conditions: Vec<PushCondition>,
 	pub actions: Vec<Action>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct NewPatternedPushRule {
 	pub rule_id: String,
 	pub pattern: String,
 	pub actions: Vec<Action>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct NewSimplePushRule<T> {
 	pub rule_id: T,
 	pub actions: Vec<Action>,
@@ -559,7 +559,7 @@ error_display! {
 }
 
 /// A user's push rules, ordered by priority within each kind.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub struct Ruleset {
 	pub override_: RuleList<ConditionalPushRule>,
 	pub content: RuleList<PatternedPushRule>,
@@ -592,7 +592,7 @@ impl<T: AsRef<str>> HasRuleId for SimplePushRule<T> {
 ///
 /// Dereferences to the underlying `Vec` for iteration and in-place edits; the
 /// by-ID `get`, `insert` and `shift_remove` mirror an insertion-ordered set.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct RuleList<T>(Vec<T>);
 
 impl<T> Default for RuleList<T> {
@@ -665,7 +665,7 @@ impl<T: HasRuleId> RuleList<T> {
 }
 
 /// Power-level data needed to evaluate `sender_notification_permission`.
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 pub struct PushConditionPowerLevelsCtx {
 	pub users: BTreeMap<OwnedUserId, Int>,
 	pub users_default: Int,
@@ -673,7 +673,7 @@ pub struct PushConditionPowerLevelsCtx {
 }
 
 /// Room context for evaluating push conditions.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct PushConditionRoomCtx {
 	pub room_id: OwnedRoomId,
 	pub member_count: UInt,
@@ -1544,7 +1544,7 @@ pub mod set_pushrule {
 			push_rules::{NewPushRule, RuleKind, RuleScope},
 		};
 
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct Request {
 			pub scope: RuleScope,
 			pub rule: NewPushRule,
@@ -1624,7 +1624,7 @@ pub mod set_pushrule {
 			}
 		}
 
-		#[derive(Clone, Debug, Default)]
+		#[derive(Debug, Default)]
 		pub struct Response {}
 
 		impl EndpointResponse for Response {

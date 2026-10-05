@@ -18,7 +18,7 @@ pub enum Visibility {
 crate::impl_codec_enum!(Visibility { Public => "public", Private => "private" });
 
 /// Which network a directory query targets.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub enum RoomNetwork {
 	/// Rooms on the Matrix network only.
 	#[default]
@@ -48,7 +48,7 @@ impl RoomNetwork {
 }
 
 /// A room type to filter the directory by.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub enum RoomTypeFilter {
 	/// Rooms without a type.
 	#[default]
@@ -96,7 +96,7 @@ impl Deserialize for RoomTypeFilter {
 }
 
 /// Search criteria for a filtered directory query.
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 pub struct Filter {
 	pub generic_search_term: Option<String>,
 	pub room_types: Vec<RoomTypeFilter>,
@@ -105,7 +105,7 @@ pub struct Filter {
 impl_codec_struct!(Filter {} default { generic_search_term: Option<String>, room_types: Vec<RoomTypeFilter> });
 
 /// How a public room can be joined.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub enum PublicRoomJoinRule {
 	#[default]
 	Public,
@@ -138,7 +138,7 @@ impl From<&str> for PublicRoomJoinRule {
 crate::impl_codec_string!(PublicRoomJoinRule, |s| Ok(Self::from(s)), |v| v.as_str());
 
 /// One room in the public directory.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct PublicRoomsChunk {
 	pub avatar_url: Option<OwnedMxcUri>,
 	pub canonical_alias: Option<OwnedRoomAliasId>,
@@ -168,7 +168,7 @@ impl_codec_struct!(PublicRoomsChunk {
 
 macro_rules! filtered_request {
 	($method:literal, $path:literal $(, $server:ident)?) => {
-		#[derive(Clone, Debug, Default)]
+		#[derive(Debug, Default)]
 		pub struct Request {
 			$(pub $server: Option<$crate::OwnedServerName>,)?
 			pub limit: Option<$crate::UInt>,

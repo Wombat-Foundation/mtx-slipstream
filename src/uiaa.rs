@@ -15,7 +15,7 @@ use crate::{
 };
 
 /// An `errcode` and human-readable message, as found in error bodies.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct StandardErrorBody {
 	pub kind: ErrorKind,
 	pub message: String,
@@ -42,7 +42,7 @@ impl Deserialize for StandardErrorBody {
 }
 
 /// The type of one authentication stage.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum AuthType {
 	Password,
 	ReCaptcha,
@@ -97,7 +97,7 @@ impl fmt::Display for AuthType {
 crate::impl_codec_string!(AuthType, |s| Ok(Self::from(s)), |v| v.as_str());
 
 /// A sequence of stages that together complete authentication.
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 pub struct AuthFlow {
 	pub stages: Vec<AuthType>,
 }
@@ -114,7 +114,7 @@ impl AuthFlow {
 impl_codec_struct!(AuthFlow { stages: Vec<AuthType> });
 
 /// The state of a UIAA session, sent to the client with a 401.
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 pub struct UiaaInfo {
 	pub flows: Vec<AuthFlow>,
 	pub completed: Vec<AuthType>,
@@ -174,7 +174,7 @@ impl Deserialize for UiaaInfo {
 }
 
 /// How the user identifies themselves in an authentication stage.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum UserIdentifier {
 	UserIdOrLocalpart(String),
 	Email {
@@ -231,7 +231,7 @@ impl Deserialize for UserIdentifier {
 	}
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct ThirdpartyIdCredentials {
 	pub sid: String,
 	pub client_secret: String,
@@ -250,7 +250,7 @@ impl_codec_struct!(ThirdpartyIdCredentials {
 macro_rules! auth_stage {
 	($(#[$meta:meta])* $name:ident { $($field:ident : $ty:ty),* }) => {
 		$(#[$meta])*
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct $name {
 			$(pub $field: $ty,)*
 			pub session: Option<String>,
@@ -276,7 +276,7 @@ auth_stage!(
 );
 
 /// Authentication data a client sends to continue a UIAA session.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum AuthData {
 	Password(Password),
 	ReCaptcha(ReCaptcha),

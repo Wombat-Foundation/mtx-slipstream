@@ -1,7 +1,7 @@
 use alloc::{string::String, vec::Vec};
 
 /// `m.room.server_acl` content.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct RoomServerAclEventContent {
 	pub allow_ip_literals: bool,
 	pub allow: Vec<String>,

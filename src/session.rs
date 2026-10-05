@@ -20,22 +20,22 @@ pub mod get_login_types {
 		}
 
 		/// `m.login.password`.
-		#[derive(Clone, Debug, Default)]
+		#[derive(Debug, Default)]
 		pub struct PasswordLoginType {}
 
 		/// `m.login.application_service`.
-		#[derive(Clone, Debug, Default)]
+		#[derive(Debug, Default)]
 		pub struct ApplicationServiceLoginType {}
 
 		/// `m.login.token`.
-		#[derive(Clone, Debug, Default)]
+		#[derive(Debug, Default)]
 		pub struct TokenLoginType {
 			/// Whether the server also supports `POST /login/get_token`.
 			pub get_login_token: bool,
 		}
 
 		/// A login flow the server supports.
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub enum LoginType {
 			Password(PasswordLoginType),
 			ApplicationService(ApplicationServiceLoginType),
@@ -84,7 +84,7 @@ pub mod get_login_types {
 		}
 
 		/// The supported login flows.
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct Response {
 			pub flows: Vec<LoginType>,
 		}
@@ -130,7 +130,7 @@ pub mod login {
 		};
 
 		/// `m.login.password`.
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct Password {
 			pub identifier: Option<UserIdentifier>,
 			pub password: String,
@@ -139,13 +139,13 @@ pub mod login {
 		}
 
 		/// `m.login.token`.
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct Token {
 			pub token: String,
 		}
 
 		/// `m.login.application_service`.
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct ApplicationService {
 			pub identifier: Option<UserIdentifier>,
 			/// Deprecated: the user's localpart or ID.
@@ -153,7 +153,7 @@ pub mod login {
 		}
 
 		/// How the client authenticates, discriminated by `type`.
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub enum LoginInfo {
 			Password(Password),
 			Token(Token),
@@ -213,7 +213,7 @@ pub mod login {
 		}
 
 		/// A login request.
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct Request {
 			pub login_info: LoginInfo,
 			pub device_id: Option<OwnedDeviceId>,
@@ -272,7 +272,7 @@ pub mod login {
 		}
 
 		/// The homeserver base URL.
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct HomeserverInfo {
 			pub base_url: String,
 		}
@@ -291,7 +291,7 @@ pub mod login {
 		});
 
 		/// The identity server base URL.
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct IdentityServerInfo {
 			pub base_url: String,
 		}
@@ -301,7 +301,7 @@ pub mod login {
 		});
 
 		/// Client discovery information (`m.homeserver`, `m.identity_server`).
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct DiscoveryInfo {
 			pub homeserver: HomeserverInfo,
 			pub identity_server: Option<IdentityServerInfo>,
@@ -341,7 +341,7 @@ pub mod login {
 		}
 
 		/// A successful login.
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct Response {
 			pub user_id: OwnedUserId,
 			pub access_token: String,
@@ -407,7 +407,7 @@ pub mod get_login_token {
 		}
 
 		/// A short-lived token for `m.login.token`.
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct Response {
 			pub expires_in: Duration,
 			pub login_token: alloc::string::String,

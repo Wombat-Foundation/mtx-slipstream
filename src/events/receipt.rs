@@ -15,7 +15,7 @@ pub enum ReceiptType {
 }
 crate::impl_codec_enum!(ReceiptType { Read => "m.read", ReadPrivate => "m.read.private", FullyRead => "m.fully_read" });
 
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
 pub enum ReceiptThread {
 	#[default]
 	Unthreaded,
@@ -35,12 +35,12 @@ impl ReceiptThread {
 	}
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 pub struct Receipt {
 	pub ts: Option<UInt>,
 	pub thread: ReceiptThread,
 }
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 pub struct ReceiptEventContent(
 	pub BTreeMap<OwnedEventId, BTreeMap<ReceiptType, BTreeMap<OwnedUserId, Receipt>>>,
 );
@@ -84,7 +84,7 @@ impl FromIterator<(OwnedEventId, BTreeMap<ReceiptType, BTreeMap<OwnedUserId, Rec
 	}
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct ReceiptEvent {
 	pub content: ReceiptEventContent,
 	pub room_id: OwnedRoomId,

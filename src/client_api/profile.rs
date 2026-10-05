@@ -17,7 +17,7 @@ pub mod get_profile {
 		};
 		use std::collections::BTreeMap;
 
-		#[derive(Clone, Debug, Default)]
+		#[derive(Debug, Default)]
 		pub struct Response {
 			pub avatar_url: Option<OwnedMxcUri>,
 			pub displayname: Option<String>,
@@ -183,7 +183,7 @@ pub mod get_avatar_url {
 			json::{Object, Value},
 		};
 
-		#[derive(Clone, Debug, Default)]
+		#[derive(Debug, Default)]
 		pub struct Response {
 			pub avatar_url: Option<crate::OwnedMxcUri>,
 			/// MSC2448 `BlurHash`, serialized as `xyz.amorgan.blurhash`.

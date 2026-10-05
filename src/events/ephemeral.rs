@@ -10,7 +10,7 @@ pub type SyncReceiptEvent = SyncEphemeralRoomEvent<ReceiptEventContent>;
 pub type SyncTypingEvent = SyncEphemeralRoomEvent<TypingEventContent>;
 
 /// An ephemeral event of any known type.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum AnySyncEphemeralRoomEvent {
 	Receipt(SyncReceiptEvent),
 	Typing(SyncTypingEvent),

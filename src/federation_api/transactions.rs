@@ -21,7 +21,7 @@ pub mod edu {
 	};
 
 	/// A user's presence update.
-	#[derive(Clone, Debug)]
+	#[derive(Debug)]
 	pub struct PresenceUpdate {
 		pub user_id: OwnedUserId,
 		pub presence: PresenceState,
@@ -39,7 +39,7 @@ pub mod edu {
 	});
 
 	/// Presence updates from one server.
-	#[derive(Clone, Debug, Default)]
+	#[derive(Debug, Default)]
 	pub struct PresenceContent {
 		pub push: Vec<PresenceUpdate>,
 	}
@@ -47,7 +47,7 @@ pub mod edu {
 	crate::impl_codec_struct!(PresenceContent { push: Vec<PresenceUpdate> });
 
 	/// Read-receipt data for one user.
-	#[derive(Clone, Debug)]
+	#[derive(Debug)]
 	pub struct ReceiptData {
 		pub data: Receipt,
 		pub event_ids: Vec<OwnedEventId>,
@@ -56,7 +56,7 @@ pub mod edu {
 	crate::impl_codec_struct!(ReceiptData { data: Receipt, event_ids: Vec<OwnedEventId> });
 
 	/// Receipts in one room.
-	#[derive(Clone, Debug, Default)]
+	#[derive(Debug, Default)]
 	pub struct ReceiptMap {
 		pub read: BTreeMap<OwnedUserId, ReceiptData>,
 	}
@@ -80,7 +80,7 @@ pub mod edu {
 	}
 
 	/// Receipts across rooms.
-	#[derive(Clone, Debug, Default)]
+	#[derive(Debug, Default)]
 	pub struct ReceiptContent {
 		pub receipts: BTreeMap<OwnedRoomId, ReceiptMap>,
 	}
@@ -100,7 +100,7 @@ pub mod edu {
 	}
 
 	/// A user starting or stopping typing.
-	#[derive(Clone, Debug)]
+	#[derive(Debug)]
 	pub struct TypingContent {
 		pub room_id: OwnedRoomId,
 		pub user_id: OwnedUserId,
@@ -125,7 +125,7 @@ pub mod edu {
 	});
 
 	/// A device list change.
-	#[derive(Clone, Debug)]
+	#[derive(Debug)]
 	pub struct DeviceListUpdateContent {
 		pub user_id: OwnedUserId,
 		pub device_id: OwnedDeviceId,
@@ -147,7 +147,7 @@ pub mod edu {
 	});
 
 	/// A device targeted by a to-device message, or all of a user's devices.
-	#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+	#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 	pub enum DeviceIdOrAllDevices {
 		DeviceId(OwnedDeviceId),
 		AllDevices,
@@ -177,7 +177,7 @@ pub mod edu {
 		BTreeMap<OwnedUserId, BTreeMap<DeviceIdOrAllDevices, Raw<Value>>>;
 
 	/// Direct-to-device messages.
-	#[derive(Clone, Debug)]
+	#[derive(Debug)]
 	pub struct DirectDeviceContent {
 		pub sender: OwnedUserId,
 		pub ev_type: String,
@@ -193,7 +193,7 @@ pub mod edu {
 	});
 
 	/// Cross-signing key changes.
-	#[derive(Clone, Debug)]
+	#[derive(Debug)]
 	pub struct SigningKeyUpdateContent {
 		pub user_id: OwnedUserId,
 		pub master_key: Option<Raw<Value>>,
@@ -207,7 +207,7 @@ pub mod edu {
 	});
 
 	/// An ephemeral data unit sent in a transaction.
-	#[derive(Clone, Debug)]
+	#[derive(Debug)]
 	pub enum Edu {
 		Presence(PresenceContent),
 		Receipt(ReceiptContent),

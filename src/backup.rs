@@ -5,7 +5,7 @@ use alloc::{collections::BTreeMap, string::String};
 use crate::{UInt, impl_codec_struct, json::Value, serde::Raw};
 
 /// A backup algorithm and its public parameters.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct BackupAlgorithm {
 	pub algorithm: String,
 	pub auth_data: Value,
@@ -17,7 +17,7 @@ impl_codec_struct!(BackupAlgorithm {
 });
 
 /// One backed-up room key.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct KeyBackupData {
 	pub first_message_index: UInt,
 	pub forwarded_count: UInt,
@@ -34,7 +34,7 @@ impl_codec_struct!(KeyBackupData {
 });
 
 /// The backed-up sessions of one room.
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 pub struct RoomKeyBackup {
 	pub sessions: BTreeMap<String, Raw<KeyBackupData>>,
 }
@@ -45,7 +45,7 @@ impl_codec_struct!(RoomKeyBackup { sessions: BTreeMap<String, Raw<KeyBackupData>
 /// the top level next to `count`, `etag` and `version`.
 macro_rules! backup_info_response {
 	() => {
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct Response {
 			pub algorithm: $crate::serde::Raw<$crate::backup::BackupAlgorithm>,
 			pub count: $crate::UInt,

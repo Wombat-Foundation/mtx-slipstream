@@ -60,7 +60,7 @@ pub mod search_events {
 		}
 
 		/// What to search for in one category.
-		#[derive(Clone, Debug, Default)]
+		#[derive(Debug, Default)]
 		pub struct Criteria {
 			pub search_term: String,
 			pub event_context: EventContext,
@@ -74,7 +74,7 @@ pub mod search_events {
 			include_state: Option<bool>,
 		});
 
-		#[derive(Clone, Debug, Default)]
+		#[derive(Debug, Default)]
 		pub struct Categories {
 			pub room_events: Option<Criteria>,
 		}
@@ -82,7 +82,7 @@ pub mod search_events {
 		impl_codec_struct!(Categories {} default { room_events: Option<Criteria> });
 
 		/// A user's profile, as returned alongside context events.
-		#[derive(Clone, Debug, Default)]
+		#[derive(Debug, Default)]
 		pub struct UserProfile {
 			pub displayname: Option<String>,
 			pub avatar_url: Option<OwnedMxcUri>,
@@ -94,7 +94,7 @@ pub mod search_events {
 		});
 
 		/// Events around a hit.
-		#[derive(Clone, Debug, Default)]
+		#[derive(Debug, Default)]
 		pub struct EventContextResult {
 			pub end: Option<String>,
 			pub events_after: Vec<RawPdu>,
@@ -111,7 +111,7 @@ pub mod search_events {
 			start: Option<String>,
 		});
 
-		#[derive(Clone, Debug, Default)]
+		#[derive(Debug, Default)]
 		pub struct SearchResult {
 			pub context: EventContextResult,
 			pub rank: Option<f64>,
@@ -125,7 +125,7 @@ pub mod search_events {
 		});
 
 		/// The results for the `room_events` category.
-		#[derive(Clone, Debug, Default)]
+		#[derive(Debug, Default)]
 		pub struct ResultRoomEvents {
 			pub count: Option<UInt>,
 			/// Result groupings; not produced by this server.
@@ -145,7 +145,7 @@ pub mod search_events {
 			state: BTreeMap<OwnedRoomId, Vec<Raw<crate::events::AnyStateEvent>>>,
 		});
 
-		#[derive(Clone, Debug, Default)]
+		#[derive(Debug, Default)]
 		pub struct ResultCategories {
 			pub room_events: ResultRoomEvents,
 		}

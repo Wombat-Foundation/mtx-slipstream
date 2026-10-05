@@ -1,7 +1,7 @@
 pub mod search_users {
 	pub mod v3 {
 		use crate::{OwnedMxcUri, UInt, endpoint};
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct User {
 			pub user_id: crate::OwnedUserId,
 			pub display_name: Option<String>,

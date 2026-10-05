@@ -15,7 +15,7 @@ use crate::{
 };
 
 /// How a room in a space hierarchy can be joined.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub enum SpaceRoomJoinRule {
 	Invite,
 	Knock,
@@ -141,7 +141,7 @@ macro_rules! summary {
 		$($extra:ident : $extra_ty:ty),*
 	) => {
 		$(#[$doc])*
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct $summary {
 			pub canonical_alias: Option<OwnedRoomAliasId>,
 			pub name: Option<String>,
@@ -160,7 +160,7 @@ macro_rules! summary {
 		}
 
 		/// The required fields of the summary.
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct $init {
 			pub num_joined_members: UInt,
 			pub room_id: OwnedRoomId,

@@ -51,7 +51,7 @@ pub mod get_state_events_for_key {
 		const _: Metadata = Metadata::new("GET", PATH);
 
 		/// Reads one state entry; `format=event` asks for the whole event.
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct Request {
 			pub room_id: OwnedRoomId,
 			pub event_type: StateEventType,
@@ -111,7 +111,7 @@ pub mod get_state_events_for_key {
 
 		/// Either the content (the default) or the whole event, both sent
 		/// as the entire body.
-		#[derive(Clone, Debug, Default)]
+		#[derive(Debug, Default)]
 		pub struct Response {
 			pub content: Option<Value>,
 			pub event: Option<Value>,
@@ -160,7 +160,7 @@ pub mod send_state_event {
 		const _: Metadata = Metadata::new("PUT", PATH);
 
 		/// Sends one state entry; the body is the event content as given.
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct Request {
 			pub room_id: OwnedRoomId,
 			pub event_type: StateEventType,

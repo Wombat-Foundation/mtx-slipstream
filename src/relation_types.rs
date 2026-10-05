@@ -12,7 +12,7 @@ use crate::{
 };
 
 /// The event a reply points at.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct InReplyTo {
 	pub event_id: OwnedEventId,
 }
@@ -31,7 +31,7 @@ impl_codec_struct!(InReplyTo {
 });
 
 /// A relation placing an event in a thread.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Thread {
 	/// The root of the thread.
 	pub event_id: OwnedEventId,
@@ -57,7 +57,7 @@ impl_codec_struct!(Thread { event_id: OwnedEventId } default {
 });
 
 /// Replaces (edits) another event.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Replacement {
 	pub event_id: OwnedEventId,
 }
@@ -67,7 +67,7 @@ impl_codec_struct!(Replacement {
 });
 
 /// References another event without changing how it is shown.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Reference {
 	pub event_id: OwnedEventId,
 }
@@ -77,7 +77,7 @@ impl_codec_struct!(Reference {
 });
 
 /// An annotation, such as a reaction, on another event.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Annotation {
 	pub event_id: OwnedEventId,
 	pub key: String,
@@ -89,14 +89,14 @@ impl_codec_struct!(Annotation {
 });
 
 /// A relation of a kind this server does not know.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct CustomRelation {
 	pub rel_type: String,
 	pub data: Object,
 }
 
 /// How an event relates to another.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum Relation {
 	Reply {
 		in_reply_to: InReplyTo,
@@ -167,7 +167,7 @@ impl Deserialize for Relation {
 }
 
 /// Aggregated thread information bundled into a thread root.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct BundledThread {
 	pub latest_event: Raw<Value>,
 	pub count: UInt,
@@ -180,7 +180,7 @@ impl_codec_struct!(BundledThread {
 } default { current_user_participated: bool });
 
 /// An event that references the bundling event.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct BundledReference {
 	pub event_id: OwnedEventId,
 }
@@ -199,7 +199,7 @@ impl_codec_struct!(BundledReference {
 });
 
 /// All references to the bundling event.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct ReferenceChunk {
 	pub chunk: Vec<BundledReference>,
 }
@@ -218,7 +218,7 @@ impl_codec_struct!(ReferenceChunk { chunk: Vec<BundledReference> });
 /// The aggregations bundled into an event's `unsigned.m.relations`.
 ///
 /// `T` is the representation of the replacing event.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct BundledMessageLikeRelations<T> {
 	pub replace: Option<Box<T>>,
 	pub has_invalid_replacement: bool,

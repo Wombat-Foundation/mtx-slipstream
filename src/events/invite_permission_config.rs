@@ -17,7 +17,7 @@ pub enum FilterLevel {
 }
 
 /// A user's invite filtering preferences.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub struct InvitePermissionConfigEventContent {
 	pub enabled: bool,
 	pub blocked_users: Vec<String>,

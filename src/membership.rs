@@ -14,7 +14,7 @@ use crate::{
 };
 
 /// Signed token proving a third-party invite, supplied when joining.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct ThirdPartySigned {
 	pub sender: OwnedUserId,
 	pub mxid: OwnedUserId,
@@ -30,7 +30,7 @@ crate::impl_codec_struct!(ThirdPartySigned {
 });
 
 /// Who an invitation is for.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum InvitationRecipient {
 	UserId {
 		user_id: OwnedUserId,
@@ -57,7 +57,7 @@ crate::impl_codec_enum!(MembershipEventFilter {
 });
 
 /// A joined member's profile.
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 pub struct RoomMember {
 	pub display_name: Option<String>,
 	pub avatar_url: Option<OwnedMxcUri>,
@@ -292,7 +292,7 @@ pub mod invite_user {
 		const _: Metadata = Metadata::new("POST", "/_matrix/client/v3/rooms/{room_id}/invite");
 
 		/// An invitation, by user ID or by third-party identifier.
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct Request {
 			pub room_id: OwnedRoomId,
 			pub recipient: InvitationRecipient,
@@ -370,7 +370,7 @@ pub mod invite_user {
 		}
 
 		/// Empty response.
-		#[derive(Clone, Debug, Default)]
+		#[derive(Debug, Default)]
 		pub struct Response {}
 
 		impl Response {
@@ -405,7 +405,7 @@ pub mod join_room_by_id_or_alias {
 
 		/// Joins by room ID or alias. `via` is sent as both `via` and the legacy
 		/// `server_name` query parameter, and read from either.
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct Request {
 			pub room_id_or_alias: OwnedRoomOrAliasId,
 			pub third_party_signed: Option<ThirdPartySigned>,
@@ -474,7 +474,7 @@ pub mod join_room_by_id_or_alias {
 		}
 
 		/// The room that was joined.
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct Response {
 			pub room_id: OwnedRoomId,
 		}
@@ -515,7 +515,7 @@ pub mod knock_room {
 
 		/// Knocks on a room. `via` is sent as both `via` and the legacy `server_name`
 		/// query parameter, and read from either.
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct Request {
 			pub room_id_or_alias: OwnedRoomOrAliasId,
 			pub reason: Option<String>,
@@ -574,7 +574,7 @@ pub mod knock_room {
 		}
 
 		/// The room that was knocked on.
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct Response {
 			pub room_id: OwnedRoomId,
 		}

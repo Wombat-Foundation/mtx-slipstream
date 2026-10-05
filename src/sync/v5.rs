@@ -9,7 +9,7 @@ use alloc::vec::Vec;
 use crate::writer::BufWriter;
 
 /// Per-room extra data for v5 sliding sync responses.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct RoomExtras {
 	/// The membership state of the local user in this room.
 	pub membership: Option<String>,

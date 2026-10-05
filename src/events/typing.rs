@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 use crate::OwnedUserId;
 
 /// The users currently typing in a room.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub struct TypingEventContent {
 	pub user_ids: Vec<OwnedUserId>,
 }

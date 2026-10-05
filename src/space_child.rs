@@ -10,7 +10,7 @@ use crate::{
 };
 
 /// A room's membership of a space, as stated by the space.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub struct SpaceChildEventContent {
 	/// Servers to try when joining the child.
 	pub via: Vec<OwnedServerName>,
@@ -71,7 +71,7 @@ impl crate::events::EventContent for SpaceChildEventContent {
 }
 
 /// The content of a redacted `m.space.child`: everything is stripped.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub struct RedactedSpaceChildEventContent {}
 
 impl Serialize for RedactedSpaceChildEventContent {
@@ -121,7 +121,7 @@ mod tests {
 }
 
 /// An `m.space.child` event as carried in a federation hierarchy response.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct HierarchySpaceChildEvent {
 	pub content: SpaceChildEventContent,
 	pub sender: crate::OwnedUserId,

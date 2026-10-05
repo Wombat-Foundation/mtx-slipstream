@@ -2,7 +2,7 @@
 pub enum EventEncryptionAlgorithm {
 	MegolmV1AesSha2,
 }
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct RoomEncryptionEventContent {
 	pub algorithm: EventEncryptionAlgorithm,
 }

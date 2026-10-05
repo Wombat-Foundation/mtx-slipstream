@@ -27,7 +27,7 @@ impl_codec_enum!(KeyUsage {
 });
 
 /// Extra information about a device that is not covered by its signatures.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub struct UnsignedDeviceInfo {
 	pub device_display_name: Option<String>,
 }
@@ -35,7 +35,7 @@ pub struct UnsignedDeviceInfo {
 impl_codec_struct!(UnsignedDeviceInfo {} default { device_display_name: Option<String> });
 
 /// Identity keys of a device.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct DeviceKeys {
 	pub user_id: OwnedUserId,
 	pub device_id: OwnedDeviceId,
@@ -76,7 +76,7 @@ impl_codec_struct!(DeviceKeys {
 });
 
 /// A cross-signing key.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct CrossSigningKey {
 	pub user_id: OwnedUserId,
 	pub usage: Vec<KeyUsage>,
@@ -110,7 +110,7 @@ impl_codec_struct!(CrossSigningKey {
 });
 
 /// A one-time or fallback key, kept as the JSON the client uploaded.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct OneTimeKey(pub Value);
 
 impl Serialize for OneTimeKey {

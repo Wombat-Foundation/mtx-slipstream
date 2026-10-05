@@ -13,7 +13,7 @@ use core::fmt;
 use crate::json::Value;
 
 /// Error produced when a JSON value does not match the target type.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct DeError(pub String);
 
 impl DeError {

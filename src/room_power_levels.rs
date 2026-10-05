@@ -10,7 +10,7 @@ use crate::{
 };
 
 /// The power levels of a room, as used to decide who may do what.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct RoomPowerLevels {
 	ban: Int,
 	events: BTreeMap<TimelineEventType, Int>,

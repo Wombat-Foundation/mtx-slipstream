@@ -41,7 +41,7 @@ pub mod get_profile_information {
 		};
 
 		/// A single profile field to query.
-		#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+		#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 		pub enum ProfileField {
 			DisplayName,
 			AvatarUrl,
@@ -98,7 +98,7 @@ pub mod get_profile_information {
 		}
 
 		/// A profile; unknown keys are kept in `custom_profile_fields`.
-		#[derive(Clone, Debug, Default)]
+		#[derive(Debug, Default)]
 		pub struct Response {
 			pub displayname: Option<String>,
 			pub avatar_url: Option<OwnedMxcUri>,

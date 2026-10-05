@@ -9,7 +9,7 @@ use crate::{
 };
 
 /// A user's suspension state.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub struct UserSuspension {
 	/// Whether the user is currently suspended.
 	pub suspended: bool,
@@ -26,7 +26,7 @@ crate::impl_codec_struct!(UserSuspension {
 });
 
 /// A profile change retained for MSC4429 incremental sync.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct ProfileUpdate {
 	pub user_id: OwnedUserId,
 	pub field: String,

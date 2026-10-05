@@ -3,7 +3,7 @@ use alloc::string::String;
 use crate::{OwnedRoomId, impl_codec_struct};
 
 /// `m.room.tombstone`: the room has been replaced by another.
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 pub struct RoomTombstoneEventContent {
 	pub body: String,
 	pub replacement_room: OwnedRoomId,

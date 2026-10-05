@@ -299,7 +299,7 @@ impl EndpointError for Error {
 }
 
 /// Error converting an HTTP response into a typed response.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum FromHttpResponseError<E> {
 	/// The server returned an error response.
 	Server(E),
@@ -324,7 +324,7 @@ impl<E> From<DeError> for FromHttpResponseError<E> {
 }
 
 /// Error converting an HTTP request into a typed request.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum FromHttpRequestError {
 	Deserialization(DeError),
 	MethodMismatch,

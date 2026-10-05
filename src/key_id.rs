@@ -140,7 +140,7 @@ impl<A, K> Deserialize for OwnedKeyId<A, K> {
 }
 
 /// An algorithm for one-time keys.
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum OneTimeKeyAlgorithm {
 	Curve25519,
 	SignedCurve25519,
@@ -180,7 +180,7 @@ impl From<&str> for OneTimeKeyAlgorithm {
 }
 
 /// The name part of a one-time key ID.
-#[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct OneTimeKeyName(pub String);
 
 impl AsRef<str> for OneTimeKeyName {
@@ -205,7 +205,7 @@ pub type OwnedOneTimeKeyId = OwnedKeyId<OneTimeKeyAlgorithm, OneTimeKeyName>;
 pub type OneTimeKeyId = OwnedOneTimeKeyId;
 
 /// An algorithm for signing keys.
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum SigningKeyAlgorithm {
 	Ed25519,
 	/// Any other algorithm.
@@ -244,7 +244,7 @@ impl From<&str> for SigningKeyAlgorithm {
 macro_rules! key_name {
 	($(#[$doc:meta])* $name:ident) => {
 		$(#[$doc])*
-		#[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
+		#[derive(Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 		pub struct $name(pub String);
 
 		impl AsRef<str> for $name {

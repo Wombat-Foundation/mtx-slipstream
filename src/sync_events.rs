@@ -98,7 +98,7 @@ macro_rules! sync_struct {
 		}
 	) => {
 		$(#[$meta])*
-		#[derive(Clone, Debug, Default)]
+		#[derive(Debug, Default)]
 		pub struct $name {
 			$($(#[$fmeta])* pub $field: $ty),*
 		}
@@ -184,7 +184,7 @@ sync_basics!(DeviceLists);
 /// Sticky list filters for simplified sliding sync, kept alongside a
 /// connection's other sticky parameters. `is_invited` is accepted as an alias
 /// of `is_invite`.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub struct CompatListFilters {
 	pub is_dm: Option<bool>,
 	pub is_encrypted: Option<bool>,
@@ -252,7 +252,7 @@ pub mod v3 {
 	};
 
 	/// A filter given inline or by ID.
-	#[derive(Clone, Debug)]
+	#[derive(Debug)]
 	pub enum Filter {
 		FilterDefinition(alloc::boxed::Box<FilterDefinition>),
 		FilterId(String),
@@ -291,7 +291,7 @@ pub mod v3 {
 		}
 	}
 
-	#[derive(Clone, Debug)]
+	#[derive(Debug)]
 	pub struct Request {
 		pub filter: Option<Filter>,
 		pub since: Option<String>,
@@ -670,7 +670,7 @@ pub mod v5 {
 		sync_basics!(Receipts);
 
 		/// Rooms a receipts extension covers: every subscribed room (`*`) or one room.
-		#[derive(Clone, Debug, Eq, PartialEq)]
+		#[derive(Debug, Eq, PartialEq)]
 		pub enum ReceiptsRoom {
 			AllSubscribed,
 			Room(OwnedRoomId),
@@ -1105,7 +1105,7 @@ pub mod v4 {
 	}
 
 	/// Sliding-sync v4 responses are not produced by this server.
-	#[derive(Clone, Debug, Default)]
+	#[derive(Debug, Default)]
 	pub struct Response {
 		pub pos: String,
 	}
@@ -1221,7 +1221,7 @@ mod tests {
 		let config = from_str::<v4::ExtensionsConfig>(r#"{"e2ee":{"enabled":true}}"#).unwrap();
 		assert_eq!(config.e2ee.enabled, Some(true));
 		assert!(config.account_data.is_empty() && !config.is_empty());
-		assert_eq!(config, config.clone());
+		assert_eq!(config, from_str::<v4::ExtensionsConfig>(&to_string(&config)).unwrap());
 	}
 }
 

@@ -5,7 +5,7 @@ use alloc::{string::String, vec::Vec};
 use crate::{federation_api::RawPdu, impl_codec_struct};
 
 /// Room state returned from a join, in the v1 layout.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct RoomStateV1 {
 	pub origin: String,
 	pub auth_chain: Vec<RawPdu>,
@@ -21,7 +21,7 @@ impl_codec_struct!(RoomStateV1 {
 });
 
 /// Room state returned from a join, in the v2 layout.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct RoomStateV2 {
 	pub auth_chain: Vec<RawPdu>,
 	pub state: Vec<RawPdu>,
@@ -266,7 +266,7 @@ pub mod create_invite {
 			Metadata::new("PUT", "/_matrix/federation/v2/invite/{room_id}/{event_id}");
 
 		/// Invites a user on the receiving server; the `via` list uses the MSC4125 key.
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct Request {
 			pub room_id: OwnedRoomId,
 			pub event_id: OwnedEventId,
@@ -320,7 +320,7 @@ pub mod create_invite {
 		}
 
 		/// The invited user's server returns the event, countersigned.
-		#[derive(Clone, Debug)]
+		#[derive(Debug)]
 		pub struct Response {
 			pub event: RawPdu,
 		}

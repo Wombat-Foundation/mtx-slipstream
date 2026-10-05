@@ -42,7 +42,7 @@ crate::impl_codec_enum!(DelayedEventStatus {
 });
 
 /// The content of an event waiting to be sent, kept as raw JSON.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub struct AnyTimelineEventContent(pub Value);
 
 impl Serialize for AnyTimelineEventContent {
@@ -65,7 +65,7 @@ fn optional<T: Deserialize>(object: &Object, name: &str) -> Result<Option<T>, De
 }
 
 /// A delayed event as reported to clients.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct DelayedEventData {
 	/// The ID of the delayed event.
 	pub delay_id: String,
@@ -168,7 +168,7 @@ impl Deserialize for DelayedEventData {
 ///
 /// Times are stored in the same shape serde gives them: `running_since` as
 /// `{secs_since_epoch, nanos_since_epoch}` and `delay` as `{secs, nanos}`.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct ScheduledDelayedEvent {
 	pub event_type: TimelineEventType,
 	pub state_key: Option<String>,

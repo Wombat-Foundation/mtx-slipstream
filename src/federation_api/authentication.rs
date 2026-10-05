@@ -7,7 +7,7 @@ use http::HeaderValue;
 use crate::{OwnedServerName, OwnedServerSigningKeyId};
 
 /// The parsed fields of an `X-Matrix` authorization header.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct XMatrix {
 	pub origin: OwnedServerName,
 	pub destination: Option<OwnedServerName>,

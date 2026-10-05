@@ -80,7 +80,7 @@ impl Serialize for RoomCreateEventContent {
 }
 
 /// Error decoding unpadded base64.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Base64DecodeError;
 
 impl core::fmt::Display for Base64DecodeError {

@@ -10,7 +10,7 @@ use crate::{
 };
 
 /// An ignored user. The spec defines no fields; any that appear are kept.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub struct IgnoredUser {
 	pub extra: Object,
 }
@@ -30,7 +30,7 @@ impl Deserialize for IgnoredUser {
 }
 
 /// The users a user is ignoring.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub struct IgnoredUserListEventContent {
 	pub ignored_users: BTreeMap<OwnedUserId, IgnoredUser>,
 }

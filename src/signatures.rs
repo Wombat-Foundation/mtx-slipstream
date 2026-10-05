@@ -22,7 +22,7 @@ use crate::{
 const MAX_PDU_BYTES: usize = 65_535;
 
 /// Errors from signing and verification.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum Error {
 	/// The canonical PDU exceeds the size limit.
 	PduSize,
@@ -75,7 +75,7 @@ impl fmt::Debug for Ed25519KeyPair {
 }
 
 /// A detached signature.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Signature(pub Vec<u8>);
 
 impl Signature {

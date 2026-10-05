@@ -10,7 +10,7 @@ use crate::{
 };
 
 /// Metadata about one of a user's devices.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Device {
 	pub device_id: OwnedDeviceId,
 	pub display_name: Option<String>,
@@ -102,7 +102,7 @@ pub mod delete_devices {
 }
 
 /// The encrypted private data of a dehydrated device (MSC3814).
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct DehydratedDeviceData(pub Value);
 
 impl Serialize for DehydratedDeviceData {
@@ -193,7 +193,7 @@ pub mod dehydrated_device {
 }
 
 /// A user's stored dehydrated device.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct DehydratedDevice {
 	/// Unique ID of the device.
 	pub device_id: OwnedDeviceId,

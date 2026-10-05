@@ -1,4 +1,4 @@
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 pub struct RoomNameEventContent {
 	pub name: Option<String>,
 }
