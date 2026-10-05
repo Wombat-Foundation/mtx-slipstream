@@ -34,6 +34,10 @@ all: format
 check: ##H Type-check without building
 	$(CARGO) check --all-targets --all-features
 
+.PHONY: macro
+macro: ##H See macro expansion costs
+	$(CARGO) +nightly rustc -- -Zmacro-stats
+
 .PHONY: lint
 lint: ##H Run clippy lints
 	$(CARGO) clippy --all-targets --all-features -- $(if $(CI),-D warnings)
