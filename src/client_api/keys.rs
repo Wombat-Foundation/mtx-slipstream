@@ -44,10 +44,36 @@ pub mod claim_keys {
 		};
 		use std::collections::BTreeMap;
 
+		/// The one-time keys for a single device.
+		pub type OneTimeKeys = BTreeMap<
+			OwnedDeviceId,
+			BTreeMap<OwnedOneTimeKeyId, Raw<crate::encryption::OneTimeKey>>,
+		>;
+
 		endpoint! {
 			method: "POST", path: "/_matrix/client/v3/keys/claim",
-			request { path {} query {} body { one_time_keys: BTreeMap<OwnedUserId, BTreeMap<OwnedDeviceId, OneTimeKeyAlgorithm>>, timeout: Option<std::time::Duration> } }
-			response { one_time_keys: BTreeMap<OwnedUserId, BTreeMap<OwnedOneTimeKeyId, Raw<crate::encryption::OneTimeKey>>>, failures: BTreeMap<String, crate::json::Value> }
+			request {
+				path {} query {}
+				body {
+					one_time_keys: BTreeMap<OwnedUserId, BTreeMap<OwnedDeviceId, OneTimeKeyAlgorithm>>,
+					timeout: Option<std::time::Duration>
+				}
+			}
+			response {
+				one_time_keys: BTreeMap<OwnedUserId, OneTimeKeys>,
+				failures: BTreeMap<String, crate::json::Value>
+			}
+		}
+
+		impl Response {
+			/// Creates a response with the given keys and no failures.
+			#[must_use]
+			pub fn new(one_time_keys: BTreeMap<OwnedUserId, OneTimeKeys>) -> Self {
+				Self {
+					failures: BTreeMap::new(),
+					one_time_keys,
+				}
+			}
 		}
 	}
 }

@@ -74,11 +74,20 @@ pub mod keys {
 			use super::super::{
 				BTreeMap, OneTimeKey, OwnedDeviceId, OwnedServerName, OwnedUserId, endpoint,
 			};
+			use crate::{OneTimeKeyAlgorithm, OwnedOneTimeKeyId, serde::Raw};
+
+			pub type OneTimeKeyClaims =
+				BTreeMap<OwnedUserId, BTreeMap<OwnedDeviceId, OneTimeKeyAlgorithm>>;
+			pub type OneTimeKeys = BTreeMap<
+				OwnedUserId,
+				BTreeMap<OwnedDeviceId, BTreeMap<OwnedOneTimeKeyId, Raw<OneTimeKey>>>,
+			>;
+
 			endpoint! {
 				method: "POST", path: "/_matrix/federation/v1/user/keys/claim",
-				request { path {} query {} body { one_time_keys: BTreeMap<OwnedUserId, BTreeMap<OwnedDeviceId, String>> } }
+				request { path {} query {} body { one_time_keys: OneTimeKeyClaims } }
 				response {
-					one_time_keys: BTreeMap<OwnedUserId, BTreeMap<OwnedDeviceId, BTreeMap<crate::OneTimeKeyAlgorithm, OneTimeKey>>>,
+					one_time_keys: OneTimeKeys,
 					failures: BTreeMap<OwnedServerName, crate::json::Value>
 				}
 			}
