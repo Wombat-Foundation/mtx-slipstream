@@ -542,17 +542,7 @@ pub enum RemovePushRuleError {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct RuleNotFoundError;
 
-macro_rules! error_display {
-	($($t:ty => $msg:literal),* $(,)?) => {$(
-		impl core::fmt::Display for $t {
-			fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-				f.write_str($msg)
-			}
-		}
-		impl core::error::Error for $t {}
-	)*};
-}
-error_display! {
+crate::compat::simple_error! {
 	InsertPushRuleError => "invalid push rule insertion",
 	RemovePushRuleError => "cannot remove push rule",
 	RuleNotFoundError => "push rule not found",

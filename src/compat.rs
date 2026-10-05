@@ -11,14 +11,18 @@ use crate::{
 	http_headers::{ContentDisposition, ContentDispositionParseError, ContentDispositionType},
 };
 
+/// Gives each type a fixed `Display` message and an empty `std::error::Error` impl.
 macro_rules! simple_error {
 	($($t:ty => $msg:literal),* $(,)?) => {$(
-		impl fmt::Display for $t {
-			fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str($msg) }
+		impl core::fmt::Display for $t {
+			fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+				f.write_str($msg)
+			}
 		}
 		impl core::error::Error for $t {}
 	)*};
 }
+pub(crate) use simple_error;
 
 simple_error! {
 	JsParseIntError => "failed to parse integer",
