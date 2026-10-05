@@ -651,6 +651,12 @@ pub mod api {
 				join_room_by_id_or_alias, joined_members, joined_rooms, kick_user, leave_room,
 				unban_user,
 			};
+			pub mod mutual_rooms {
+				pub mod unstable {
+					use crate::{OwnedRoomId, OwnedUserId, endpoint};
+					endpoint! { method: "GET", path: "/_matrix/client/unstable/uk.half-shot.msc2666/user/mutual_rooms", request { path {} query { user_id: OwnedUserId } body {} } response { joined: alloc::vec::Vec<OwnedRoomId>, next_batch_token: Option<String> } }
+				}
+			}
 		}
 		pub mod knock {
 			pub use crate::membership::knock_room;
