@@ -112,7 +112,7 @@ macro_rules! sync_struct {
 		impl $crate::codec::Serialize for $name {
 			fn to_json(&self) -> $crate::json::Value {
 				let mut object = $crate::json::Object::new();
-				$($crate::sync_struct!(@put object, &self.$field, $spec);)*
+				$(sync_put!(object, &self.$field, $spec);)*
 				$crate::json::Value::Object(object)
 			}
 		}
@@ -125,32 +125,10 @@ macro_rules! sync_struct {
 					.as_object()
 					.ok_or_else(|| $crate::codec::DeError::expected("object"))?;
 				Ok(Self {
-					$($field: $crate::sync_struct!(@get object, value, $spec)),*
+					$($field: sync_get!(object, value, $spec)),*
 				})
 			}
 		}
-	};
-	(@put $object:ident, $value:expr, ($key:literal, skip)) => {
-		if !$crate::sync_events::SyncEmpty::sync_empty($value) {
-			$object.insert($key.into(), $crate::codec::Serialize::to_json($value));
-		}
-	};
-	(@put $object:ident, $value:expr, ($key:literal, keep)) => {
-		$object.insert($key.into(), $crate::codec::Serialize::to_json($value));
-	};
-	(@put $object:ident, $value:expr, (flatten)) => {
-		if let $crate::json::Value::Object(inner) = $crate::codec::Serialize::to_json($value) {
-			$object.extend(inner);
-		}
-	};
-	(@get $object:ident, $value:ident, ($key:literal, $mode:ident)) => {
-		match $object.get($key) {
-			Some(found) => $crate::codec::Deserialize::from_json(found)?,
-			None => Default::default(),
-		}
-	};
-	(@get $object:ident, $value:ident, (flatten)) => {
-		$crate::codec::Deserialize::from_json($value)?
 	};
 }
 
