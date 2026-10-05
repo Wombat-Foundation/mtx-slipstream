@@ -789,11 +789,15 @@ macro_rules! endpoint_request {
 			body { $($body_field_name:ident : $bt:ty),* $(,)? }
 		}
 	) => {
-		#[derive(Debug)]
 		pub struct Request {
 			$(pub $path_field: $pt,)*
 			$(pub $query_field: $qt,)*
 			$(pub $body_field_name: $bt,)*
+		}
+		impl ::core::fmt::Debug for Request {
+			fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+				f.debug_struct(stringify!(Request)).finish()
+			}
 		}
 
 		const _: $crate::endpoint::Metadata =
@@ -846,9 +850,13 @@ macro_rules! endpoint_request {
 #[macro_export]
 macro_rules! endpoint_response {
 	(response { $($resp_field:ident : $rt:ty),* $(,)? }) => {
-		#[derive(Debug)]
 		pub struct Response {
 			$(pub $resp_field: $rt,)*
+		}
+		impl ::core::fmt::Debug for Response {
+			fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+				f.debug_struct(stringify!(Response)).finish()
+			}
 		}
 
 		impl $crate::endpoint::EndpointResponse for Response {
@@ -906,11 +914,15 @@ macro_rules! endpoint_request_raw {
 			raw_body { $body_field:ident : $bt:ty }
 		}
 	) => {
-		#[derive(Debug)]
 		pub struct Request {
 			$(pub $path_field: $pt,)*
 			$(pub $query_field: $qt,)*
 			pub $body_field: $bt,
+		}
+		impl ::core::fmt::Debug for Request {
+			fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+				f.debug_struct(stringify!(Request)).finish()
+			}
 		}
 
 		const _: $crate::endpoint::Metadata =
@@ -958,9 +970,13 @@ macro_rules! endpoint_request_raw {
 #[macro_export]
 macro_rules! endpoint_response_flat {
 	($field:ident : $ty:ty) => {
-		#[derive(Debug)]
 		pub struct Response {
 			pub $field: $ty,
+		}
+		impl ::core::fmt::Debug for Response {
+			fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+				f.debug_struct(stringify!(Response)).finish()
+			}
 		}
 
 		impl $crate::endpoint::EndpointResponse for Response {
@@ -982,9 +998,13 @@ macro_rules! endpoint_response_flat {
 #[macro_export]
 macro_rules! endpoint_response_status_array {
 	($field:ident : $ty:ty) => {
-		#[derive(Debug)]
 		pub struct Response {
 			pub $field: $ty,
+		}
+		impl ::core::fmt::Debug for Response {
+			fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+				f.debug_struct(stringify!(Response)).finish()
+			}
 		}
 
 		impl $crate::endpoint::EndpointResponse for Response {
