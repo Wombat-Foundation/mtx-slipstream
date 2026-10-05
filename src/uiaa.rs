@@ -15,7 +15,7 @@ use crate::{
 };
 
 /// An `errcode` and human-readable message, as found in error bodies.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct StandardErrorBody {
 	pub kind: ErrorKind,
 	pub message: String,
@@ -42,7 +42,7 @@ impl Deserialize for StandardErrorBody {
 }
 
 /// The type of one authentication stage.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum AuthType {
 	Password,
 	ReCaptcha,
@@ -97,7 +97,7 @@ impl fmt::Display for AuthType {
 crate::impl_codec_string!(AuthType, |s| Ok(Self::from(s)), |v| v.as_str());
 
 /// A sequence of stages that together complete authentication.
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct AuthFlow {
 	pub stages: Vec<AuthType>,
 }
@@ -114,7 +114,7 @@ impl AuthFlow {
 impl_codec_struct!(AuthFlow { stages: Vec<AuthType> });
 
 /// The state of a UIAA session, sent to the client with a 401.
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct UiaaInfo {
 	pub flows: Vec<AuthFlow>,
 	pub completed: Vec<AuthType>,

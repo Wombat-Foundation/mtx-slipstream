@@ -1,6 +1,6 @@
 use crate::{MilliSecondsSinceUnixEpoch, OwnedUserId};
 
-#[derive(Debug, Eq, PartialEq, Default)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Default)]
 pub enum PresenceState {
 	Online,
 	Unavailable,

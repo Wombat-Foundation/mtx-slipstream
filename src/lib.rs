@@ -1270,7 +1270,7 @@ pub mod events {
 			}
 		}
 		pub mod join_rules {
-			#[derive(Debug, Default, PartialEq, Eq)]
+			#[derive(Clone, Debug, Default, PartialEq, Eq)]
 			pub enum JoinRule {
 				#[default]
 				Public,
@@ -1280,12 +1280,12 @@ pub mod events {
 				Restricted(RestrictedRule),
 				KnockRestricted(RestrictedRule),
 			}
-			#[derive(Debug, Default, PartialEq, Eq)]
+			#[derive(Clone, Debug, Default, PartialEq, Eq)]
 			pub struct RestrictedRule {
 				pub allow: alloc::vec::Vec<AllowRule>,
 			}
 			/// One way a restricted room lets a user join.
-			#[derive(Debug, PartialEq, Eq)]
+			#[derive(Clone, Debug, PartialEq, Eq)]
 			pub enum AllowRule {
 				/// The user is a member of another room.
 				RoomMembership(RoomMembership),
@@ -1295,7 +1295,7 @@ pub mod events {
 				_Custom(crate::json::Value),
 			}
 			/// Membership of the room `room_id`.
-			#[derive(Debug, PartialEq, Eq)]
+			#[derive(Clone, Debug, PartialEq, Eq)]
 			pub struct RoomMembership {
 				pub room_id: crate::OwnedRoomId,
 			}
