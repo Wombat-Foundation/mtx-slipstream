@@ -680,6 +680,7 @@ pub mod api {
 		}
 		pub use crate::client_api::account;
 		pub use crate::client_api::profile;
+		pub use crate::client_api::{message, presence, redact, tag, typing};
 		pub use authentication::TokenType;
 		pub mod media {
 			pub use crate::media_api::legacy::{
