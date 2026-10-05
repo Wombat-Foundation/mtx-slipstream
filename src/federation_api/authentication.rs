@@ -3,6 +3,7 @@
 use alloc::string::String;
 
 use http::HeaderValue;
+#[cfg(feature = "x-matrix")]
 use headers::authorization::Credentials;
 
 use crate::{OwnedServerName, OwnedServerSigningKeyId};
@@ -74,6 +75,7 @@ impl XMatrix {
 	}
 }
 
+#[cfg(feature = "x-matrix")]
 impl Credentials for XMatrix {
 	const SCHEME: &'static str = "X-Matrix";
 
