@@ -679,7 +679,11 @@ pub mod api {
 			crate::impl_codec_enum!(TokenType { Bearer => "Bearer" });
 		}
 		pub use crate::client_api::account;
+		pub use crate::client_api::admin;
 		pub use crate::client_api::message_events::get_message_events;
+		pub use crate::client_api::profile_keys::{
+			delete_profile_key, get_profile_key, set_profile_key,
+		};
 		pub use crate::client_api::report::report_user;
 		pub use crate::client_api::{
 			alias, config, context, keys, message, presence, profile, redact, relations, report,

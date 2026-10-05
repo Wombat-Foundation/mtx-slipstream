@@ -74,10 +74,10 @@ impl Serialize for RoomMember {
 
 impl Deserialize for RoomMember {
 	fn from_json(value: &Value) -> Result<Self, DeError> {
-	if value.as_object().is_none() {
-		return Err(DeError::expected("room member object"));
-	}
-	let input = Input::new(&[], &[], Some(value));
+		if value.as_object().is_none() {
+			return Err(DeError::expected("room member object"));
+		}
+		let input = Input::new(&[], &[], Some(value));
 		// Some servers send an empty string for "no avatar".
 		let avatar: Option<String> = input.body_or_default("avatar_url")?;
 		Ok(Self {

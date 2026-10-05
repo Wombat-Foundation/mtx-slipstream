@@ -82,6 +82,10 @@ event_type!(TimelineEventType {
 	RoomServerAcl => "m.room.server_acl",
 	RoomTombstone => "m.room.tombstone",
 	SpaceChild => "m.space.child",
+	Beacon => "org.matrix.msc3488.beacon",
+	CallInvite => "m.call.invite",
+	PollStart => "org.matrix.msc3381.poll.start",
+	Sticker => "m.sticker",
 });
 
 event_type!(StateEventType {

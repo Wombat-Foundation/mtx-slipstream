@@ -107,7 +107,7 @@ pub mod get_username_availability {
 pub mod whoami {
 	pub mod v3 {
 		use crate::endpoint;
-		endpoint! { method: "GET", path: "/_matrix/client/v3/account/whoami", request { path {} query {} body {} } response { user_id: crate::OwnedUserId, device_id: Option<crate::OwnedDeviceId>, is_guest: Option<bool> } }
+		endpoint! { method: "GET", path: "/_matrix/client/v3/account/whoami", request { path {} query {} body {} } response { user_id: crate::OwnedUserId, device_id: Option<crate::OwnedDeviceId>, is_guest: bool } }
 	}
 }
 pub mod request_password_change_token_via_email {

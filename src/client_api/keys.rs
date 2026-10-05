@@ -30,7 +30,7 @@ pub mod get_keys {
 
 		endpoint! {
 			method: "POST", path: "/_matrix/client/v3/keys/query",
-			request { path {} query {} body { device_keys: BTreeMap<OwnedUserId, Vec<OwnedDeviceId>>, timeout: Option<crate::UInt>, notary: Option<bool> } }
+			request { path {} query {} body { device_keys: BTreeMap<OwnedUserId, Vec<OwnedDeviceId>>, timeout: Option<std::time::Duration> } }
 			response { device_keys: BTreeMap<OwnedUserId, BTreeMap<OwnedDeviceId, Raw<DeviceKeys>>>, master_keys: BTreeMap<OwnedUserId, Raw<CrossSigningKey>>, self_signing_keys: BTreeMap<OwnedUserId, Raw<CrossSigningKey>>, user_signing_keys: BTreeMap<OwnedUserId, Raw<CrossSigningKey>>, failures: BTreeMap<String, crate::json::Value> }
 		}
 	}
@@ -46,7 +46,7 @@ pub mod claim_keys {
 
 		endpoint! {
 			method: "POST", path: "/_matrix/client/v3/keys/claim",
-			request { path {} query {} body { one_time_keys: BTreeMap<OwnedUserId, BTreeMap<OwnedDeviceId, OneTimeKeyAlgorithm>>, timeout: Option<crate::UInt> } }
+			request { path {} query {} body { one_time_keys: BTreeMap<OwnedUserId, BTreeMap<OwnedDeviceId, OneTimeKeyAlgorithm>>, timeout: Option<std::time::Duration> } }
 			response { one_time_keys: BTreeMap<OwnedUserId, BTreeMap<OwnedOneTimeKeyId, Raw<crate::encryption::OneTimeKey>>>, failures: BTreeMap<String, crate::json::Value> }
 		}
 	}
