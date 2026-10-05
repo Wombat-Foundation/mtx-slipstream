@@ -400,6 +400,9 @@ impl OwnedRoomId {
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct MilliSecondsSinceUnixEpoch(pub UInt);
 
+/// Seconds since the Unix epoch, represented as an unsigned Matrix integer.
+pub type SecondsSinceUnixEpoch = MilliSecondsSinceUnixEpoch;
+
 impl MilliSecondsSinceUnixEpoch {
 	#[must_use]
 	pub fn get(self) -> UInt {
@@ -810,6 +813,13 @@ pub mod api {
 				Unknown,
 				BadJson,
 				InvalidParam,
+				NotJson,
+				UserInUse,
+				ThreepidMediumNotSupported,
+				ThreepidNotFound,
+				UnableToAuthorizeJoin,
+				UnableToGrantJoin,
+				IncompatibleRoomVersion { room_version: crate::RoomVersionId },
 			}
 			#[derive(Clone, Debug)]
 			pub enum ErrorBody {
