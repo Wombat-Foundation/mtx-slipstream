@@ -144,11 +144,7 @@ pub(super) const AUTH_TABLE: &[(&str, &str, AuthScheme)] = &[
 	("PUT", "/_matrix/client/r0/user/{}/rooms/{}/tags/{}", AuthScheme::AccessToken),
 	("POST", "/_matrix/client/r0/user_directory/search", AuthScheme::AccessToken),
 	("GET", "/_matrix/client/r0/voip/turnServer", AuthScheme::AccessToken),
-	(
-		"POST",
-		"/_matrix/client/unstable/event_relationships",
-		AuthScheme::AccessToken,
-	),
+	("POST", "/_matrix/client/unstable/event_relationships", AuthScheme::AccessToken),
 	(
 		"POST",
 		"/_matrix/client/unstable/fi.mau.msc2659/appservice/{}/ping",

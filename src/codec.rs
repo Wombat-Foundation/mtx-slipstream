@@ -99,6 +99,7 @@ impl Serialize for Value {
 		self.clone()
 	}
 }
+
 impl Deserialize for Value {
 	fn from_json(value: &Value) -> Result<Self, DeError> {
 		Ok(value.clone())

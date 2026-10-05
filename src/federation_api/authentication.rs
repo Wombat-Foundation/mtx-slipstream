@@ -2,9 +2,9 @@
 
 use alloc::string::String;
 
-use http::HeaderValue;
 #[cfg(feature = "x-matrix")]
 use headers::authorization::Credentials;
+use http::HeaderValue;
 
 use crate::{OwnedServerName, OwnedServerSigningKeyId};
 
@@ -79,9 +79,13 @@ impl XMatrix {
 impl Credentials for XMatrix {
 	const SCHEME: &'static str = "X-Matrix";
 
-	fn decode(value: &HeaderValue) -> Option<Self> { Self::decode(value) }
+	fn decode(value: &HeaderValue) -> Option<Self> {
+		Self::decode(value)
+	}
 
-	fn encode(&self) -> HeaderValue { Self::encode(self) }
+	fn encode(&self) -> HeaderValue {
+		Self::encode(self)
+	}
 }
 
 #[cfg(test)]
