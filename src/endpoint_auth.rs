@@ -241,18 +241,18 @@ pub(super) const AUTH_TABLE: &[(&str, &str, AuthScheme)] = &[
 	("POST", "/_matrix/client/unstable/org.matrix.msc3983/keys/claim", AuthScheme::AccessToken),
 	("POST", "/_matrix/client/unstable/org.matrix.msc4108/rendezvous", AuthScheme::None),
 	(
-		"POST",
-		"/_matrix/client/unstable/org.matrix.msc4140/delayed_events/{}",
-		AuthScheme::AccessToken,
-	),
-	(
-		"GET",
-		"/_matrix/client/unstable/org.matrix.msc4140/delayed_events/{}",
-		AuthScheme::AccessToken,
-	),
-	(
 		"GET",
 		"/_matrix/client/unstable/org.matrix.msc4140/delayed_events",
+		AuthScheme::AccessToken,
+	),
+	(
+		"GET",
+		"/_matrix/client/unstable/org.matrix.msc4140/delayed_events/{}",
+		AuthScheme::AccessToken,
+	),
+	(
+		"POST",
+		"/_matrix/client/unstable/org.matrix.msc4140/delayed_events/{}",
 		AuthScheme::AccessToken,
 	),
 	("GET", "/_matrix/client/unstable/org.matrix.msc4143/rtc/transports", AuthScheme::None),

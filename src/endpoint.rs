@@ -108,7 +108,7 @@ pub const fn lookup_auth(method: &str, path: &str) -> Option<AuthScheme> {
 	if let Some(scheme) = lookup_in(EXTRA_AUTH, method, path) {
 		return Some(scheme);
 	}
-	lookup_in(auth_table::AUTH_TABLE, method, path)
+	lookup_sorted(auth_table::AUTH_TABLE, method, path)
 }
 
 /// Hand-reviewed entries that take precedence over the generated table.
@@ -140,6 +140,7 @@ const EXTRA_AUTH: &[(&str, &str, AuthScheme)] = &[
 	),
 ];
 
+/// Linear scan; only for the small hand-written override table.
 const fn lookup_in(
 	table: &[(&str, &str, AuthScheme)],
 	method: &str,
@@ -148,7 +149,8 @@ const fn lookup_in(
 	let mut i = 0;
 	while i < table.len() {
 		let (m, p, scheme) = table[i];
-		if bytes_eq(m.as_bytes(), method.as_bytes()) && template_eq(p.as_bytes(), path.as_bytes())
+		if template_cmp(p.as_bytes(), path.as_bytes()) == 0
+			&& bytes_cmp(m.as_bytes(), method.as_bytes()) == 0
 		{
 			return Some(scheme);
 		}
@@ -157,13 +159,46 @@ const fn lookup_in(
 	None
 }
 
-const fn bytes_eq(a: &[u8], b: &[u8]) -> bool {
-	if a.len() != b.len() {
-		return false;
+/// Binary search over a table sorted by `(path, method)`.
+///
+/// Every endpoint evaluates this during const evaluation, so it must stay
+/// logarithmic: a linear scan made the whole crate's check time quadratic in the
+/// number of endpoints.
+const fn lookup_sorted(
+	table: &[(&str, &str, AuthScheme)],
+	method: &str,
+	path: &str,
+) -> Option<AuthScheme> {
+	let (mut lo, mut hi) = (0, table.len());
+	while lo < hi {
+		let mid = lo.saturating_add(hi.saturating_sub(lo) / 2);
+		let (m, p, scheme) = table[mid];
+		let mut ord = template_cmp(p.as_bytes(), path.as_bytes());
+		if ord == 0 {
+			ord = bytes_cmp(m.as_bytes(), method.as_bytes());
+		}
+		if ord == 0 {
+			return Some(scheme);
+		} else if ord < 0 {
+			lo = mid.saturating_add(1);
+		} else {
+			hi = mid;
+		}
 	}
-	let mut i = 0;
-	while i < a.len() {
-		if a[i] != b[i] {
+	None
+}
+
+/// Whether `table` is strictly sorted by `(path, method)`, as `lookup_sorted` requires.
+const fn is_sorted(table: &[(&str, &str, AuthScheme)]) -> bool {
+	let mut i = 1;
+	while i < table.len() {
+		let (pm, pp, _) = table[i.saturating_sub(1)];
+		let (m, p, _) = table[i];
+		let mut ord = template_cmp(pp.as_bytes(), p.as_bytes());
+		if ord == 0 {
+			ord = bytes_cmp(pm.as_bytes(), m.as_bytes());
+		}
+		if ord >= 0 {
 			return false;
 		}
 		i = i.saturating_add(1);
@@ -171,7 +206,32 @@ const fn bytes_eq(a: &[u8], b: &[u8]) -> bool {
 	true
 }
 
-const fn template_eq(a: &[u8], b: &[u8]) -> bool {
+const _: () =
+	assert!(is_sorted(auth_table::AUTH_TABLE), "AUTH_TABLE must be sorted by (path, method)");
+
+const fn bytes_cmp(a: &[u8], b: &[u8]) -> i8 {
+	let mut i = 0;
+	while i < a.len() && i < b.len() {
+		if a[i] != b[i] {
+			return if a[i] < b[i] {
+				-1
+			} else {
+				1
+			};
+		}
+		i = i.saturating_add(1);
+	}
+	if a.len() == b.len() {
+		0
+	} else if a.len() < b.len() {
+		-1
+	} else {
+		1
+	}
+}
+
+/// Orders path templates, treating every `{name}` placeholder as `{}`.
+const fn template_cmp(a: &[u8], b: &[u8]) -> i8 {
 	let (mut i, mut j) = (0, 0);
 	while i < a.len() && j < b.len() {
 		if a[i] == b'{' && b[j] == b'{' {
@@ -182,12 +242,22 @@ const fn template_eq(a: &[u8], b: &[u8]) -> bool {
 				j = j.saturating_add(1);
 			}
 		} else if a[i] != b[j] {
-			return false;
+			return if a[i] < b[j] {
+				-1
+			} else {
+				1
+			};
 		}
 		i = i.saturating_add(1);
 		j = j.saturating_add(1);
 	}
-	i == a.len() && j == b.len()
+	if i >= a.len() && j >= b.len() {
+		0
+	} else if i >= a.len() {
+		-1
+	} else {
+		1
+	}
 }
 
 /// Static description of an endpoint.
@@ -745,7 +815,8 @@ macro_rules! endpoint_request {
 			$(pub $body_field_name: $bt,)*
 		}
 
-		const _: $crate::endpoint::Metadata = $crate::endpoint::Metadata::new($method, $path);
+		const _: $crate::endpoint::Metadata =
+				<Request as $crate::endpoint::EndpointRequest>::METADATA;
 		impl $crate::endpoint::EndpointRequest for Request {
 			type Response = Response;
 			const METADATA: $crate::endpoint::Metadata =
@@ -861,7 +932,8 @@ macro_rules! endpoint_request_raw {
 			pub $body_field: $bt,
 		}
 
-		const _: $crate::endpoint::Metadata = $crate::endpoint::Metadata::new($method, $path);
+		const _: $crate::endpoint::Metadata =
+				<Request as $crate::endpoint::EndpointRequest>::METADATA;
 		impl $crate::endpoint::EndpointRequest for Request {
 			type Response = Response;
 			const METADATA: $crate::endpoint::Metadata =
