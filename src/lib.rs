@@ -1439,7 +1439,7 @@ pub mod events {
 		}
 		pub mod power_levels {
 			pub use crate::room_power_levels::RoomPowerLevels;
-			#[derive(Debug)]
+			#[derive(Clone, Debug)]
 			pub struct RoomPowerLevelsEventContent {
 				pub ban: crate::Int,
 				pub events:
