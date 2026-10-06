@@ -128,6 +128,9 @@ pub enum PushCondition {
 		key: String,
 		value: Value,
 	},
+	ThreadSubscription {
+		subscribed: bool,
+	},
 	Unknown(Value),
 }
 
@@ -179,6 +182,12 @@ impl Serialize for PushCondition {
 				("key", string(key)),
 				("value", value.clone()),
 			],
+			Self::ThreadSubscription {
+				subscribed,
+			} => vec![
+				("kind", Value::String("io.element.msc4306.thread_subscription".into())),
+				("subscribed", Value::Bool(*subscribed)),
+			],
 			Self::Unknown(value) => return value.clone(),
 		};
 		Value::Object(object_from(fields))
@@ -208,6 +217,12 @@ impl Deserialize for PushCondition {
 			"event_property_contains" => Self::EventPropertyContains {
 				key: text_field(object, "key")?,
 				value: property("value"),
+			},
+			"io.element.msc4306.thread_subscription" => Self::ThreadSubscription {
+				subscribed: object
+					.get("subscribed")
+					.and_then(Value::as_bool)
+					.ok_or_else(|| DeError::expected("subscribed"))?,
 			},
 			_ => Self::Unknown(value.clone()),
 		})
@@ -1201,14 +1216,18 @@ fn default_postcontent_rules() -> Vec<ConditionalPushRule> {
 		default_conditional(
 			PredefinedPostContentRuleId::UnsubscribedThread.as_str(),
 			true,
-			vec![event_match("content.m\\.relates_to.rel_type", "m.thread")],
+			vec![PushCondition::ThreadSubscription {
+				subscribed: false,
+			}],
 			Vec::new(),
 		),
 		default_conditional(
 			PredefinedPostContentRuleId::SubscribedThread.as_str(),
 			true,
-			vec![event_match("content.m\\.relates_to.rel_type", "m.thread")],
-			Vec::new(),
+			vec![PushCondition::ThreadSubscription {
+				subscribed: true,
+			}],
+			action_list(&[Tweak::Sound("default".into())], true),
 		),
 	]
 }
@@ -1405,6 +1424,9 @@ impl Matcher<'_> {
 				.lookup(key)
 				.and_then(Value::as_array)
 				.is_some_and(|items| items.contains(value)),
+			PushCondition::ThreadSubscription {
+				..
+			} => false,
 			PushCondition::Unknown(_) => false,
 		}
 	}
@@ -1844,6 +1866,31 @@ mod tests {
 		] {
 			assert!(rules.get(RuleKind::PostContent, id).is_some(), "{}", id.as_str());
 		}
+	}
+
+	#[test]
+	fn postcontent_rules_round_trip_and_mutate_independently() {
+		let rules = Ruleset::server_default("@u:example.org");
+		let json = rules.to_json();
+		assert!(json.get("postcontent").is_some());
+		let parsed = Ruleset::from_json(&json).unwrap();
+		assert!(
+			parsed
+				.get(RuleKind::PostContent, PredefinedPostContentRuleId::SubscribedThread)
+				.is_some()
+		);
+
+		let mut custom = Ruleset::default();
+		custom.postcontent.insert(ConditionalPushRule {
+			actions: Vec::new(),
+			default: false,
+			enabled: true,
+			rule_id: "custom".into(),
+			conditions: Vec::new(),
+		});
+		custom.set_enabled(RuleKind::PostContent, "custom", false).unwrap();
+		assert!(!custom.get(RuleKind::PostContent, "custom").unwrap().enabled());
+		assert!(custom.remove(RuleKind::PostContent, "custom").is_ok());
 	}
 
 	#[test]
