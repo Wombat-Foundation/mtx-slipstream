@@ -230,8 +230,8 @@ impl OwnedServerName {
 }
 impl OwnedRoomAliasId {
 	#[must_use]
-	pub fn server_name(&self) -> Option<OwnedServerName> {
-		crate::server_part(self.as_str())
+	pub fn server_name(&self) -> OwnedServerName {
+		crate::server_part(self.as_str()).expect("validated room alias ID must have a server name")
 	}
 }
 
