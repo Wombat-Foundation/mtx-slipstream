@@ -272,6 +272,7 @@ pub mod get_event_by_timestamp {
 		crate::endpoint! {
 			method: "GET",
 			path: "/_matrix/client/unstable/org.matrix.msc3030/rooms/{room_id}/timestamp_to_event",
+			aliases: ["/_matrix/client/v1/rooms/{room_id}/timestamp_to_event"],
 			request {
 				path { room_id: OwnedRoomId }
 				query { ts: MilliSecondsSinceUnixEpoch, dir: Direction }
@@ -586,5 +587,17 @@ mod room_endpoint_tests {
 		.unwrap();
 		assert_eq!(raw.get_field::<String>("type").unwrap().as_deref(), Some("m.room.name"));
 		assert!(raw.get_field::<String>("missing").unwrap().is_none());
+	}
+}
+
+#[cfg(test)]
+mod timestamp_alias_tests {
+	use crate::endpoint::EndpointRequest;
+
+	#[test]
+	fn timestamp_to_event_is_also_served_on_the_stable_v1_path() {
+		let metadata = super::get_event_by_timestamp::v1::Request::METADATA;
+		assert!(metadata.path.contains("org.matrix.msc3030"));
+		assert_eq!(metadata.aliases, &["/_matrix/client/v1/rooms/{room_id}/timestamp_to_event"]);
 	}
 }

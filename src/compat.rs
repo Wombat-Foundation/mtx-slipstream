@@ -267,11 +267,31 @@ impl fmt::Display for ContentDisposition {
 	}
 }
 
+/// Splits header parameters on `;`, leaving `;` inside quoted strings alone.
+fn split_header_params(value: &str) -> alloc::vec::Vec<&str> {
+	let mut parts = alloc::vec::Vec::new();
+	let (mut start, mut in_quotes, mut escaped) = (0, false, false);
+	for (index, c) in value.char_indices() {
+		match c {
+			_ if escaped => escaped = false,
+			'\\' if in_quotes => escaped = true,
+			'"' => in_quotes = !in_quotes,
+			';' if !in_quotes => {
+				parts.push(&value[start..index]);
+				start = index + 1;
+			}
+			_ => {}
+		}
+	}
+	parts.push(&value[start..]);
+	parts
+}
+
 impl core::str::FromStr for ContentDisposition {
 	type Err = ContentDispositionParseError;
 
 	fn from_str(value: &str) -> Result<Self, Self::Err> {
-		let mut parts = value.split(';');
+		let mut parts = split_header_params(value).into_iter();
 		let disposition = match parts.next().map(str::trim) {
 			Some(kind) if kind.eq_ignore_ascii_case("inline") => ContentDispositionType::Inline,
 			Some(kind) if kind.eq_ignore_ascii_case("attachment") => {
@@ -301,6 +321,20 @@ impl core::str::FromStr for ContentDisposition {
 #[cfg(test)]
 mod tests {
 	use crate::http_headers::{ContentDisposition, ContentDispositionType};
+
+	#[test]
+	fn semicolons_inside_a_quoted_filename_are_kept() {
+		let parsed: ContentDisposition =
+			"attachment; filename=\"name;with;semicolons\"".parse().unwrap();
+		assert_eq!(parsed.filename.as_deref(), Some("name;with;semicolons"));
+
+		let again: ContentDisposition = parsed.to_string().parse().unwrap();
+		assert_eq!(again.filename.as_deref(), Some("name;with;semicolons"));
+
+		let escaped: ContentDisposition =
+			"inline; filename=\"a\\\";b\"; other=1".parse().unwrap();
+		assert_eq!(escaped.filename.as_deref(), Some("a\";b"));
+	}
 
 	#[test]
 	fn content_disposition_round_trips() {

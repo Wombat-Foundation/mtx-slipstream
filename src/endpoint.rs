@@ -1061,6 +1061,7 @@ macro_rules! endpoint_request {
 	};
 	(
 		method: $method:literal, path: $path:literal,
+		$(aliases: [$($alias:literal),* $(,)?],)?
 		request {
 			path { $($path_field:ident : $pt:ty),* $(,)? }
 			query { $($query_field:ident : $qt:ty $(= $query_default:expr)?),* $(,)? }
@@ -1083,7 +1084,7 @@ macro_rules! endpoint_request {
 		impl $crate::endpoint::EndpointRequest for Request {
 			type Response = Response;
 			const METADATA: $crate::endpoint::Metadata =
-				$crate::endpoint::Metadata::new($method, $path);
+				$crate::endpoint::Metadata::new($method, $path) $(.with_aliases(&[$($alias),*]))?;
 
 			fn path_args(&self) -> $crate::endpoint::Strs {
 				$crate::endpoint::path_args_from(&mut [
@@ -1194,6 +1195,7 @@ macro_rules! endpoint {
 	};
 	(
 		method: $method:literal, path: $path:literal,
+		$(aliases: [$($alias:literal),* $(,)?],)?
 		request {
 			path { $($path_field:ident : $pt:ty),* $(,)? }
 			query { $($query_field:ident : $qt:ty $(= $query_default:expr)?),* $(,)? }
@@ -1203,6 +1205,7 @@ macro_rules! endpoint {
 	) => {
 		$crate::endpoint_request! {
 			method: $method, path: $path,
+			$(aliases: [$($alias),*],)?
 			request {
 				path { $($path_field : $pt),* }
 				query { $($query_field : $qt $(= $query_default)?),* }
