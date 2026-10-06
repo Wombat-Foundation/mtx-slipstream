@@ -1275,7 +1275,9 @@ mod media_config_tests {
 
 	#[test]
 	fn media_config_uses_one_flat_dotted_key() {
-		let response = super::legacy::get_media_config::v3::Response { upload_size: 1234 };
+		let response = super::legacy::get_media_config::v3::Response {
+			upload_size: 1234,
+		};
 		let body = response.to_body();
 		let object = body.as_object().unwrap();
 		assert_eq!(object.len(), 1);

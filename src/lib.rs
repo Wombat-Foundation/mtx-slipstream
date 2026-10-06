@@ -991,10 +991,8 @@ pub mod api {
 							("m.3pid_changes", self.thirdparty_id_changes.to_json()),
 							("m.get_login_token", self.get_login_token.to_json()),
 						]);
-						if let crate::json::Value::Object(ref mut map) = object {
-							map.extend(self.extra.clone());
-						}
-						object
+						object.extend(self.extra.clone());
+						crate::json::Value::Object(object)
 					}
 				}
 				impl crate::codec::Deserialize for Capabilities {
@@ -1005,7 +1003,10 @@ pub mod api {
 						let extra = o
 							.iter()
 							.filter(|(key, _)| {
-								!matches!(key.as_str(), "m.room_versions" | "m.3pid_changes" | "m.get_login_token")
+								!matches!(
+									key.as_str(),
+									"m.room_versions" | "m.3pid_changes" | "m.get_login_token"
+								)
 							})
 							.map(|(key, value)| (key.clone(), value.clone()))
 							.collect();

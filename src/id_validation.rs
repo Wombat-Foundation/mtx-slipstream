@@ -51,15 +51,14 @@ fn dns_name(value: &str) -> bool {
 #[must_use]
 pub fn user_id(value: &str) -> bool {
 	value.len() <= MAX_BYTES
-		&& value
-			.strip_prefix('@')
-			.and_then(|rest| rest.split_once(':'))
-			.is_some_and(|(local, server)| {
+		&& value.strip_prefix('@').and_then(|rest| rest.split_once(':')).is_some_and(
+			|(local, server)| {
 				// Historical grammar: printable ASCII only, no `:` (already split off).
 				!local.is_empty()
 					&& local.bytes().all(|b| (0x21..=0x7E).contains(&b))
 					&& server_name(server)
-			})
+			},
+		)
 }
 
 /// Whether a user ID localpart is "fully conforming" to the current grammar
@@ -67,9 +66,9 @@ pub fn user_id(value: &str) -> bool {
 #[must_use]
 pub fn user_localpart_is_fully_conforming(local: &str) -> bool {
 	!local.is_empty()
-		&& local
-			.bytes()
-			.all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'z' | b'-' | b'.' | b'=' | b'_' | b'/' | b'+'))
+		&& local.bytes().all(
+			|b| matches!(b, b'0'..=b'9' | b'a'..=b'z' | b'-' | b'.' | b'=' | b'_' | b'/' | b'+'),
+		)
 }
 
 /// `!opaque:server`, or `!hash` for room versions that omit the server.
@@ -233,7 +232,9 @@ mod user_id_grammar_tests {
 
 	#[test]
 	fn parse_rejects_invalid_historical_localparts() {
-		for bad in ["@user name:example.org", "@üser:example.org", "@:example.org", "@a\tb:example.org"] {
+		for bad in
+			["@user name:example.org", "@üser:example.org", "@:example.org", "@a\tb:example.org"]
+		{
 			assert!(OwnedUserId::parse(bad).is_err(), "{bad:?} must not parse");
 		}
 		assert!(OwnedUserId::parse("@Alice!:example.org").is_ok(), "historical IDs still parse");
