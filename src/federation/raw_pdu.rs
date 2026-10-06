@@ -70,6 +70,8 @@ pub fn parse_pdu_json(buf: &mut [u8]) -> Result<simd_json::OwnedValue, simd_json
 ///
 /// Returns `io::Error` if serialization fails.
 pub fn canonical_to_bytes(pdu: &simd_json::OwnedValue) -> io::Result<BytesMut> {
+	// TODO: enforce canonical-input whitespace rules at the tokenizer boundary:
+	// no spaces, tabs, or newlines outside JSON string values.
 	let mut buf = BytesMut::with_capacity(2048);
 	write_canonical_value(&mut buf, pdu)?;
 	Ok(buf)
