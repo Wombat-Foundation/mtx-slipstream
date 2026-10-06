@@ -169,6 +169,10 @@ pub mod get_server_keys {
 		}
 
 		impl EndpointResponse for Response {
+			// MSC4499: a key response with a repeated key must be rejected, and
+			// the body is parsed (and deduplicated) before `from_body` runs.
+			const REJECT_DUPLICATE_KEYS: bool = true;
+
 			fn to_body(&self) -> Value {
 				self.server_key.to_json()
 			}
@@ -244,6 +248,26 @@ mod tests {
 		codec::{from_str, to_string},
 		sswire::Raw,
 	};
+
+	#[test]
+	fn key_response_with_a_deep_duplicate_key_is_rejected_at_parse_time() {
+		use crate::endpoint::IncomingResponse;
+
+		let decode = |body: &str| {
+			get_server_keys::v2::Response::try_from_http_response(
+				http::Response::builder()
+					.status(http::StatusCode::OK)
+					.body(body.as_bytes().to_vec())
+					.unwrap(),
+			)
+		};
+		let clean = r#"{"server_name":"example.org","valid_until_ts":1,"verify_keys":{"ed25519:a":{"key":"AAA"}}}"#;
+		let deep_duplicate = r#"{"server_name":"example.org","valid_until_ts":1,"verify_keys":{"ed25519:a":{"key":"AAA","key":"AAA"}}}"#;
+		assert!(decode(clean).is_ok());
+		// Identical values: deduplicating would lose nothing and a signature would
+		// still verify, so only the parse can reject it.
+		assert!(decode(deep_duplicate).is_err());
+	}
 
 	#[test]
 	fn server_signing_keys_round_trip() {

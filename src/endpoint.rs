@@ -504,6 +504,12 @@ pub trait EndpointRequest: Sized {
 
 /// Response half of an endpoint, implemented by [`endpoint!`](macro@crate::endpoint).
 pub trait EndpointResponse: Sized {
+	/// Whether a response body with a repeated object key, at any depth, is
+	/// rejected while it is first parsed. Parsing keeps the last duplicate, so
+	/// by the time `from_body` sees the value the duplicate is already gone.
+	/// Responses whose signatures cover the body (MSC4499 key responses) opt in.
+	const REJECT_DUPLICATE_KEYS: bool = false;
+
 	fn to_body(&self) -> Value;
 	/// # Errors
 	///
@@ -685,7 +691,12 @@ impl<T: EndpointResponse> IncomingResponse for T {
 		}
 		let text =
 			core::str::from_utf8(response.body().as_ref()).map_err(|e| DeError(e.to_string()))?;
-		let value = Value::parse(text).map_err(|e| DeError(e.to_string()))?;
+		let value = if T::REJECT_DUPLICATE_KEYS {
+			Value::parse_strict(text)
+		} else {
+			Value::parse(text)
+		}
+		.map_err(|e| DeError(e.to_string()))?;
 		Ok(T::from_body(&value)?)
 	}
 }
