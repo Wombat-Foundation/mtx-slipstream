@@ -1,6 +1,6 @@
 //! Federation API endpoints.
 
-use crate::{json::Value, serde::Raw};
+use crate::{json::Value, sswire::Raw};
 
 /// A PDU as it appears on the wire.
 pub type RawPdu = Raw<Value>;
@@ -46,7 +46,7 @@ pub mod keys {
 		OwnedDeviceId, OwnedServerName, OwnedUserId,
 		encryption::{CrossSigningKey, DeviceKeys, OneTimeKey},
 		endpoint,
-		serde::Raw,
+		sswire::Raw,
 	};
 	use alloc::collections::BTreeMap;
 
@@ -74,7 +74,7 @@ pub mod keys {
 			use super::super::{
 				BTreeMap, OneTimeKey, OwnedDeviceId, OwnedServerName, OwnedUserId, endpoint,
 			};
-			use crate::{OneTimeKeyAlgorithm, OwnedOneTimeKeyId, serde::Raw};
+			use crate::{OneTimeKeyAlgorithm, OwnedOneTimeKeyId, sswire::Raw};
 
 			pub type OneTimeKeyClaims =
 				BTreeMap<OwnedUserId, BTreeMap<OwnedDeviceId, OneTimeKeyAlgorithm>>;

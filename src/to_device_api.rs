@@ -2,7 +2,7 @@
 
 use alloc::{collections::BTreeMap, string::String};
 
-use crate::{OwnedTransactionId, OwnedUserId, endpoint, events::AnyToDeviceEvent, serde::Raw};
+use crate::{OwnedTransactionId, OwnedUserId, endpoint, events::AnyToDeviceEvent, sswire::Raw};
 
 pub mod send_event_to_device {
 	pub mod v3 {

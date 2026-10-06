@@ -128,7 +128,7 @@ pub mod dehydrated_device {
 				OwnedDeviceId, OwnedOneTimeKeyId,
 				device::DehydratedDeviceData,
 				encryption::{DeviceKeys, OneTimeKey},
-				serde::Raw,
+				sswire::Raw,
 			};
 
 			crate::endpoint! {
@@ -152,7 +152,7 @@ pub mod dehydrated_device {
 
 	pub mod get_dehydrated_device {
 		pub mod unstable {
-			use crate::{OwnedDeviceId, device::DehydratedDeviceData, serde::Raw};
+			use crate::{OwnedDeviceId, device::DehydratedDeviceData, sswire::Raw};
 
 			crate::endpoint! {
 				method: "GET", path: "/_matrix/client/unstable/org.matrix.msc3814.v1/dehydrated_device",
@@ -176,7 +176,7 @@ pub mod dehydrated_device {
 		pub mod unstable {
 			use alloc::{string::String, vec::Vec};
 
-			use crate::{OwnedDeviceId, events::AnyToDeviceEvent, serde::Raw};
+			use crate::{OwnedDeviceId, events::AnyToDeviceEvent, sswire::Raw};
 
 			crate::endpoint! {
 				method: "POST",
@@ -198,10 +198,10 @@ pub struct DehydratedDevice {
 	/// Unique ID of the device.
 	pub device_id: OwnedDeviceId,
 	/// Serialized and encrypted private data.
-	pub device_data: crate::serde::Raw<DehydratedDeviceData>,
+	pub device_data: crate::sswire::Raw<DehydratedDeviceData>,
 }
 
 impl_codec_struct!(DehydratedDevice {
 	device_id: OwnedDeviceId,
-	device_data: crate::serde::Raw<DehydratedDeviceData>,
+	device_data: crate::sswire::Raw<DehydratedDeviceData>,
 });

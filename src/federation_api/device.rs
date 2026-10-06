@@ -6,7 +6,7 @@ use crate::{
 	OwnedDeviceId, OwnedUserId, UInt,
 	encryption::{CrossSigningKey, DeviceKeys},
 	endpoint,
-	serde::Raw,
+	sswire::Raw,
 };
 
 /// Device-list queries.
@@ -55,7 +55,7 @@ mod tests {
 		OwnedDeviceId, OwnedUserId,
 		codec::{Deserialize, Serialize},
 		encryption::DeviceKeys,
-		serde::Raw,
+		sswire::Raw,
 	};
 	use alloc::{collections::BTreeMap, vec::Vec};
 

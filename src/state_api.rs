@@ -12,12 +12,12 @@ use crate::{
 	endpoint::{EndpointRequest, EndpointResponse, Input, Metadata, query_pairs, to_param},
 	events::{AnyStateEventContent, StateEventType},
 	json::Value,
-	serde::Raw,
+	sswire::Raw,
 };
 
 pub mod get_state_events {
 	pub mod v3 {
-		use crate::{OwnedRoomId, events::AnyStateEvent, serde::Raw};
+		use crate::{OwnedRoomId, events::AnyStateEvent, sswire::Raw};
 
 		crate::endpoint_request! {
 			method: "GET", path: "/_matrix/client/v3/rooms/{room_id}/state",

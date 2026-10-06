@@ -4,7 +4,7 @@ pub mod send_message_event {
 	pub mod v3 {
 		use crate::{
 			MilliSecondsSinceUnixEpoch, OwnedEventId, OwnedRoomId, OwnedTransactionId, endpoint,
-			events::MessageLikeEventType, serde::Raw,
+			events::MessageLikeEventType, sswire::Raw,
 		};
 
 		endpoint! {

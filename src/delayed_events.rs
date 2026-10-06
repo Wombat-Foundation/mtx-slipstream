@@ -11,7 +11,7 @@ use crate::{
 	endpoint::object_from,
 	events::TimelineEventType,
 	json::{Object, Value},
-	serde::Raw,
+	sswire::Raw,
 };
 
 /// What a client asks to do with a scheduled delayed event.

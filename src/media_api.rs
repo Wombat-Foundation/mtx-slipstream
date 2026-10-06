@@ -240,7 +240,7 @@ macro_rules! preview_endpoint {
 		/// The preview is arbitrary JSON (Open Graph data), passed through.
 		#[derive(Debug, Default)]
 		pub struct Response {
-			pub data: $crate::serde::Raw<$crate::json::Value>,
+			pub data: $crate::sswire::Raw<$crate::json::Value>,
 		}
 
 		impl Response {
@@ -251,7 +251,7 @@ macro_rules! preview_endpoint {
 			/// Returns an error if `json` is not valid JSON.
 			pub fn from_json_text(json: &str) -> Result<Self, $crate::codec::DeError> {
 				Ok(Self {
-					data: $crate::serde::Raw::from_json_text(json)?,
+					data: $crate::sswire::Raw::from_json_text(json)?,
 				})
 			}
 		}

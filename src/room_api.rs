@@ -65,7 +65,7 @@ pub mod create_room {
 		use super::super::{AnyInitialStateEvent, CreationContent, Visibility};
 		use crate::{
 			OwnedRoomId, OwnedUserId, RoomVersionId,
-			events::room::power_levels::RoomPowerLevelsEventContent, serde::Raw,
+			events::room::power_levels::RoomPowerLevelsEventContent, sswire::Raw,
 		};
 		use crate::{
 			codec::{DeError, Deserialize, Serialize},
@@ -240,7 +240,7 @@ pub mod aliases {
 /// `GET /_matrix/client/v3/rooms/{roomId}/event/{eventId}`.
 pub mod get_room_event {
 	pub mod v3 {
-		use crate::{OwnedEventId, OwnedRoomId, events::AnyTimelineEvent, serde::Raw};
+		use crate::{OwnedEventId, OwnedRoomId, events::AnyTimelineEvent, sswire::Raw};
 
 		crate::endpoint_request! {
 			method: "GET", path: "/_matrix/client/v3/rooms/{room_id}/event/{event_id}",
@@ -425,7 +425,7 @@ pub mod initial_sync {
 				AnyMessageLikeEvent, AnyRoomAccountDataEvent, AnyStateEvent,
 				room::member::MembershipState,
 			},
-			serde::Raw,
+			sswire::Raw,
 		};
 
 		crate::endpoint_request! {
@@ -503,7 +503,7 @@ mod room_endpoint_tests {
 		codec::{from_str, to_string},
 		endpoint::{EndpointRequest, EndpointResponse, MatrixVersion},
 		events::room::member::MembershipState,
-		serde::Raw,
+		sswire::Raw,
 	};
 
 	#[test]

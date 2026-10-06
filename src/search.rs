@@ -12,7 +12,7 @@ pub mod search_events {
 			filter::RoomEventFilter,
 			impl_codec_struct,
 			json::Value,
-			serde::Raw,
+			sswire::Raw,
 		};
 
 		/// How much surrounding context to return with each hit.

@@ -182,7 +182,7 @@ mod tests {
 			backfill::get_backfill,
 			membership::{create_join_event, prepare_join_event},
 		},
-		serde::Raw,
+		sswire::Raw,
 	};
 
 	#[test]
@@ -259,7 +259,7 @@ pub mod create_invite {
 			events::AnyStrippedStateEvent,
 			federation_api::RawPdu,
 			json::Value,
-			serde::Raw,
+			sswire::Raw,
 		};
 
 		const _: Metadata =

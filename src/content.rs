@@ -16,7 +16,7 @@ use crate::{
 	codec::{DeError, Deserialize, Serialize, from_value},
 	events::room::create::RoomCreateEventContent,
 	json::Value,
-	serde::{Base64, Raw},
+	sswire::{Base64, Raw},
 };
 
 impl Serialize for MilliSecondsSinceUnixEpoch {

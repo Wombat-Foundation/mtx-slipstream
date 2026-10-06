@@ -1,6 +1,6 @@
 pub mod upload_keys {
 	pub mod v3 {
-		use crate::{OwnedOneTimeKeyId, encryption::DeviceKeys, endpoint, serde::Raw};
+		use crate::{OwnedOneTimeKeyId, encryption::DeviceKeys, endpoint, sswire::Raw};
 		use std::collections::BTreeMap;
 
 		endpoint! {
@@ -24,7 +24,7 @@ pub mod get_keys {
 			OwnedDeviceId, OwnedUserId,
 			encryption::{CrossSigningKey, DeviceKeys},
 			endpoint,
-			serde::Raw,
+			sswire::Raw,
 		};
 		use std::collections::BTreeMap;
 
@@ -40,7 +40,7 @@ pub mod claim_keys {
 	pub mod v3 {
 		use crate::{
 			OneTimeKeyAlgorithm, OwnedDeviceId, OwnedOneTimeKeyId, OwnedUserId, endpoint,
-			serde::Raw,
+			sswire::Raw,
 		};
 		use std::collections::BTreeMap;
 
@@ -80,7 +80,7 @@ pub mod claim_keys {
 
 pub mod upload_signing_keys {
 	pub mod v3 {
-		use crate::{encryption::CrossSigningKey, endpoint, serde::Raw};
+		use crate::{encryption::CrossSigningKey, endpoint, sswire::Raw};
 
 		endpoint! {
 			method: "POST", path: "/_matrix/client/v3/keys/device_signing/upload",
@@ -101,7 +101,7 @@ pub mod upload_signing_keys {
 pub mod upload_signatures {
 	pub mod v3 {
 		use crate::{
-			OwnedDeviceId, OwnedUserId, encryption::CrossSigningKey, endpoint, serde::Raw,
+			OwnedDeviceId, OwnedUserId, encryption::CrossSigningKey, endpoint, sswire::Raw,
 		};
 		use std::collections::BTreeMap;
 

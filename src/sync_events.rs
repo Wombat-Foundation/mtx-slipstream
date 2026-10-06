@@ -248,7 +248,7 @@ pub mod v3 {
 		filter::FilterDefinition,
 		json::Value,
 		key_id::OneTimeKeyAlgorithm,
-		serde::Raw,
+		sswire::Raw,
 	};
 
 	/// A filter given inline or by ID.
@@ -807,7 +807,7 @@ pub mod v5 {
 			},
 			js_option::JsOption,
 			key_id::OneTimeKeyAlgorithm,
-			serde::Raw,
+			sswire::Raw,
 		};
 
 		sync_struct! {

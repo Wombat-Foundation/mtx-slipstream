@@ -8,7 +8,7 @@ use crate::{
 	endpoint::{Input, object_from},
 	impl_codec_struct,
 	json::{Object, Value},
-	serde::Raw,
+	sswire::Raw,
 };
 
 /// The event a reply points at.

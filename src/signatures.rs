@@ -15,7 +15,7 @@ use rezzy::signing::{SignatureVerifier, verify_event_signatures};
 use crate::{
 	CanonicalJsonObject, OwnedServerName, OwnedServerSigningKeyId, RoomVersionId,
 	json::{self, Value},
-	serde::Base64,
+	sswire::Base64,
 };
 
 /// Maximum canonical PDU size in bytes.

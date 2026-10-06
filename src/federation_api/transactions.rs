@@ -17,7 +17,7 @@ pub mod edu {
 		endpoint::Input,
 		events::{presence::PresenceState, receipt::Receipt},
 		json::{Object, Value},
-		serde::Raw,
+		sswire::Raw,
 	};
 
 	/// A user's presence update.
@@ -287,7 +287,7 @@ pub mod send_transaction_message {
 		use super::super::{PduResult, edu::Edu};
 		use crate::{
 			MilliSecondsSinceUnixEpoch, OwnedEventId, OwnedServerName, OwnedTransactionId,
-			endpoint, federation_api::RawPdu, serde::Raw,
+			endpoint, federation_api::RawPdu, sswire::Raw,
 		};
 
 		endpoint! {

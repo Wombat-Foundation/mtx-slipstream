@@ -11,7 +11,7 @@ use crate::{
 	},
 	json::Value,
 	room::RoomType,
-	serde::Raw,
+	sswire::Raw,
 };
 
 /// How a room in a space hierarchy can be joined.

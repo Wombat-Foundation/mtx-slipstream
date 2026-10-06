@@ -2,7 +2,7 @@
 
 use alloc::{collections::BTreeMap, string::String};
 
-use crate::{UInt, impl_codec_struct, json::Value, serde::Raw};
+use crate::{UInt, impl_codec_struct, json::Value, sswire::Raw};
 
 /// A backup algorithm and its public parameters.
 #[derive(Debug)]
@@ -47,7 +47,7 @@ macro_rules! backup_info_response {
 	() => {
 		#[derive(Debug)]
 		pub struct Response {
-			pub algorithm: $crate::serde::Raw<$crate::backup::BackupAlgorithm>,
+			pub algorithm: $crate::sswire::Raw<$crate::backup::BackupAlgorithm>,
 			pub count: $crate::UInt,
 			pub etag: ::alloc::string::String,
 			pub version: ::alloc::string::String,
@@ -87,7 +87,7 @@ pub mod create_backup_version {
 			request {
 				path {}
 				query {}
-				body { algorithm: crate::serde::Raw<crate::backup::BackupAlgorithm> }
+				body { algorithm: crate::sswire::Raw<crate::backup::BackupAlgorithm> }
 			}
 			response { version: alloc::string::String }
 		}
@@ -101,7 +101,7 @@ pub mod update_backup_version {
 			request {
 				path { version: alloc::string::String }
 				query {}
-				raw_body { algorithm: crate::serde::Raw<crate::backup::BackupAlgorithm> }
+				raw_body { algorithm: crate::sswire::Raw<crate::backup::BackupAlgorithm> }
 			}
 		}
 		crate::endpoint_response! { response {} }
@@ -164,7 +164,7 @@ pub mod add_backup_keys_for_room {
 				body {
 					sessions: alloc::collections::BTreeMap<
 						alloc::string::String,
-						crate::serde::Raw<crate::backup::KeyBackupData>
+						crate::sswire::Raw<crate::backup::KeyBackupData>
 					>
 				}
 			}
@@ -180,7 +180,7 @@ pub mod add_backup_keys_for_session {
 			request {
 				path { room_id: crate::OwnedRoomId, session_id: alloc::string::String }
 				query { version: alloc::string::String }
-				raw_body { session_data: crate::serde::Raw<crate::backup::KeyBackupData> }
+				raw_body { session_data: crate::sswire::Raw<crate::backup::KeyBackupData> }
 			}
 		}
 		crate::endpoint_response! { response { count: crate::UInt, etag: alloc::string::String } }
@@ -211,7 +211,7 @@ pub mod get_backup_keys_for_room {
 			response {
 				sessions: alloc::collections::BTreeMap<
 					alloc::string::String,
-					crate::serde::Raw<crate::backup::KeyBackupData>
+					crate::sswire::Raw<crate::backup::KeyBackupData>
 				>
 			}
 		}
@@ -228,7 +228,7 @@ pub mod get_backup_keys_for_session {
 				body {}
 			}
 		}
-		crate::endpoint_response_flat!(key_data: crate::serde::Raw<crate::backup::KeyBackupData>);
+		crate::endpoint_response_flat!(key_data: crate::sswire::Raw<crate::backup::KeyBackupData>);
 	}
 }
 

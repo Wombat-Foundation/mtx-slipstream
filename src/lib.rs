@@ -1096,8 +1096,8 @@ pub mod events {
 	pub type AnyGlobalAccountDataEventContent = AnyGlobalAccountDataEvent;
 	#[derive(Debug)]
 	pub enum AnyRawAccountDataEvent {
-		Room(crate::serde::Raw<AnyRoomAccountDataEvent>),
-		Global(crate::serde::Raw<AnyGlobalAccountDataEvent>),
+		Room(crate::sswire::Raw<AnyRoomAccountDataEvent>),
+		Global(crate::sswire::Raw<AnyGlobalAccountDataEvent>),
 	}
 	#[derive(Debug, Default)]
 	pub struct AnyRoomAccountDataEvent;
@@ -1630,10 +1630,10 @@ pub mod power_levels {
 
 pub mod signatures;
 
-pub mod serde {
+pub mod sswire {
 	use core::marker::PhantomData;
 
-	/// A JSON object, as `serde_json::Map<String, Value>`.
+	/// A JSON object backed by Slipstream's JSON implementation.
 	pub type JsonObject = crate::json::Object;
 
 	#[must_use]

@@ -23,7 +23,7 @@ use crate::{
 	},
 	json::{Object, Value},
 	power_levels::NotificationPowerLevels,
-	serde::deserialize_v1_powerlevel,
+	sswire::deserialize_v1_powerlevel,
 };
 
 impl Serialize for RoomGuestAccessEventContent {

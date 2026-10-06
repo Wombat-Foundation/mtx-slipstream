@@ -233,7 +233,7 @@ pub mod get_member_events {
 		use alloc::vec::Vec;
 
 		pub use super::super::MembershipEventFilter;
-		use crate::{OwnedRoomId, serde::RawJsonValue};
+		use crate::{OwnedRoomId, sswire::RawJsonValue};
 
 		crate::endpoint! {
 			method: "GET", path: "/_matrix/client/v3/rooms/{room_id}/members",

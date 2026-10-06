@@ -341,7 +341,7 @@ pub mod send_event_notification {
 			impl_codec_enum, impl_codec_struct,
 			json::{Object, Value},
 			push::{PushFormat, Tweak},
-			serde::Raw,
+			sswire::Raw,
 		};
 
 		#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]

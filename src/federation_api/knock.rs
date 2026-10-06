@@ -6,7 +6,7 @@ pub mod send_knock {
 
 		use crate::{
 			OwnedEventId, OwnedRoomId, endpoint_request_raw, federation_api::RawPdu, json::Value,
-			serde::Raw,
+			sswire::Raw,
 		};
 
 		endpoint_request_raw! {

@@ -4,7 +4,7 @@ use alloc::collections::BTreeMap;
 
 use crate::{
 	MilliSecondsSinceUnixEpoch, OwnedServerName, OwnedServerSigningKeyId, Signatures,
-	serde::Base64,
+	sswire::Base64,
 };
 
 pub mod discover_homeserver {
@@ -118,7 +118,7 @@ pub mod get_server_keys {
 			codec::{DeError, Deserialize, Serialize},
 			endpoint::{EndpointRequest, EndpointResponse, Metadata},
 			json::Value,
-			serde::Raw,
+			sswire::Raw,
 		};
 
 		/// Request for this server's own signing keys.
@@ -187,7 +187,7 @@ pub mod get_remote_server_keys {
 		use alloc::vec::Vec;
 
 		use super::super::ServerSigningKeys;
-		use crate::{MilliSecondsSinceUnixEpoch, OwnedServerName, endpoint, serde::Raw};
+		use crate::{MilliSecondsSinceUnixEpoch, OwnedServerName, endpoint, sswire::Raw};
 
 		endpoint! {
 			method: "GET", path: "/_matrix/key/v2/query/{server_name}",
@@ -208,7 +208,7 @@ pub mod get_remote_server_keys_batch {
 		use super::super::ServerSigningKeys;
 		use crate::{
 			MilliSecondsSinceUnixEpoch, OwnedServerName, OwnedServerSigningKeyId, endpoint,
-			serde::Raw,
+			sswire::Raw,
 		};
 
 		/// Constraints on the keys a notary returns for one server.
@@ -242,7 +242,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		codec::{from_str, to_string},
-		serde::Raw,
+		sswire::Raw,
 	};
 
 	#[test]

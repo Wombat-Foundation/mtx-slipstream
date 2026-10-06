@@ -15,7 +15,7 @@ use crate::{
 	json::{Object, Value},
 	power_levels::NotificationPowerLevels,
 	push::{Action, Tweak},
-	serde::Raw,
+	sswire::Raw,
 };
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
