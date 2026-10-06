@@ -1537,6 +1537,10 @@ impl AnyPushRule {
 	///
 	/// The JSON representation does not contain the rule kind, so callers for
 	/// endpoints such as `GET /pushrules/.../{kind}/{rule_id}` must supply it.
+	///
+	/// # Errors
+	///
+	/// Returns an error if the response body does not match the requested kind.
 	pub fn from_json_with_kind(kind: RuleKind, value: &Value) -> Result<Self, DeError> {
 		Ok(match kind {
 			RuleKind::Override => Self::Override(ConditionalPushRule::from_json(value)?),
@@ -1586,6 +1590,10 @@ pub mod get_pushrule {
 		crate::endpoint_response_flat!(rule: crate::push_rules::PushRule);
 		impl Response {
 			/// Decodes the response using the rule kind from the request path.
+			///
+			/// # Errors
+			///
+			/// Returns an error if the response body does not match the requested kind.
 			pub fn from_body_with_kind(
 				kind: crate::push_rules::RuleKind,
 				body: &crate::json::Value,
