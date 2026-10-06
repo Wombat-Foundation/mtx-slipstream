@@ -895,6 +895,10 @@ impl<'a> Input<'a> {
 	}
 
 	/// The named field of the JSON body, or the supplied default when absent or null.
+	///
+	/// # Errors
+	///
+	/// Returns an error if the field is present but malformed.
 	pub fn body_or<T: Deserialize>(&self, name: &str, default: T) -> Result<T, DeError> {
 		let present = self
 			.body
