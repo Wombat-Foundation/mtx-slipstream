@@ -267,6 +267,20 @@ impl fmt::Display for ContentDisposition {
 	}
 }
 
+/// Decodes the escapes of an HTTP quoted-string body: a backslash makes the next
+/// character literal. Done in one pass so adjacent escapes cannot interfere.
+fn unescape_quoted_string(quoted: &str) -> String {
+	let mut out = String::with_capacity(quoted.len());
+	let mut chars = quoted.chars();
+	while let Some(c) = chars.next() {
+		match c {
+			'\\' => out.push(chars.next().unwrap_or('\\')),
+			other => out.push(other),
+		}
+	}
+	out
+}
+
 /// Splits header parameters on `;`, leaving `;` inside quoted strings alone.
 fn split_header_params(value: &str) -> alloc::vec::Vec<&str> {
 	let mut parts = alloc::vec::Vec::new();
@@ -303,12 +317,10 @@ impl core::str::FromStr for ContentDisposition {
 			let (key, value) = part.split_once('=')?;
 			key.trim().eq_ignore_ascii_case("filename").then(|| {
 				let value = value.trim();
-				value
-					.strip_prefix('"')
-					.and_then(|rest| rest.strip_suffix('"'))
-					.unwrap_or(value)
-					.replace("\\\"", "\"")
-					.replace("\\\\", "\\")
+				match value.strip_prefix('"').and_then(|rest| rest.strip_suffix('"')) {
+					Some(quoted) => unescape_quoted_string(quoted),
+					None => value.to_owned(),
+				}
 			})
 		});
 		Ok(Self {
@@ -321,6 +333,19 @@ impl core::str::FromStr for ContentDisposition {
 #[cfg(test)]
 mod tests {
 	use crate::http_headers::{ContentDisposition, ContentDispositionType};
+
+	#[test]
+	fn escaped_backslashes_and_quotes_unescape_in_one_pass() {
+		let parse = |text: &str| -> Option<String> {
+			text.parse::<ContentDisposition>().unwrap().filename
+		};
+		// filename="a\\b"  ->  a\b
+		assert_eq!(parse("attachment; filename=\"a\\\\b\"").as_deref(), Some("a\\b"));
+		// filename="x\\\"y"  ->  x\"y  (an escaped backslash, then an escaped quote)
+		assert_eq!(parse("attachment; filename=\"x\\\\\\\"y\"").as_deref(), Some("x\\\"y"));
+		// A trailing escaped backslash does not swallow the closing quote.
+		assert_eq!(parse("attachment; filename=\"end\\\\\"; other=1").as_deref(), Some("end\\"));
+	}
 
 	#[test]
 	fn semicolons_inside_a_quoted_filename_are_kept() {
