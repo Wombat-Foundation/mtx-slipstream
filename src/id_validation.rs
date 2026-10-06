@@ -53,10 +53,11 @@ pub fn user_id(value: &str) -> bool {
 	value.len() <= MAX_BYTES
 		&& value.strip_prefix('@').and_then(|rest| rest.split_once(':')).is_some_and(
 			|(local, server)| {
-				// Historical grammar: printable ASCII only, no `:` (already split off).
-				!local.is_empty()
-					&& local.bytes().all(|b| (0x21..=0x7E).contains(&b))
-					&& server_name(server)
+				// Historical user IDs must be accepted (appendices, "Historical User
+				// IDs"): any code points except `:` (already split off) and NUL,
+				// including the empty string. Whether a localpart is *compliant* is
+				// `user_localpart_is_fully_conforming`, which registration enforces.
+				!local.contains('\0') && server_name(server)
 			},
 		)
 }
@@ -162,9 +163,14 @@ mod tests {
 	fn user_ids() {
 		assert!(user_id("@alice:example.org"));
 		assert!(user_id("@Alice.Weird=chars/+:example.org:8448"));
-		for bad in ["alice:example.org", "@alice", "@:example.org", "@alice:", "@a:b c", "!a:b"] {
+		for bad in
+			["alice:example.org", "@alice", "@alice:", "@a:b c", "!a:b", "@a\0b:example.org"]
+		{
 			assert!(!user_id(bad), "{bad}");
 		}
+		// Historical IDs are accepted (appendices, "Historical User IDs"), even the
+		// empty localpart, which is merely non-compliant.
+		assert!(user_id("@:example.org"));
 		let long = alloc::format!("@{}:example.org", "a".repeat(250));
 		assert!(!user_id(&long));
 	}
@@ -231,20 +237,34 @@ mod user_id_grammar_tests {
 	use crate::OwnedUserId;
 
 	#[test]
-	fn parse_rejects_invalid_historical_localparts() {
-		for bad in
-			["@user name:example.org", "@üser:example.org", "@:example.org", "@a\tb:example.org"]
-		{
-			assert!(OwnedUserId::parse(bad).is_err(), "{bad:?} must not parse");
+	fn parse_accepts_historical_localparts_but_not_nul() {
+		// Spec: servers and clients MUST accept these, including control
+		// characters, non-ASCII and the empty string.
+		for historical in [
+			"@user name:example.org",
+			"@\u{fc}ser:example.org",
+			"@:example.org",
+			"@a\tb:example.org",
+			"@Alice!:example.org",
+		] {
+			assert!(OwnedUserId::parse(historical).is_ok(), "{historical:?} must parse");
 		}
-		assert!(OwnedUserId::parse("@Alice!:example.org").is_ok(), "historical IDs still parse");
+		assert!(OwnedUserId::parse("@a\0b:example.org").is_err(), "NUL is never allowed");
+		assert!(OwnedUserId::parse("@nocolon").is_err());
+		assert!(OwnedUserId::parse("alice:example.org").is_err(), "needs the @ sigil");
 	}
 
 	#[test]
 	fn validate_strict_requires_the_current_grammar() {
 		let ok = OwnedUserId::parse("@alice_1.x=y/z+w-v:example.org").unwrap();
 		assert!(ok.validate_strict().is_ok());
-		for historical in ["@Alice:example.org", "@alice!:example.org", "@al@ice:example.org"] {
+		for historical in [
+			"@Alice:example.org",
+			"@alice!:example.org",
+			"@al@ice:example.org",
+			"@:example.org",
+			"@\u{fc}ser:example.org",
+		] {
 			let id = OwnedUserId::parse(historical).unwrap();
 			assert!(id.validate_strict().is_err(), "{historical} is historical, not strict");
 		}
