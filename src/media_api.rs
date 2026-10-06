@@ -230,22 +230,17 @@ pub mod config {
 			}
 			impl crate::endpoint::EndpointResponse for Response {
 				fn to_body(&self) -> crate::json::Value {
+					// One flat property whose name contains dots, not nested objects.
 					crate::json::Value::Object(crate::json::Object::from([(
-						"m.upload".to_owned(),
-						crate::json::Value::Object(crate::json::Object::from([(
-							"size".to_owned(),
-							crate::endpoint::enc(&self.upload_size),
-						)])),
+						"m.upload.size".to_owned(),
+						crate::endpoint::enc(&self.upload_size),
 					)]))
 				}
 
 				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let upload = body
-						.get("m.upload")
-						.ok_or_else(|| crate::codec::DeError::expected("m.upload"))?;
-					let size = upload
-						.get("size")
-						.ok_or_else(|| crate::codec::DeError::expected("size"))?;
+					let size = body
+						.get("m.upload.size")
+						.ok_or_else(|| crate::codec::DeError::expected("m.upload.size"))?;
 					Ok(Self {
 						upload_size: crate::codec::Deserialize::from_json(size)?,
 					})
@@ -1271,5 +1266,22 @@ mod tests {
 			.map(|r: legacy::get_content_thumbnail::v3::Request| r)
 			.is_err()
 		);
+	}
+}
+
+#[cfg(test)]
+mod media_config_tests {
+	use crate::endpoint::EndpointResponse;
+
+	#[test]
+	fn media_config_uses_one_flat_dotted_key() {
+		let response = super::legacy::get_media_config::v3::Response { upload_size: 1234 };
+		let body = response.to_body();
+		let object = body.as_object().unwrap();
+		assert_eq!(object.len(), 1);
+		assert_eq!(object.get("m.upload.size").and_then(crate::json::Value::as_u64), Some(1234));
+
+		let back = super::legacy::get_media_config::v3::Response::from_body(&body).unwrap();
+		assert_eq!(back.upload_size, 1234);
 	}
 }

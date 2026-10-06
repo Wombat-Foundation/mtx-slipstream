@@ -54,7 +54,22 @@ pub fn user_id(value: &str) -> bool {
 		&& value
 			.strip_prefix('@')
 			.and_then(|rest| rest.split_once(':'))
-			.is_some_and(|(local, server)| !local.is_empty() && server_name(server))
+			.is_some_and(|(local, server)| {
+				// Historical grammar: printable ASCII only, no `:` (already split off).
+				!local.is_empty()
+					&& local.bytes().all(|b| (0x21..=0x7E).contains(&b))
+					&& server_name(server)
+			})
+}
+
+/// Whether a user ID localpart is "fully conforming" to the current grammar
+/// (`a-z`, `0-9`, `-`, `.`, `=`, `_`, `/`, `+`), as opposed to merely historical.
+#[must_use]
+pub fn user_localpart_is_fully_conforming(local: &str) -> bool {
+	!local.is_empty()
+		&& local
+			.bytes()
+			.all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'z' | b'-' | b'.' | b'=' | b'_' | b'/' | b'+'))
 }
 
 /// `!opaque:server`, or `!hash` for room versions that omit the server.
@@ -209,5 +224,28 @@ mod tests {
 		use crate::{OwnedUserId, codec::from_str};
 		assert!(from_str::<OwnedUserId>("\"nonsense\"").is_err());
 		assert!(from_str::<OwnedUserId>("\"@a:example.org\"").is_ok());
+	}
+}
+
+#[cfg(test)]
+mod user_id_grammar_tests {
+	use crate::OwnedUserId;
+
+	#[test]
+	fn parse_rejects_invalid_historical_localparts() {
+		for bad in ["@user name:example.org", "@üser:example.org", "@:example.org", "@a\tb:example.org"] {
+			assert!(OwnedUserId::parse(bad).is_err(), "{bad:?} must not parse");
+		}
+		assert!(OwnedUserId::parse("@Alice!:example.org").is_ok(), "historical IDs still parse");
+	}
+
+	#[test]
+	fn validate_strict_requires_the_current_grammar() {
+		let ok = OwnedUserId::parse("@alice_1.x=y/z+w-v:example.org").unwrap();
+		assert!(ok.validate_strict().is_ok());
+		for historical in ["@Alice:example.org", "@alice!:example.org", "@al@ice:example.org"] {
+			let id = OwnedUserId::parse(historical).unwrap();
+			assert!(id.validate_strict().is_err(), "{historical} is historical, not strict");
+		}
 	}
 }
