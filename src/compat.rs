@@ -292,7 +292,7 @@ fn split_header_params(value: &str) -> alloc::vec::Vec<&str> {
 			'"' => in_quotes = !in_quotes,
 			';' if !in_quotes => {
 				parts.push(&value[start..index]);
-				start = index + 1;
+				start = index.saturating_add(1);
 			}
 			_ => {}
 		}
