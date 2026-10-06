@@ -53,6 +53,11 @@ pub struct RoomEventFilter {
 	pub not_rooms: Vec<OwnedRoomId>,
 	pub senders: Option<Vec<OwnedUserId>>,
 	pub not_senders: Vec<OwnedUserId>,
+	/// MSC3874: only events with one of these `m.relates_to` relation types.
+	/// `None` applies no filter; `Some` of an empty list matches nothing.
+	pub rel_types: Option<Vec<String>>,
+	/// MSC3874: no events with any of these `m.relates_to` relation types.
+	pub not_rel_types: Vec<String>,
 	pub url_filter: Option<UrlFilter>,
 	pub lazy_load_options: LazyLoadOptions,
 	pub unread_thread_notifications: bool,
@@ -70,6 +75,15 @@ impl Serialize for RoomEventFilter {
 			("not_rooms", self.not_rooms.to_json()),
 			("senders", self.senders.to_json()),
 			("not_senders", self.not_senders.to_json()),
+			("org.matrix.msc3874.rel_types", self.rel_types.to_json()),
+			(
+				"org.matrix.msc3874.not_rel_types",
+				if self.not_rel_types.is_empty() {
+					Value::Null
+				} else {
+					self.not_rel_types.to_json()
+				},
+			),
 			("contains_url", contains_url.to_json()),
 			("lazy_load_members", lazy.to_json()),
 			("include_redundant_members", redundant.to_json()),
@@ -94,6 +108,8 @@ impl Deserialize for RoomEventFilter {
 			not_rooms: input.body_or_default("not_rooms")?,
 			senders: input.body("senders")?,
 			not_senders: input.body_or_default("not_senders")?,
+			rel_types: input.body("org.matrix.msc3874.rel_types")?,
+			not_rel_types: input.body_or_default("org.matrix.msc3874.not_rel_types")?,
 			url_filter: contains_url.map(|with| {
 				if with {
 					UrlFilter::EventsWithUrl
@@ -269,6 +285,26 @@ pub mod create_filter {
 mod tests {
 	use super::*;
 	use crate::codec::from_str;
+
+	#[test]
+	fn msc3874_relation_filters_use_the_unstable_wire_names() {
+		let filter: RoomEventFilter = from_str(
+			r#"{"org.matrix.msc3874.rel_types":["m.thread"],"org.matrix.msc3874.not_rel_types":["m.reference"]}"#,
+		)
+		.unwrap();
+		assert_eq!(filter.rel_types.as_deref(), Some(&["m.thread".to_owned()][..]));
+		assert_eq!(filter.not_rel_types, ["m.reference"]);
+
+		let encoded = crate::codec::to_value(&filter);
+		assert!(encoded.get("org.matrix.msc3874.rel_types").is_some());
+		let empty = crate::codec::to_value(&RoomEventFilter::default());
+		assert!(empty.get("org.matrix.msc3874.rel_types").is_none());
+
+		// An empty list is a filter that matches nothing, unlike an absent one.
+		let none_allowed: RoomEventFilter =
+			from_str(r#"{"org.matrix.msc3874.rel_types":[]}"#).unwrap();
+		assert_eq!(none_allowed.rel_types.as_deref(), Some(&[][..]));
+	}
 
 	#[test]
 	fn non_object_sub_filters_are_rejected() {

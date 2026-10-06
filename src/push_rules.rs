@@ -28,6 +28,7 @@ crate::impl_codec_enum!(RuleScope { Global => "global" });
 pub enum RuleKind {
 	Override,
 	Underride,
+	PostContent,
 	Sender,
 	Room,
 	Content,
@@ -35,6 +36,7 @@ pub enum RuleKind {
 crate::impl_codec_enum!(RuleKind {
 	Override => "override",
 	Underride => "underride",
+	PostContent => "postcontent",
 	Sender => "sender",
 	Room => "room",
 	Content => "content",
@@ -49,6 +51,7 @@ impl RuleKind {
 			Self::Sender => "sender",
 			Self::Room => "room",
 			Self::Content => "content",
+			Self::PostContent => "postcontent",
 		}
 	}
 }
@@ -507,11 +510,13 @@ impl NewPushRule {
 				conditions: conditions()?,
 				actions,
 			}),
-			RuleKind::Underride => Self::Underride(NewConditionalPushRule {
-				rule_id,
-				conditions: conditions()?,
-				actions,
-			}),
+			RuleKind::Underride | RuleKind::PostContent => {
+				Self::Underride(NewConditionalPushRule {
+					rule_id,
+					conditions: conditions()?,
+					actions,
+				})
+			}
 			RuleKind::Content => Self::Content(NewPatternedPushRule {
 				rule_id,
 				pattern: text_field(object, "pattern")?,
@@ -752,6 +757,9 @@ impl Ruleset {
 			RuleKind::Underride => {
 				self.underride.iter().find(|r| r.rule_id == id).map(AnyPushRuleRef::Underride)
 			}
+			RuleKind::PostContent => {
+				self.underride.iter().find(|r| r.rule_id == id).map(AnyPushRuleRef::Underride)
+			}
 			RuleKind::Content => {
 				self.content.iter().find(|r| r.rule_id == id).map(AnyPushRuleRef::Content)
 			}
@@ -856,6 +864,9 @@ impl Ruleset {
 			RuleKind::Underride => {
 				self.underride.iter_mut().find(|r| r.rule_id == id).map(|r| &mut r.actions)
 			}
+			RuleKind::PostContent => {
+				self.underride.iter_mut().find(|r| r.rule_id == id).map(|r| &mut r.actions)
+			}
 			RuleKind::Content => {
 				self.content.iter_mut().find(|r| r.rule_id == id).map(|r| &mut r.actions)
 			}
@@ -887,6 +898,9 @@ impl Ruleset {
 				self.override_.iter_mut().find(|r| r.rule_id == id).map(|r| &mut r.enabled)
 			}
 			RuleKind::Underride => {
+				self.underride.iter_mut().find(|r| r.rule_id == id).map(|r| &mut r.enabled)
+			}
+			RuleKind::PostContent => {
 				self.underride.iter_mut().find(|r| r.rule_id == id).map(|r| &mut r.enabled)
 			}
 			RuleKind::Content => {
@@ -960,6 +974,7 @@ impl Ruleset {
 		match kind {
 			RuleKind::Override => self.override_.iter().map(|r| r.rule_id.clone()).collect(),
 			RuleKind::Underride => self.underride.iter().map(|r| r.rule_id.clone()).collect(),
+			RuleKind::PostContent => self.underride.iter().map(|r| r.rule_id.clone()).collect(),
 			RuleKind::Content => self.content.iter().map(|r| r.rule_id.clone()).collect(),
 			RuleKind::Room => self.room.iter().map(|r| r.rule_id.as_str().to_owned()).collect(),
 			RuleKind::Sender => {
@@ -972,6 +987,7 @@ impl Ruleset {
 		match kind {
 			RuleKind::Override => self.override_.retain(|r| r.rule_id != id),
 			RuleKind::Underride => self.underride.retain(|r| r.rule_id != id),
+			RuleKind::PostContent => self.underride.retain(|r| r.rule_id != id),
 			RuleKind::Content => self.content.retain(|r| r.rule_id != id),
 			RuleKind::Room => self.room.retain(|r| r.rule_id.as_str() != id),
 			RuleKind::Sender => self.sender.retain(|r| r.rule_id.as_str() != id),
