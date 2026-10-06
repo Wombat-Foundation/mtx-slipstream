@@ -26,7 +26,8 @@ fn room_version_parse() {
 fn id_accessors() {
 	use mtx_slipstream::{OwnedRoomAliasId, OwnedRoomId, OwnedServerName};
 	let alias = OwnedRoomAliasId::parse("#room:example.org").unwrap();
-	assert_eq!(alias.alias(), "room");
+	assert_eq!(alias.alias(), "#room:example.org");
+	assert_eq!(alias.localpart(), "room");
 	let room = OwnedRoomId::parse("!abc:example.org").unwrap();
 	assert_eq!(room.localpart(), "abc");
 	let plain = OwnedServerName::parse("example.org").unwrap();

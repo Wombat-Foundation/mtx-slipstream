@@ -36,10 +36,24 @@ pub mod get_threads {
 			method: "GET", path: "/_matrix/client/v1/rooms/{room_id}/threads",
 			request {
 				path { room_id: OwnedRoomId }
-				query { include: IncludeThreads, limit: Option<UInt>, from: Option<String> }
+				query { include: IncludeThreads = IncludeThreads::All, limit: Option<UInt>, from: Option<String> }
 				body {}
 			}
 			response { chunk: Vec<RawPdu>, next_batch: Option<String> }
 		}
+	}
+}
+
+#[cfg(test)]
+mod get_threads_tests {
+	use super::{IncludeThreads, get_threads::v1::Request};
+	use crate::endpoint::EndpointRequest;
+
+	#[test]
+	fn include_defaults_to_all() {
+		let path = ["!room:example.org".to_owned()];
+		let request = Request::from_parts(&path, &[], None).unwrap();
+		assert_eq!(request.include, IncludeThreads::All);
+		assert!(request.limit.is_none() && request.from.is_none());
 	}
 }

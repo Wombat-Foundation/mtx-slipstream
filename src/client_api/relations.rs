@@ -1,7 +1,7 @@
 pub mod get_relating_events {
 	pub mod v1 {
 		use crate::{OwnedEventId, OwnedRoomId, UInt, api::Direction, endpoint, sswire::Raw};
-		endpoint! { method: "GET", path: "/_matrix/client/v1/rooms/{roomId}/relations/{eventId}", request { path { room_id: OwnedRoomId, event_id: OwnedEventId } query { from: Option<String>, to: Option<String>, limit: Option<UInt>, dir: Direction, recurse: bool } body {} } response { chunk: Vec<Raw<crate::events::AnyTimelineEvent>>, next_batch: Option<String>, prev_batch: Option<String>, recursion_depth: Option<UInt> } }
+		endpoint! { method: "GET", path: "/_matrix/client/v1/rooms/{roomId}/relations/{eventId}", request { path { room_id: OwnedRoomId, event_id: OwnedEventId } query { from: Option<String>, to: Option<String>, limit: Option<UInt>, dir: Direction = Direction::Backward, recurse: bool = false } body {} } response { chunk: Vec<Raw<crate::events::AnyTimelineEvent>>, next_batch: Option<String>, prev_batch: Option<String>, recursion_depth: Option<UInt> } }
 	}
 }
 pub mod get_relating_events_with_rel_type {
@@ -10,7 +10,7 @@ pub mod get_relating_events_with_rel_type {
 			OwnedEventId, OwnedRoomId, UInt, api::Direction, endpoint,
 			events::relation::RelationType, sswire::Raw,
 		};
-		endpoint! { method: "GET", path: "/_matrix/client/v1/rooms/{roomId}/relations/{eventId}/{relType}", request { path { room_id: OwnedRoomId, event_id: OwnedEventId, rel_type: RelationType } query { from: Option<String>, to: Option<String>, limit: UInt, dir: Direction, recurse: Option<bool> } body {} } response { chunk: Vec<Raw<crate::events::AnyTimelineEvent>>, next_batch: Option<String>, prev_batch: Option<String>, recursion_depth: Option<UInt> } }
+		endpoint! { method: "GET", path: "/_matrix/client/v1/rooms/{roomId}/relations/{eventId}/{relType}", request { path { room_id: OwnedRoomId, event_id: OwnedEventId, rel_type: RelationType } query { from: Option<String>, to: Option<String>, limit: UInt = 10, dir: Direction = Direction::Backward, recurse: Option<bool> } body {} } response { chunk: Vec<Raw<crate::events::AnyTimelineEvent>>, next_batch: Option<String>, prev_batch: Option<String>, recursion_depth: Option<UInt> } }
 	}
 }
 pub mod get_relating_events_with_rel_type_and_event_type {
@@ -22,7 +22,7 @@ pub mod get_relating_events_with_rel_type_and_event_type {
 			events::{TimelineEventType, relation::RelationType},
 			sswire::Raw,
 		};
-		endpoint! { method: "GET", path: "/_matrix/client/v1/rooms/{roomId}/relations/{eventId}/{relType}/{eventType}", request { path { room_id: OwnedRoomId, event_id: OwnedEventId, rel_type: RelationType, event_type: TimelineEventType } query { from: Option<String>, to: Option<String>, limit: UInt, dir: Direction, recurse: Option<bool> } body {} } response { chunk: Vec<Raw<crate::events::AnyTimelineEvent>>, next_batch: Option<String>, prev_batch: Option<String>, recursion_depth: Option<UInt> } }
+		endpoint! { method: "GET", path: "/_matrix/client/v1/rooms/{roomId}/relations/{eventId}/{relType}/{eventType}", request { path { room_id: OwnedRoomId, event_id: OwnedEventId, rel_type: RelationType, event_type: TimelineEventType } query { from: Option<String>, to: Option<String>, limit: UInt = 10, dir: Direction = Direction::Backward, recurse: Option<bool> } body {} } response { chunk: Vec<Raw<crate::events::AnyTimelineEvent>>, next_batch: Option<String>, prev_batch: Option<String>, recursion_depth: Option<UInt> } }
 	}
 }
 
@@ -55,5 +55,32 @@ pub mod event_relationships {
 				limited: bool
 			}
 		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use crate::{api::Direction, endpoint::EndpointRequest};
+
+	fn path(extra: &[&str]) -> Vec<String> {
+		["!room:example.org", "$event"].iter().chain(extra).map(|s| (*s).to_owned()).collect()
+	}
+
+	#[test]
+	fn relations_query_defaults() {
+		let request =
+			super::get_relating_events::v1::Request::from_parts(&path(&[]), &[], None).unwrap();
+		assert_eq!(request.dir, Direction::Backward);
+		assert!(!request.recurse);
+		assert!(request.limit.is_none());
+
+		let request = super::get_relating_events_with_rel_type::v1::Request::from_parts(
+			&path(&["m.annotation"]),
+			&[],
+			None,
+		)
+		.unwrap();
+		assert_eq!(request.dir, Direction::Backward);
+		assert_eq!(request.limit, 10);
 	}
 }
