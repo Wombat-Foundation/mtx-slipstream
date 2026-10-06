@@ -3,7 +3,7 @@ pub mod read_marker {
 		pub mod v3 {
 			pub use crate::events::receipt::{ReceiptThread, ReceiptType};
 			use crate::{OwnedEventId, OwnedRoomId, endpoint};
-			endpoint! { method: "POST", path: "/_matrix/client/v3/rooms/{roomId}/read_markers", request { path { room_id: OwnedRoomId } query {} body { fully_read: Option<OwnedEventId>, read_receipt: Option<OwnedEventId>, private_read_receipt: Option<OwnedEventId> } } response {} }
+			endpoint! { method: "POST", path: "/_matrix/client/v3/rooms/{roomId}/read_markers", request { path { room_id: OwnedRoomId } query {} body { fully_read => "m.fully_read": Option<OwnedEventId> = default, read_receipt => "m.read": Option<OwnedEventId> = default, private_read_receipt => "m.read.private": Option<OwnedEventId> = default } } response {} }
 		}
 	}
 }
@@ -115,5 +115,18 @@ mod read_marker_tests {
 
 		let request = Request::from_parts(&path, &[], None).unwrap();
 		assert!(request.fully_read.is_none());
+	}
+
+	#[test]
+	fn read_markers_use_the_spec_wire_keys() {
+		let path = ["!room:example.org".to_owned()];
+		let body = Value::parse(
+			r#"{"m.fully_read":"$a","m.read":"$b","m.read.private":"$c","read_receipt":"$ignored"}"#,
+		)
+		.unwrap();
+		let request = Request::from_parts(&path, &[], Some(&body)).unwrap();
+		assert_eq!(request.fully_read.as_deref(), Some("$a"));
+		assert_eq!(request.read_receipt.as_deref(), Some("$b"));
+		assert_eq!(request.private_read_receipt.as_deref(), Some("$c"));
 	}
 }

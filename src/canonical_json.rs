@@ -58,19 +58,48 @@ pub fn redact_content_in_place(
 	version: &crate::RoomVersionId,
 	event_type: impl AsRef<str>,
 ) -> Result<(), RedactionError> {
-	if matches!(version, crate::RoomVersionId::Custom(_)) {
+	// MSC3389's unstable room version redacts like version 10 but keeps
+	// `rel_type` and `event_id` of `m.relates_to`.
+	let msc3389 = version.as_str() == MSC3389_ROOM_VERSION;
+	if matches!(version, crate::RoomVersionId::Custom(_)) && !msc3389 {
 		return Err(RedactionError::UnsupportedRoomVersion(version.as_str().into()));
 	}
+	let preserved_relation = if msc3389 {
+		content.get("m.relates_to").and_then(Value::as_object).map(|relation| {
+			["rel_type", "event_id"]
+				.into_iter()
+				.filter_map(|key| {
+					relation
+						.get(key)
+						.map(|value| (alloc::string::String::from(key), value.clone()))
+				})
+				.collect::<Object>()
+		})
+	} else {
+		None
+	};
+	// TODO: better logic here; it could be v11, v12, etc
+	let rules_version = if msc3389 {
+		"10"
+	} else {
+		version.as_str()
+	};
 	let (redacted, _) = rezzy::split_redaction_content(
 		&Value::Object(core::mem::take(content)),
 		event_type.as_ref(),
-		version.as_str(),
+		rules_version,
 	);
 	if let Value::Object(object) = redacted {
 		*content = object;
 	}
+	if let Some(relation) = preserved_relation.filter(|relation| !relation.is_empty()) {
+		content.insert("m.relates_to".into(), Value::Object(relation));
+	}
 	Ok(())
 }
+
+/// The unstable room version that keeps `m.relates_to` through redaction (MSC3389).
+const MSC3389_ROOM_VERSION: &str = "org.matrix.msc3389.10";
 
 /// Redacts a full event object, using its `type` field when no type is supplied.
 ///
@@ -131,5 +160,33 @@ mod tests {
 			redact_content_in_place(&mut content, &RoomVersionId::Custom("x".into()), "m.x")
 				.is_err()
 		);
+	}
+
+	fn relation_content() -> Object {
+		let Value::Object(object) = Value::parse(
+			r#"{"body":"x","m.relates_to":{"rel_type":"m.annotation","event_id":"$e","key":"k"}}"#,
+		)
+		.unwrap() else {
+			panic!("object")
+		};
+		object
+	}
+
+	#[test]
+	fn msc3389_room_version_keeps_rel_type_and_event_id() {
+		let version = RoomVersionId::Custom("org.matrix.msc3389.10".into());
+		let mut content = relation_content();
+		redact_content_in_place(&mut content, &version, "m.reaction").unwrap();
+		let relation = content.get("m.relates_to").and_then(Value::as_object).unwrap();
+		assert_eq!(relation.len(), 2, "only rel_type and event_id survive: {relation:?}");
+		assert!(relation.contains_key("rel_type") && relation.contains_key("event_id"));
+		assert!(!content.contains_key("body"));
+	}
+
+	#[test]
+	fn older_room_versions_strip_the_relation_entirely() {
+		let mut content = relation_content();
+		redact_content_in_place(&mut content, &RoomVersionId::V9, "m.reaction").unwrap();
+		assert!(content.is_empty(), "{content:?}");
 	}
 }

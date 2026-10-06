@@ -593,6 +593,11 @@ pub fn percent_decode(input: &str) -> String {
 	let mut out = Vec::with_capacity(bytes.len());
 	let mut i = 0;
 	while let Some(&byte) = bytes.get(i) {
+		if byte == b'+' {
+			out.push(b' ');
+			i = i.saturating_add(1);
+			continue;
+		}
 		let escaped = (byte == b'%')
 			.then(|| bytes.get(i.saturating_add(1)..i.saturating_add(3)))
 			.flatten()

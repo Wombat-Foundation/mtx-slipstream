@@ -474,6 +474,20 @@ mod tests {
 	}
 
 	#[test]
+	fn room_versions_one_and_two_have_no_reference_hash() {
+		// Their event IDs are opaque server-assigned strings carried in `event_id`.
+		let Value::Object(event) = Value::parse(
+			r#"{"type":"m.room.message","sender":"@a:example.org","room_id":"!r:example.org","origin_server_ts":1,"depth":1,"content":{"body":"hi"},"prev_events":[],"auth_events":[]}"#,
+		)
+		.unwrap() else {
+			panic!("object")
+		};
+		assert!(reference_hash(&event, &RoomVersionId::V1).is_err());
+		assert!(reference_hash(&event, &RoomVersionId::V2).is_err());
+		assert!(reference_hash(&event, &RoomVersionId::V3).is_ok());
+	}
+
+	#[test]
 	fn countersigning_keeps_the_existing_signatures() {
 		let (first, second) = (pair(), pair());
 		let Value::Object(mut event) = Value::parse(
