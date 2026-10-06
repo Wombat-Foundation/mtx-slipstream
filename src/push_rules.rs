@@ -513,11 +513,11 @@ impl NewPushRule {
 				actions,
 			}),
 			RuleKind::Room => Self::Room(NewSimplePushRule {
-				rule_id: OwnedRoomId::from(rule_id),
+				rule_id: OwnedRoomId::from_trusted(rule_id),
 				actions,
 			}),
 			RuleKind::Sender => Self::Sender(NewSimplePushRule {
-				rule_id: OwnedUserId::from(rule_id),
+				rule_id: OwnedUserId::from_trusted(rule_id),
 				actions,
 			}),
 		})

@@ -37,9 +37,9 @@ impl XMatrix {
 			let (name, value) = part.trim().split_once('=')?;
 			let value = value.trim_matches('"');
 			match name.trim() {
-				"origin" => origin = Some(OwnedServerName::from(value)),
-				"destination" => destination = Some(OwnedServerName::from(value)),
-				"key" => key = Some(OwnedServerSigningKeyId::from(value)),
+				"origin" => origin = Some(OwnedServerName::parse(value).ok()?),
+				"destination" => destination = Some(OwnedServerName::parse(value).ok()?),
+				"key" => key = Some(OwnedServerSigningKeyId::parse(value).ok()?),
 				"sig" => sig = Some(value.into()),
 				_ => {}
 			}

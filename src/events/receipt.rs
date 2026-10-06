@@ -133,7 +133,9 @@ impl Deserialize for Receipt {
 		let thread = match object.get("thread_id").and_then(Value::as_str) {
 			None => ReceiptThread::Unthreaded,
 			Some("main") => ReceiptThread::Main,
-			Some(root) => ReceiptThread::Thread(OwnedEventId::from(root)),
+			Some(root) => ReceiptThread::Thread(
+				OwnedEventId::parse(root).map_err(|_| DeError::expected("thread_id"))?,
+			),
 		};
 		Ok(Self {
 			ts,

@@ -166,7 +166,9 @@ pub mod edu {
 		fn from_json(value: &Value) -> Result<Self, DeError> {
 			match value.as_str() {
 				Some("*") => Ok(Self::AllDevices),
-				Some(id) => Ok(Self::DeviceId(OwnedDeviceId::from(id))),
+				Some(id) => Ok(Self::DeviceId(
+					OwnedDeviceId::parse(id).map_err(|_| DeError::expected("device ID"))?,
+				)),
 				None => Err(DeError::expected("device ID")),
 			}
 		}

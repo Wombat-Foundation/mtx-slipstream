@@ -390,10 +390,10 @@ pub fn required_keys(
 		let ids = entry
 			.as_object()
 			.map(|entry| {
-				entry.keys().map(|k| OwnedServerSigningKeyId::from(k.as_str())).collect()
+				entry.keys().map(|k| OwnedServerSigningKeyId::from_trusted(k.as_str())).collect()
 			})
 			.unwrap_or_default();
-		required.insert(OwnedServerName::from(server.as_str()), ids);
+		required.insert(OwnedServerName::from_trusted(server.as_str()), ids);
 	}
 	let _ = version;
 	if required.is_empty() {

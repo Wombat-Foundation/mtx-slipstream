@@ -167,7 +167,7 @@ impl OwnedUserId {
 
 	#[must_use]
 	pub fn server_name(&self) -> OwnedServerName {
-		crate::server_part(self.as_str()).unwrap_or_else(|| OwnedServerName::from(""))
+			crate::server_part(self.as_str()).unwrap_or_else(|| OwnedServerName::from_trusted(""))
 	}
 }
 /// The part of an identifier between its sigil and the first `:`.
@@ -227,7 +227,7 @@ impl OwnedServerName {
 impl OwnedRoomAliasId {
 	#[must_use]
 	pub fn server_name(&self) -> OwnedServerName {
-		crate::server_part(self.as_str()).unwrap_or_else(|| OwnedServerName::from(""))
+			crate::server_part(self.as_str()).unwrap_or_else(|| OwnedServerName::from_trusted(""))
 	}
 }
 

@@ -82,7 +82,11 @@ impl Deserialize for RoomMember {
 		let avatar: Option<String> = input.body_or_default("avatar_url")?;
 		Ok(Self {
 			display_name: input.body_or_default("display_name")?,
-			avatar_url: avatar.filter(|url| !url.is_empty()).map(OwnedMxcUri::from),
+			avatar_url: avatar
+				.filter(|url| !url.is_empty())
+				.map(OwnedMxcUri::parse)
+				.transpose()
+				.map_err(|_| DeError::expected("avatar_url"))?,
 		})
 	}
 }

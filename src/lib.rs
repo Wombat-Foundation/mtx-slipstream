@@ -134,10 +134,7 @@ macro_rules! matrix_id {
 			/// # Errors
 			///
 			/// Returns [`MatrixIdParseError`] if `value` does not match the
-			/// identifier's grammar. `From<&str>` skips this check and is meant for
-			/// values already known to be well formed, such as database rows.
-			/// `TryFrom<&str>` is core's blanket impl over that `From`, so it never
-			/// fails either; use `parse` wherever input is untrusted.
+			/// identifier's grammar.
 			pub fn parse(value: impl AsRef<str>) -> Result<Self, MatrixIdParseError> {
 				let value = value.as_ref();
 				if $validate(value) {
@@ -145,6 +142,14 @@ macro_rules! matrix_id {
 				} else {
 					Err(MatrixIdParseError)
 				}
+			}
+			/// Constructs an identifier from a value already validated by the
+			/// caller, such as a trusted database row or a value generated here.
+			///
+			/// This bypasses grammar validation and must not be used for wire or
+			/// request data.
+			pub fn from_trusted(value: impl Into<alloc::string::String>) -> Self {
+				Self(value.into())
 			}
 			pub fn as_str(&self) -> &str {
 				&self.0
@@ -155,14 +160,16 @@ macro_rules! matrix_id {
 			}
 		}
 
-		impl From<alloc::string::String> for $owned {
-			fn from(value: alloc::string::String) -> Self {
-				Self(value)
+		impl TryFrom<alloc::string::String> for $owned {
+			type Error = MatrixIdParseError;
+			fn try_from(value: alloc::string::String) -> Result<Self, Self::Error> {
+				Self::parse(value)
 			}
 		}
-		impl From<&str> for $owned {
-			fn from(value: &str) -> Self {
-				Self(value.to_owned())
+		impl TryFrom<&str> for $owned {
+			type Error = MatrixIdParseError;
+			fn try_from(value: &str) -> Result<Self, Self::Error> {
+				Self::parse(value)
 			}
 		}
 		impl core::str::FromStr for $owned {
@@ -246,7 +253,7 @@ macro_rules! matrix_id {
 
 /// The server part of an identifier of the form `<sigil><local>:<server>`.
 pub(crate) fn server_part(id: &str) -> Option<OwnedServerName> {
-	id.rsplit_once(':').map(|(_, server)| OwnedServerName::from(server))
+	id.rsplit_once(':').map(|(_, server)| OwnedServerName::from_trusted(server))
 }
 
 matrix_id!(EventId, OwnedEventId, crate::id_validation::event_id);
@@ -302,7 +309,7 @@ impl OwnedMxcUri {
 		self.as_str()
 			.strip_prefix("mxc://")
 			.and_then(|value| {
-				value.split_once('/').map(|(server, _)| OwnedServerName::from(server))
+				value.split_once('/').map(|(server, _)| OwnedServerName::from_trusted(server))
 			})
 			.ok_or(MatrixIdParseError)
 	}
@@ -374,7 +381,7 @@ impl OwnedRoomId {
 		let mut rng = rand_core::OsRng;
 		rng.fill_bytes(&mut random);
 		let localpart = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(random);
-		Self::from(alloc::format!("!{localpart}:{server_name}"))
+		Self::from_trusted(alloc::format!("!{localpart}:{server_name}"))
 	}
 
 	/// Generates a fresh random room ID using the v11 room-ID format.
@@ -430,22 +437,22 @@ macro_rules! uint {
 
 #[macro_export]
 macro_rules! event_id {
-	($value:expr) => {
-		$crate::OwnedEventId::from($value)
+	($value:literal) => {
+		$crate::OwnedEventId::parse($value).expect("invalid event ID literal")
 	};
 }
 
 #[macro_export]
 macro_rules! device_id {
-	($value:expr) => {
-		$crate::OwnedDeviceId::from($value)
+	($value:literal) => {
+		$crate::OwnedDeviceId::parse($value).expect("invalid device ID literal")
 	};
 }
 
 #[macro_export]
 macro_rules! room_id {
-	($value:expr) => {
-		$crate::OwnedRoomId::from($value)
+	($value:literal) => {
+		$crate::OwnedRoomId::parse($value).expect("invalid room ID literal")
 	};
 }
 

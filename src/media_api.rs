@@ -752,7 +752,7 @@ pub mod legacy {
 					};
 					let query = crate::endpoint::parse_query(request.uri());
 					Ok(Self {
-						server_name: OwnedServerName::from(server_name.as_ref()),
+						server_name: OwnedServerName::from_trusted(server_name.as_ref()),
 						media_id: media_id.as_ref().into(),
 						filename: query
 							.iter()

@@ -688,7 +688,9 @@ pub mod v5 {
 			fn from_json(value: &Value) -> Result<Self, DeError> {
 				match value.as_str() {
 					Some("*") => Ok(Self::AllSubscribed),
-					Some(other) => Ok(Self::Room(OwnedRoomId::from(other))),
+					Some(other) => Ok(Self::Room(
+						OwnedRoomId::parse(other).map_err(|_| DeError::expected("room ID"))?,
+					)),
 					None => Err(DeError::expected("room ID or `*`")),
 				}
 			}
