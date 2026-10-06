@@ -8,7 +8,26 @@ pub mod read_marker {
 	}
 }
 pub mod receipt {
-	pub use super::read_marker::set_read_marker as create_receipt;
+	pub mod create_receipt {
+		pub mod v3 {
+			pub use crate::events::receipt::{ReceiptThread, ReceiptType};
+			use crate::{OwnedEventId, OwnedRoomId, endpoint};
+			endpoint! {
+				method: "POST",
+				path: "/_matrix/client/v3/rooms/{roomId}/receipt/{receiptType}/{eventId}",
+				request {
+					path {
+						room_id: OwnedRoomId,
+						receipt_type: ReceiptType,
+						event_id: OwnedEventId
+					}
+					query {}
+					body { thread_id: ReceiptThread }
+				}
+				response {}
+			}
+		}
+	}
 }
 pub mod thirdparty {
 	pub mod get_protocols {
