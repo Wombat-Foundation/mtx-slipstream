@@ -247,9 +247,33 @@ pub struct Metadata {
 	pub method: &'static str,
 	pub path: &'static str,
 	pub authentication: AuthScheme,
+	/// Further paths the same endpoint is served under (for example the stable
+	/// path of an endpoint whose canonical path is still the unstable one).
+	pub aliases: &'static [&'static str],
 }
 
 impl Metadata {
+	/// Adds alias paths. Each must have an authentication entry for the same
+	/// method, like the canonical path.
+	///
+	/// # Panics
+	///
+	/// Panics (at compile time in const contexts) if an alias has no declared
+	/// authentication.
+	#[must_use]
+	pub const fn with_aliases(mut self, aliases: &'static [&'static str]) -> Self {
+		let mut i = 0;
+		while i < aliases.len() {
+			assert!(
+				lookup_auth(self.method, aliases[i]).is_some(),
+				"no authentication declared for an endpoint alias; add it to endpoint_auth.rs"
+			);
+			i = i.saturating_add(1);
+		}
+		self.aliases = aliases;
+		self
+	}
+
 	/// Describes an endpoint, looking up its authentication.
 	///
 	/// There is deliberately no default: an endpoint missing from the table fails to
@@ -268,6 +292,7 @@ impl Metadata {
 			method,
 			path,
 			authentication,
+			aliases: &[],
 		}
 	}
 }

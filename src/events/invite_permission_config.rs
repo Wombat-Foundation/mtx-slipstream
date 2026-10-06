@@ -28,17 +28,43 @@ pub struct InvitePermissionConfigEventContent {
 	pub ignored_servers: Vec<String>,
 }
 
-crate::impl_codec_struct!(InvitePermissionConfigEventContent {}
-	default {
-		enabled: bool,
-		blocked_users: Vec<String>,
-		blocked_servers: Vec<String>,
-		allowed_users: Vec<String>,
-		allowed_servers: Vec<String>,
-		ignored_users: Vec<String>,
-		ignored_servers: Vec<String>,
+impl crate::codec::Serialize for InvitePermissionConfigEventContent {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			("enabled", crate::endpoint::enc(&self.enabled)),
+			("blocked_users", crate::endpoint::enc(&self.blocked_users)),
+			("blocked_servers", crate::endpoint::enc(&self.blocked_servers)),
+			("allowed_users", crate::endpoint::enc(&self.allowed_users)),
+			("allowed_servers", crate::endpoint::enc(&self.allowed_servers)),
+			("ignored_users", crate::endpoint::enc(&self.ignored_users)),
+			("ignored_servers", crate::endpoint::enc(&self.ignored_servers)),
+		])
 	}
-);
+}
+
+impl crate::codec::Deserialize for InvitePermissionConfigEventContent {
+	fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+		let object = value.as_object().ok_or_else(|| {
+			crate::codec::DeError::expected("InvitePermissionConfigEventContent")
+		})?;
+		let decode =
+			|name: &str| object.get(name).map(crate::codec::Deserialize::from_json).transpose();
+		Ok(Self {
+			// MSC4155 treats an omitted enabled flag as enabled.
+			enabled: object
+				.get("enabled")
+				.map(crate::codec::Deserialize::from_json)
+				.transpose()?
+				.unwrap_or(true),
+			blocked_users: decode("blocked_users")?.unwrap_or_default(),
+			blocked_servers: decode("blocked_servers")?.unwrap_or_default(),
+			allowed_users: decode("allowed_users")?.unwrap_or_default(),
+			allowed_servers: decode("allowed_servers")?.unwrap_or_default(),
+			ignored_users: decode("ignored_users")?.unwrap_or_default(),
+			ignored_servers: decode("ignored_servers")?.unwrap_or_default(),
+		})
+	}
+}
 
 /// Matches `target` against a glob in which `*` matches any run and `?` one character.
 fn glob_match(glob: &str, target: &str) -> bool {

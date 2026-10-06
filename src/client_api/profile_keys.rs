@@ -1,21 +1,70 @@
 pub mod get_profile_key {
 	pub mod unstable {
-		use crate::{OwnedUserId, json::Value};
+		use crate::{
+			OwnedUserId,
+			codec::DeError,
+			endpoint::{self, EndpointRequest},
+			json::Value,
+		};
 		use std::collections::BTreeMap;
 
-		crate::endpoint_request! {
-			method: "GET",
-			path: "/_matrix/client/unstable/uk.tcpip.msc4133/profile/{userId}/{keyName}",
-			request {
-				path { user_id: OwnedUserId, key_name: String }
-				query {}
-				body {}
+		/// The canonical path is the MSC4133 one; the stable profile path is an alias.
+		#[derive(Debug)]
+		pub struct Request {
+			pub user_id: OwnedUserId,
+			pub key_name: String,
+		}
+
+		impl Request {
+			#[must_use]
+			pub fn new(user_id: OwnedUserId, key_name: String) -> Self {
+				Self {
+					user_id,
+					key_name,
+				}
 			}
 		}
+
+		impl EndpointRequest for Request {
+			type Response = Response;
+			const METADATA: endpoint::Metadata = endpoint::Metadata::new(
+				"GET",
+				"/_matrix/client/unstable/uk.tcpip.msc4133/profile/{userId}/{keyName}",
+			)
+			.with_aliases(&["/_matrix/client/v3/profile/{userId}/{keyName}"]);
+
+			fn path_args(&self) -> Vec<String> {
+				vec![self.user_id.to_string(), self.key_name.clone()]
+			}
+
+			fn query(&self) -> Vec<(String, String)> {
+				Vec::new()
+			}
+
+			fn body(&self) -> Option<Value> {
+				None
+			}
+
+			fn from_parts(
+				path: &[String],
+				query: &[(String, String)],
+				body: Option<&Value>,
+			) -> Result<Self, DeError> {
+				let input = endpoint::Input::new(path, query, body);
+				let request = Self {
+					user_id: input.path()?,
+					key_name: input.path()?,
+				};
+				input.finish()?;
+				Ok(request)
+			}
+		}
+
 		// The wire body is the bare `{"<keyName>": <value>}` map, not `{"value": ..}`.
 		crate::endpoint_response_flat!(value: BTreeMap<String, Value>);
 	}
 }
+
 pub mod set_profile_key {
 	pub mod unstable {
 		use crate::{
@@ -58,7 +107,8 @@ pub mod set_profile_key {
 			const METADATA: endpoint::Metadata = endpoint::Metadata::new(
 				"PUT",
 				"/_matrix/client/unstable/uk.tcpip.msc4133/profile/{userId}/{keyName}",
-			);
+			)
+			.with_aliases(&["/_matrix/client/v3/profile/{userId}/{keyName}"]);
 
 			fn path_args(&self) -> Vec<String> {
 				vec![self.user_id.to_string(), self.key_name.clone()]
@@ -129,7 +179,8 @@ pub mod delete_profile_key {
 			const METADATA: endpoint::Metadata = endpoint::Metadata::new(
 				"DELETE",
 				"/_matrix/client/unstable/uk.tcpip.msc4133/profile/{userId}/{keyName}",
-			);
+			)
+			.with_aliases(&["/_matrix/client/v3/profile/{userId}/{keyName}"]);
 
 			fn path_args(&self) -> Vec<String> {
 				vec![self.user_id.to_string(), self.key_name.clone()]
@@ -161,5 +212,29 @@ pub mod delete_profile_key {
 		}
 
 		crate::endpoint_response! { response {} }
+	}
+}
+
+#[cfg(test)]
+mod alias_tests {
+	use crate::endpoint::{EndpointRequest, Metadata};
+
+	const STABLE: &str = "/_matrix/client/v3/profile/{userId}/{keyName}";
+
+	#[test]
+	fn profile_field_endpoints_are_also_served_on_the_stable_path() {
+		for metadata in [
+			super::get_profile_key::unstable::Request::METADATA,
+			super::set_profile_key::unstable::Request::METADATA,
+			super::delete_profile_key::unstable::Request::METADATA,
+		] {
+			assert!(metadata.path.contains("uk.tcpip.msc4133"));
+			assert_eq!(metadata.aliases, &[STABLE]);
+		}
+	}
+
+	#[test]
+	fn endpoints_without_aliases_have_none() {
+		assert!(Metadata::new("GET", "/_matrix/client/versions").aliases.is_empty());
 	}
 }
