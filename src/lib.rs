@@ -926,21 +926,30 @@ pub mod api {
 							pub enabled: bool,
 						}
 						impl Default for $name {
-							fn default() -> Self { Self { enabled: true } }
+							fn default() -> Self {
+								Self {
+									enabled: true,
+								}
+							}
 						}
 						impl crate::codec::Serialize for $name {
 							fn to_json(&self) -> crate::json::Value {
-								crate::endpoint::object_from(vec![("enabled", self.enabled.to_json())])
-									.into()
+								crate::endpoint::object_from(vec![(
+									"enabled",
+									self.enabled.to_json(),
+								)])
+								.into()
 							}
 						}
 						impl crate::codec::Deserialize for $name {
-							fn from_json(v: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+							fn from_json(
+								v: &crate::json::Value,
+							) -> Result<Self, crate::codec::DeError> {
 								Ok(Self {
 									enabled: crate::codec::Deserialize::from_json(
-										v.as_object().and_then(|o| o.get("enabled")).ok_or_else(|| {
-											crate::codec::DeError::expected("enabled")
-										})?,
+										v.as_object().and_then(|o| o.get("enabled")).ok_or_else(
+											|| crate::codec::DeError::expected("enabled"),
+										)?,
 									)?,
 								})
 							}
@@ -1044,8 +1053,10 @@ pub mod api {
 								!matches!(
 									key.as_str(),
 									"m.room_versions"
-										| "m.change_password" | "m.set_displayname"
-										| "m.set_avatar_url" | "m.3pid_changes"
+										| "m.change_password"
+										| "m.set_displayname"
+										| "m.set_avatar_url"
+										| "m.3pid_changes"
 										| "m.get_login_token"
 								)
 							})
@@ -2005,15 +2016,15 @@ mod capabilities_tests {
 	#[test]
 	fn standard_capabilities_default_to_enabled_and_extras_are_kept() {
 		let mut capabilities = Capabilities::default();
-		capabilities
-			.set("org.example.extra", crate::json::Value::Bool(true))
-			.unwrap();
+		capabilities.set("org.example.extra", crate::json::Value::Bool(true)).unwrap();
 		let json = capabilities.to_json();
 		let object = json.as_object().unwrap();
 		for key in ["m.change_password", "m.set_displayname", "m.set_avatar_url"] {
 			let enabled = object.get(key).and_then(|v| v.get("enabled"));
 			assert_eq!(enabled.and_then(crate::json::Value::as_bool), Some(true), "{key}");
 		}
-		assert!(object.contains_key("m.room_versions") && object.contains_key("org.example.extra"));
+		assert!(
+			object.contains_key("m.room_versions") && object.contains_key("org.example.extra")
+		);
 	}
 }

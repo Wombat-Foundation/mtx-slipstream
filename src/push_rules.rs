@@ -82,6 +82,7 @@ predefined_ids!(PredefinedOverrideRuleId {
 	Reaction => ".m.rule.reaction",
 	ServerAcl => ".m.rule.room.server_acl",
 	SuppressEdits => ".m.rule.suppress_edits",
+	PollResponse => ".org.matrix.msc3930.rule.poll_response",
 });
 predefined_ids!(PredefinedContentRuleId {
 	ContainsUserName => ".m.rule.contains_user_name",
@@ -92,6 +93,10 @@ predefined_ids!(PredefinedUnderrideRuleId {
 	RoomOneToOne => ".m.rule.room_one_to_one",
 	Message => ".m.rule.message",
 	Encrypted => ".m.rule.encrypted",
+	PollStartOneToOne => ".org.matrix.msc3930.rule.poll_start_one_to_one",
+	PollStart => ".org.matrix.msc3930.rule.poll_start",
+	PollEndOneToOne => ".org.matrix.msc3930.rule.poll_end_one_to_one",
+	PollEnd => ".org.matrix.msc3930.rule.poll_end",
 });
 
 /// A condition that must hold for a rule to apply.
@@ -706,6 +711,14 @@ fn default_conditional(
 	}
 }
 
+/// MSC3930: matches an event whose `type` is exactly `event_type`.
+fn type_is(event_type: &str) -> PushCondition {
+	PushCondition::EventPropertyIs {
+		key: "type".into(),
+		value: Value::String(event_type.into()),
+	}
+}
+
 fn member_count_is(is: &str) -> PushCondition {
 	PushCondition::RoomMemberCount {
 		is: is.into(),
@@ -1073,6 +1086,13 @@ fn default_override_rules(user_id: &str) -> Vec<ConditionalPushRule> {
 			}],
 			Vec::new(),
 		),
+		// MSC3930: poll responses never notify.
+		default_conditional(
+			PredefinedOverrideRuleId::PollResponse.as_str(),
+			true,
+			vec![type_is("org.matrix.msc3381.poll.response")],
+			Vec::new(),
+		),
 	]
 }
 
@@ -1109,6 +1129,31 @@ fn default_underride_rules() -> Vec<ConditionalPushRule> {
 			true,
 			vec![event_match("type", "m.room.encrypted")],
 			action_list(&[Tweak::Highlight(false)], true),
+		),
+		// MSC3930: polls notify like messages do.
+		default_conditional(
+			PredefinedUnderrideRuleId::PollStartOneToOne.as_str(),
+			true,
+			vec![member_count_is("2"), type_is("org.matrix.msc3381.poll.start")],
+			action_list(core::slice::from_ref(&sound), true),
+		),
+		default_conditional(
+			PredefinedUnderrideRuleId::PollStart.as_str(),
+			true,
+			vec![type_is("org.matrix.msc3381.poll.start")],
+			action_list(&[], true),
+		),
+		default_conditional(
+			PredefinedUnderrideRuleId::PollEndOneToOne.as_str(),
+			true,
+			vec![member_count_is("2"), type_is("org.matrix.msc3381.poll.end")],
+			action_list(core::slice::from_ref(&sound), true),
+		),
+		default_conditional(
+			PredefinedUnderrideRuleId::PollEnd.as_str(),
+			true,
+			vec![type_is("org.matrix.msc3381.poll.end")],
+			action_list(&[], true),
 		),
 	]
 }
@@ -1713,6 +1758,22 @@ mod tests {
 		let json = r#"{"type":"m.room.message","sender":"@a:x","content":{"body":"x"}}"#;
 		assert!(actions(json, 2).contains(&Action::SetTweak(Tweak::Sound("default".into()))));
 		assert!(!actions(json, 3).contains(&Action::SetTweak(Tweak::Sound("default".into()))));
+	}
+
+	#[test]
+	fn server_default_includes_the_msc3930_poll_rules() {
+		let rules = Ruleset::server_default("@u:example.org");
+		assert!(
+			rules.get(RuleKind::Override, ".org.matrix.msc3930.rule.poll_response").is_some()
+		);
+		for id in [
+			".org.matrix.msc3930.rule.poll_start_one_to_one",
+			".org.matrix.msc3930.rule.poll_start",
+			".org.matrix.msc3930.rule.poll_end_one_to_one",
+			".org.matrix.msc3930.rule.poll_end",
+		] {
+			assert!(rules.get(RuleKind::Underride, id).is_some(), "{id}");
+		}
 	}
 
 	#[test]
