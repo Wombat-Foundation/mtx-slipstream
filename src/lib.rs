@@ -480,7 +480,7 @@ macro_rules! room_id {
 
 #[macro_export]
 macro_rules! user_id {
-	($value:expr) => {
+	($value:literal) => {
 		$crate::OwnedUserId::parse($value).expect("invalid user ID literal")
 	};
 }

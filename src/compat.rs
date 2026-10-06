@@ -230,6 +230,10 @@ impl OwnedServerName {
 }
 impl OwnedRoomAliasId {
 	#[must_use]
+	///
+	/// # Panics
+	///
+	/// Panics if this value is not a valid room alias ID with a server name.
 	pub fn server_name(&self) -> OwnedServerName {
 		crate::server_part(self.as_str()).expect("validated room alias ID must have a server name")
 	}
