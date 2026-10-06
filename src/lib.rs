@@ -9,6 +9,9 @@
 
 extern crate alloc;
 
+use base64::Engine as _;
+use rand_core::RngCore as _;
+
 #[cfg(feature = "mimalloc")]
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
@@ -356,8 +359,33 @@ pub mod presence {
 }
 
 impl OwnedRoomId {
+	/// Generates a fresh random room ID using the v11 room-ID format.
+	///
+	/// This constructor does not generate v12 or later room IDs. Those IDs are
+	/// derived from the room's create event and must be computed by the room
+	/// creation implementation.
+	#[must_use]
+	pub fn new_v11(server_name: &OwnedServerName) -> Self {
+		let mut random = [0_u8; 18];
+		let mut rng = rand_core::OsRng;
+		rng.fill_bytes(&mut random);
+		let localpart = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(random);
+		Self::from(alloc::format!("!{localpart}:{server_name}"))
+	}
+
+	/// Generates a fresh random room ID using the v11 room-ID format.
+	///
+	/// This compatibility alias does not generate v12 or later room IDs. Use
+	/// [`Self::new_v11`] for new code.
+	#[deprecated(note = "use OwnedRoomId::new_v11 for pre-v12 room IDs")]
 	#[must_use]
 	pub fn new(server_name: &OwnedServerName) -> Self {
+		Self::new_v11(server_name)
+	}
+
+	/// Returns the deterministic room ID reserved for the server's admin room.
+	#[must_use]
+	pub fn admin(server_name: &OwnedServerName) -> Self {
 		Self::from(alloc::format!("!admin:{server_name}"))
 	}
 }
@@ -1834,7 +1862,7 @@ impl core::error::Error for CanonicalJsonError {}
 #[cfg(test)]
 mod codec_tests {
 	use crate::{
-		OwnedEventId, RoomVersionId,
+		OwnedEventId, OwnedServerName, RoomVersionId,
 		codec::{from_str, to_string},
 		events::{TimelineEventType, room::member::MembershipState},
 	};
@@ -1848,5 +1876,23 @@ mod codec_tests {
 		assert_eq!(from_str::<TimelineEventType>("\"m.room.member\"").unwrap(), ty);
 		assert!(from_str::<MembershipState>("\"nope\"").is_err());
 		assert_eq!(from_str::<RoomVersionId>("\"11\"").unwrap(), RoomVersionId::V11);
+	}
+
+	#[test]
+	fn new_v11_generates_random_valid_ids() {
+		let server = OwnedServerName::from("example.org");
+		let first = crate::OwnedRoomId::new_v11(&server);
+		let second = crate::OwnedRoomId::new_v11(&server);
+
+		assert_ne!(first, second);
+		for room_id in [&first, &second] {
+			let (localpart, room_server) = room_id.as_str()[1..].split_once(':').unwrap();
+			assert!(!localpart.is_empty());
+			assert!(localpart.bytes().all(|byte| {
+				byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b'=' | b'/')
+			}));
+			assert_eq!(room_server, server.as_str());
+			assert!(crate::OwnedRoomId::parse(room_id.as_str()).is_ok());
+		}
 	}
 }
