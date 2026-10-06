@@ -148,7 +148,8 @@ macro_rules! matrix_id {
 			///
 			/// This bypasses grammar validation and must not be used for wire or
 			/// request data.
-			pub fn from_trusted(value: impl Into<alloc::string::String>) -> Self {
+			#[allow(dead_code)]
+			pub(crate) fn from_trusted(value: impl Into<alloc::string::String>) -> Self {
 				Self(value.into())
 			}
 			pub fn as_str(&self) -> &str {
@@ -363,9 +364,9 @@ pub mod presence {
 }
 
 impl OwnedRoomId {
-	/// Generates a fresh random room ID using the v11 room-ID format.
+	/// Generates a fresh random room ID using the v1 room-ID format.
 	///
-	/// This constructor does not generate v12 or later room IDs. Those IDs are
+	/// This constructor does not generate v2 or later room IDs. Those IDs are
 	/// derived from the room's create event, have no `:server_name` suffix, and
 	/// must be computed by the room creation implementation. See MSC4291.
 	///
@@ -373,25 +374,46 @@ impl OwnedRoomId {
 	///
 	/// Panics if the operating system's secure random source fails.
 	#[must_use]
-	pub fn new_v11(server_name: &OwnedServerName) -> Self {
-		use base64::Engine as _;
+	pub fn new_v1(server_name: &OwnedServerName) -> Self {
 		use rand_core::RngCore as _;
 
-		let mut random = [0_u8; 18];
+		const ALPHANUMERIC: &[u8; 62] =
+			b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+		let mut localpart = [0_u8; 18];
 		let mut rng = rand_core::OsRng;
-		rng.fill_bytes(&mut random);
-		let localpart = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(random);
-		Self::from_trusted(alloc::format!("!{localpart}:{server_name}"))
+		for slot in &mut localpart {
+			loop {
+				let mut random_byte = [0_u8; 1];
+				rng.fill_bytes(&mut random_byte);
+				let byte = random_byte[0];
+				if byte < 248 {
+					*slot = ALPHANUMERIC[(byte % 62) as usize];
+					break;
+				}
+			}
+		}
+		Self::from_trusted(alloc::format!(
+			"!{}:{server_name}",
+			core::str::from_utf8(&localpart).unwrap()
+		))
 	}
 
-	/// Generates a fresh random room ID using the v11 room-ID format.
+	/// Constructs a v2 room ID from the create-event reference hash.
 	///
-	/// This compatibility alias does not generate v12 or later room IDs. Use
-	/// [`Self::new_v11`] for new code.
-	#[deprecated(note = "use OwnedRoomId::new_v11 for pre-v12 room IDs")]
+	/// V2 room IDs contain no server-name suffix.
+	///
+	/// # Errors
+	///
+	/// Returns [`MatrixIdParseError`] if the reference hash is not a valid
+	/// room-ID localpart.
+	pub fn new_v2(reference_hash: &str) -> Result<Self, MatrixIdParseError> {
+		Self::parse(alloc::format!("!{reference_hash}"))
+	}
+
+	#[deprecated(note = "use OwnedRoomId::new_v1 for v1 room IDs")]
 	#[must_use]
 	pub fn new(server_name: &OwnedServerName) -> Self {
-		Self::new_v11(server_name)
+		Self::new_v1(server_name)
 	}
 }
 
@@ -1884,20 +1906,16 @@ mod codec_tests {
 	}
 
 	#[test]
-	fn new_v11_generates_random_valid_ids() {
+	fn new_v1_generates_random_valid_ids() {
 		let server = OwnedServerName::parse("example.org").unwrap();
-		let first = crate::OwnedRoomId::new_v11(&server);
-		let second = crate::OwnedRoomId::new_v11(&server);
+		let first = crate::OwnedRoomId::new_v1(&server);
+		let second = crate::OwnedRoomId::new_v1(&server);
 
 		assert_ne!(first, second);
 		for room_id in [&first, &second] {
 			let (localpart, room_server) = room_id.as_str()[1..].split_once(':').unwrap();
-			assert_eq!(localpart.len(), 24);
-			assert!(
-				localpart
-					.bytes()
-					.all(|byte| { byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_') })
-			);
+			assert_eq!(localpart.len(), 18);
+			assert!(localpart.bytes().all(|byte| byte.is_ascii_alphanumeric()));
 			assert_eq!(room_server, server.as_str());
 			assert!(crate::OwnedRoomId::parse(room_id.as_str()).is_ok());
 		}

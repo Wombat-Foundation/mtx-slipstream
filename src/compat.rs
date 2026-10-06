@@ -166,8 +166,12 @@ impl OwnedUserId {
 	}
 
 	#[must_use]
-	pub fn server_name(&self) -> Option<OwnedServerName> {
-		crate::server_part(self.as_str())
+	///
+	/// # Panics
+	///
+	/// Panics if this value is not a valid user ID with a server name.
+	pub fn server_name(&self) -> OwnedServerName {
+		crate::server_part(self.as_str()).expect("validated user ID must have a server name")
 	}
 }
 /// The part of an identifier between its sigil and the first `:`.

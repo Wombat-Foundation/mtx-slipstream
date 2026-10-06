@@ -64,9 +64,7 @@ impl InvitePermissionConfigEventContent {
 		let user = sender.as_str();
 		let server = sender.server_name();
 		let ignored = self.ignored_users.iter().any(|glob| glob_match(glob, user))
-			|| server.as_ref().is_some_and(|server| {
-				self.ignored_servers.iter().any(|glob| glob_match(glob, server.as_str()))
-			});
+			|| self.ignored_servers.iter().any(|glob| glob_match(glob, server.as_str()));
 		if ignored {
 			FilterLevel::Ignore
 		} else {

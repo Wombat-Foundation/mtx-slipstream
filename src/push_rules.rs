@@ -1719,19 +1719,16 @@ mod tests {
 	fn insert_orders_and_validates() {
 		let mut rules = Ruleset::new();
 		let simple = |id: &str| NewSimplePushRule {
-			rule_id: OwnedRoomId::parse(id).unwrap(),
+			rule_id: OwnedRoomId::from_trusted(id),
 			actions: Vec::new(),
 		};
-		rules.insert(NewPushRule::Room(simple("!a:example.org")), None, None).unwrap();
-		rules.insert(NewPushRule::Room(simple("!b:example.org")), None, None).unwrap();
-		assert_eq!(rules.ids(RuleKind::Room), ["!b:example.org", "!a:example.org"]);
-		rules.insert(
-			NewPushRule::Room(simple("!b:example.org")),
-			Some("!a:example.org"),
-			None,
-		)
-		.unwrap();
-		assert_eq!(rules.ids(RuleKind::Room), ["!a:example.org", "!b:example.org"]);
+		rules.insert(NewPushRule::Room(simple("!abc:example.org")), None, None).unwrap();
+		rules.insert(NewPushRule::Room(simple("!def:example.org")), None, None).unwrap();
+		assert_eq!(rules.ids(RuleKind::Room), ["!def:example.org", "!abc:example.org"]);
+		rules
+			.insert(NewPushRule::Room(simple("!def:example.org")), Some("!abc:example.org"), None)
+			.unwrap();
+		assert_eq!(rules.ids(RuleKind::Room), ["!abc:example.org", "!def:example.org"]);
 		assert_eq!(
 			rules.insert(NewPushRule::Room(simple(".m.x")), None, None),
 			Err(InsertPushRuleError::ServerDefaultRuleId)
