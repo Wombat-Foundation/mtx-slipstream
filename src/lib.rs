@@ -905,6 +905,9 @@ pub mod api {
 				#[derive(Clone, Debug, Default)]
 				pub struct Capabilities {
 					pub room_versions: RoomVersionsCapability,
+					pub change_password: ChangePasswordCapability,
+					pub set_displayname: SetDisplayNameCapability,
+					pub set_avatar_url: SetAvatarUrlCapability,
 					pub thirdparty_id_changes: ThirdPartyIdChangesCapability,
 					pub get_login_token: GetLoginTokenCapability,
 					pub extra: alloc::collections::BTreeMap<String, crate::json::Value>,
@@ -915,6 +918,38 @@ pub mod api {
 						alloc::collections::BTreeMap<crate::RoomVersionId, RoomVersionStability>,
 					pub default: crate::RoomVersionId,
 				}
+				// Like Ruma, these capabilities are advertised as enabled unless changed.
+				macro_rules! enabled_by_default_capability {
+					($name:ident) => {
+						#[derive(Clone, Debug)]
+						pub struct $name {
+							pub enabled: bool,
+						}
+						impl Default for $name {
+							fn default() -> Self { Self { enabled: true } }
+						}
+						impl crate::codec::Serialize for $name {
+							fn to_json(&self) -> crate::json::Value {
+								crate::endpoint::object_from(vec![("enabled", self.enabled.to_json())])
+									.into()
+							}
+						}
+						impl crate::codec::Deserialize for $name {
+							fn from_json(v: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+								Ok(Self {
+									enabled: crate::codec::Deserialize::from_json(
+										v.as_object().and_then(|o| o.get("enabled")).ok_or_else(|| {
+											crate::codec::DeError::expected("enabled")
+										})?,
+									)?,
+								})
+							}
+						}
+					};
+				}
+				enabled_by_default_capability!(ChangePasswordCapability);
+				enabled_by_default_capability!(SetDisplayNameCapability);
+				enabled_by_default_capability!(SetAvatarUrlCapability);
 				#[derive(Clone, Debug, Default)]
 				pub struct ThirdPartyIdChangesCapability {
 					pub enabled: bool,
@@ -988,6 +1023,9 @@ pub mod api {
 					fn to_json(&self) -> crate::json::Value {
 						let mut object = crate::endpoint::object_from(vec![
 							("m.room_versions", self.room_versions.to_json()),
+							("m.change_password", self.change_password.to_json()),
+							("m.set_displayname", self.set_displayname.to_json()),
+							("m.set_avatar_url", self.set_avatar_url.to_json()),
 							("m.3pid_changes", self.thirdparty_id_changes.to_json()),
 							("m.get_login_token", self.get_login_token.to_json()),
 						]);
@@ -1005,7 +1043,10 @@ pub mod api {
 							.filter(|(key, _)| {
 								!matches!(
 									key.as_str(),
-									"m.room_versions" | "m.3pid_changes" | "m.get_login_token"
+									"m.room_versions"
+										| "m.change_password" | "m.set_displayname"
+										| "m.set_avatar_url" | "m.3pid_changes"
+										| "m.get_login_token"
 								)
 							})
 							.map(|(key, value)| (key.clone(), value.clone()))
@@ -1016,6 +1057,18 @@ pub mod api {
 									crate::codec::DeError::expected("m.room_versions")
 								})?,
 							)?,
+							change_password: match o.get("m.change_password") {
+								Some(v) => crate::codec::Deserialize::from_json(v)?,
+								None => ChangePasswordCapability::default(),
+							},
+							set_displayname: match o.get("m.set_displayname") {
+								Some(v) => crate::codec::Deserialize::from_json(v)?,
+								None => SetDisplayNameCapability::default(),
+							},
+							set_avatar_url: match o.get("m.set_avatar_url") {
+								Some(v) => crate::codec::Deserialize::from_json(v)?,
+								None => SetAvatarUrlCapability::default(),
+							},
 							thirdparty_id_changes: crate::codec::Deserialize::from_json(
 								o.get("m.3pid_changes").ok_or_else(|| {
 									crate::codec::DeError::expected("m.3pid_changes")
@@ -1942,5 +1995,25 @@ mod codec_tests {
 			assert_eq!(room_server, server.as_str());
 			assert!(crate::OwnedRoomId::parse(room_id.as_str()).is_ok());
 		}
+	}
+}
+
+#[cfg(test)]
+mod capabilities_tests {
+	use crate::{api::client::discovery::get_capabilities::Capabilities, codec::Serialize};
+
+	#[test]
+	fn standard_capabilities_default_to_enabled_and_extras_are_kept() {
+		let mut capabilities = Capabilities::default();
+		capabilities
+			.set("org.example.extra", crate::json::Value::Bool(true))
+			.unwrap();
+		let json = capabilities.to_json();
+		let object = json.as_object().unwrap();
+		for key in ["m.change_password", "m.set_displayname", "m.set_avatar_url"] {
+			let enabled = object.get(key).and_then(|v| v.get("enabled"));
+			assert_eq!(enabled.and_then(crate::json::Value::as_bool), Some(true), "{key}");
+		}
+		assert!(object.contains_key("m.room_versions") && object.contains_key("org.example.extra"));
 	}
 }
