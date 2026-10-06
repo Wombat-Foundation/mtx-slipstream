@@ -299,7 +299,8 @@ pub fn hash_and_sign_event(
 	object: &mut CanonicalJsonObject,
 	version: &RoomVersionId,
 ) -> Result<(), Error> {
-	object.remove("signatures");
+	// Existing signatures (e.g. the inviting server's, when an invitee server
+	// countersigns an invite) must survive; only this entity's is added or replaced.
 	object.remove("hashes");
 	let hash =
 		rezzy::compute_content_hash(&to_value(object), version.as_str()).map_err(Error::Json)?;
@@ -470,6 +471,30 @@ mod tests {
 		assert_eq!(pair.public_key()[..4], [0xd7, 0x5a, 0x98, 0x01]);
 		// RFC 8032 test 1: the empty message.
 		assert_eq!(pair.sign(b"").as_bytes()[..4], [0xe5, 0x56, 0x43, 0x00]);
+	}
+
+	#[test]
+	fn countersigning_keeps_the_existing_signatures() {
+		let (first, second) = (pair(), pair());
+		let Value::Object(mut event) = Value::parse(
+			r#"{"type":"m.room.member","sender":"@a:example.org","state_key":"@b:other.org","room_id":"!r:example.org","origin_server_ts":1,"depth":1,"content":{"membership":"invite"},"prev_events":[],"auth_events":[]}"#,
+		)
+		.unwrap() else {
+			panic!("object")
+		};
+		let version = RoomVersionId::V11;
+		hash_and_sign_event("example.org", &first, &mut event, &version).unwrap();
+		hash_and_sign_event("other.org", &second, &mut event, &version).unwrap();
+
+		let signatures = event.get("signatures").and_then(Value::as_object).unwrap();
+		assert!(
+			signatures.contains_key("example.org"),
+			"inviting server's signature was dropped"
+		);
+		assert!(signatures.contains_key("other.org"));
+		let mut keys = keys_for("example.org", &first);
+		keys.extend(keys_for("other.org", &second));
+		verify_event(&keys, &event, &version).unwrap();
 	}
 
 	#[test]
