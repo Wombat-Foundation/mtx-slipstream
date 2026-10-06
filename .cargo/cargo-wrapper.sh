@@ -13,8 +13,20 @@ fi
 
 MOLD_ARGS=()
 if command -v mold >/dev/null 2>&1; then
-	# Do not use mold if cross-compiling to webassembly or riscv (SP1)
-	if [[ "$*" == *"wasm32"* ]] || [[ "$*" == *"riscv"* ]]; then
+	# Mold is an ELF linker. Do not override an explicitly configured linker or
+	# inject it for non-Linux cross targets (for example windows-msvc).
+	target=""
+	for ((i = 1; i <= $#; i++)); do
+		arg="${!i}"
+		if [[ "$arg" == "--target" || "$arg" == "-target" ]]; then
+			next=$((i + 1))
+			target="${!next}"
+		elif [[ "$arg" == --target=* || "$arg" == -target=* ]]; then
+			target="${arg#*=}"
+		fi
+	done
+	if [[ "$*" == *"-C linker="* ]] || [[ "$*" == *"wasm32"* ]] || \
+		[[ "$*" == *"riscv"* ]] || [[ -n "$target" && "$target" != *"linux"* ]]; then
 		: # skip mold
 	else
 		MOLD_ARGS=("-C" "link-arg=-fuse-ld=mold")

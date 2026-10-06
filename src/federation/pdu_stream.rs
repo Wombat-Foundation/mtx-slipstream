@@ -57,11 +57,13 @@ impl PduStreamWriter {
 	///
 	/// Returns `io::Error` if the value cannot be serialized.
 	pub fn write_pdu(&mut self, pdu: &simd_json::OwnedValue) -> std::io::Result<()> {
+		let mut pending = BytesMut::new();
 		if self.count > 0 {
-			self.buf.put_u8(b',');
+			pending.put_u8(b',');
 		}
-		let mut writer = BufWriter(&mut self.buf);
+		let mut writer = BufWriter(&mut pending);
 		pdu.write(&mut writer)?;
+		self.buf.extend_from_slice(&pending);
 		self.count = self.count.saturating_add(1);
 		Ok(())
 	}
@@ -157,11 +159,13 @@ impl FederationResponseWriter {
 	/// Panics if called after [`Self::begin_auth_chain`].
 	pub fn write_state_pdu(&mut self, pdu: &simd_json::OwnedValue) -> std::io::Result<()> {
 		debug_assert_eq!(self.phase, ResponsePhase::State);
+		let mut pending = BytesMut::new();
 		if self.state_count > 0 {
-			self.buf.put_u8(b',');
+			pending.put_u8(b',');
 		}
-		let mut writer = BufWriter(&mut self.buf);
+		let mut writer = BufWriter(&mut pending);
 		pdu.write(&mut writer)?;
+		self.buf.extend_from_slice(&pending);
 		self.state_count = self.state_count.saturating_add(1);
 		Ok(())
 	}
@@ -203,11 +207,13 @@ impl FederationResponseWriter {
 	/// Panics if called before [`Self::begin_auth_chain`].
 	pub fn write_auth_chain_pdu(&mut self, pdu: &simd_json::OwnedValue) -> std::io::Result<()> {
 		debug_assert_eq!(self.phase, ResponsePhase::AuthChain);
+		let mut pending = BytesMut::new();
 		if self.auth_chain_count > 0 {
-			self.buf.put_u8(b',');
+			pending.put_u8(b',');
 		}
-		let mut writer = BufWriter(&mut self.buf);
+		let mut writer = BufWriter(&mut pending);
 		pdu.write(&mut writer)?;
+		self.buf.extend_from_slice(&pending);
 		self.auth_chain_count = self.auth_chain_count.saturating_add(1);
 		Ok(())
 	}

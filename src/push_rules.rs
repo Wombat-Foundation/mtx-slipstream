@@ -1532,6 +1532,23 @@ impl Deserialize for AnyPushRule {
 	}
 }
 
+impl AnyPushRule {
+	/// Parses a rule when its kind is known from the endpoint path.
+	///
+	/// The JSON representation does not contain the rule kind, so callers for
+	/// endpoints such as `GET /pushrules/.../{kind}/{rule_id}` must supply it.
+	pub fn from_json_with_kind(kind: RuleKind, value: &Value) -> Result<Self, DeError> {
+		Ok(match kind {
+			RuleKind::Override => Self::Override(ConditionalPushRule::from_json(value)?),
+			RuleKind::Underride => Self::Underride(ConditionalPushRule::from_json(value)?),
+			RuleKind::PostContent => Self::PostContent(ConditionalPushRule::from_json(value)?),
+			RuleKind::Content => Self::Content(PatternedPushRule::from_json(value)?),
+			RuleKind::Room => Self::Room(SimplePushRule::from_json(value)?),
+			RuleKind::Sender => Self::Sender(SimplePushRule::from_json(value)?),
+		})
+	}
+}
+
 pub mod get_pushrules_all {
 	pub mod v3 {
 		crate::endpoint! {
@@ -1567,6 +1584,17 @@ pub mod get_pushrule {
 			}
 		}
 		crate::endpoint_response_flat!(rule: crate::push_rules::PushRule);
+		impl Response {
+			/// Decodes the response using the rule kind from the request path.
+			pub fn from_body_with_kind(
+				kind: crate::push_rules::RuleKind,
+				body: &crate::json::Value,
+			) -> Result<Self, crate::codec::DeError> {
+				Ok(Self {
+					rule: crate::push_rules::AnyPushRule::from_json_with_kind(kind, body)?,
+				})
+			}
+		}
 	}
 }
 
