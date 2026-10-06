@@ -3,7 +3,7 @@ pub mod read_marker {
 		pub mod v3 {
 			pub use crate::events::receipt::{ReceiptThread, ReceiptType};
 			use crate::{OwnedEventId, OwnedRoomId, endpoint};
-			endpoint! { method: "POST", path: "/_matrix/client/v3/rooms/{roomId}/read_markers", request { path { room_id: OwnedRoomId } query {} body { event_id: OwnedEventId, fully_read: Option<OwnedEventId>, read_receipt: Option<OwnedEventId>, private_read_receipt: Option<OwnedEventId>, receipt_type: ReceiptType, thread: ReceiptThread } } response {} }
+			endpoint! { method: "POST", path: "/_matrix/client/v3/rooms/{roomId}/read_markers", request { path { room_id: OwnedRoomId } query {} body { fully_read: Option<OwnedEventId>, read_receipt: Option<OwnedEventId>, private_read_receipt: Option<OwnedEventId> } } response {} }
 		}
 	}
 }
@@ -93,5 +93,27 @@ mod tests {
 			<receipt::create_receipt::v3::Request as EndpointRequest>::METADATA.path,
 			<read_marker::set_read_marker::v3::Request as EndpointRequest>::METADATA.path
 		);
+	}
+}
+
+#[cfg(test)]
+mod read_marker_tests {
+	use super::read_marker::set_read_marker::v3::Request;
+	use crate::{
+		endpoint::EndpointRequest,
+		json::{Object, Value},
+	};
+
+	#[test]
+	fn read_markers_body_fields_are_all_optional() {
+		let path = ["!room:example.org".to_owned()];
+		let empty = Value::Object(Object::new());
+		let request = Request::from_parts(&path, &[], Some(&empty)).unwrap();
+		assert!(request.fully_read.is_none());
+		assert!(request.read_receipt.is_none());
+		assert!(request.private_read_receipt.is_none());
+
+		let request = Request::from_parts(&path, &[], None).unwrap();
+		assert!(request.fully_read.is_none());
 	}
 }

@@ -863,6 +863,19 @@ impl<'a> Input<'a> {
 		})
 	}
 
+	/// The named query parameter, or `default` when it is not present.
+	///
+	/// # Errors
+	///
+	/// Returns an error if the parameter is present but malformed.
+	pub fn query_or<T: Deserialize>(&self, name: &str, default: T) -> Result<T, DeError> {
+		if self.query.iter().any(|(key, _)| key == name) {
+			self.query(name)
+		} else {
+			Ok(default)
+		}
+	}
+
 	/// The named field of the JSON body.
 	///
 	/// # Errors
@@ -936,6 +949,17 @@ macro_rules! endpoint_body_field {
 	};
 }
 
+#[doc(hidden)]
+#[macro_export]
+macro_rules! endpoint_query_field {
+	($input:ident, $name:expr, $ty:ty, $default:expr) => {
+		$input.query_or($name, $default)?
+	};
+	($input:ident, $name:expr, $ty:ty) => {
+		$input.query($name)?
+	};
+}
+
 #[macro_export]
 macro_rules! endpoint_request {
 	// Body fields in this form support a Rust-name/wire-name override and a
@@ -1005,7 +1029,7 @@ macro_rules! endpoint_request {
 		method: $method:literal, path: $path:literal,
 		request {
 			path { $($path_field:ident : $pt:ty),* $(,)? }
-			query { $($query_field:ident : $qt:ty),* $(,)? }
+			query { $($query_field:ident : $qt:ty $(= $query_default:expr)?),* $(,)? }
 			body { $($body_field_name:ident : $bt:ty $(= $body_default:expr)?),* $(,)? }
 		}
 	) => {
@@ -1054,7 +1078,7 @@ macro_rules! endpoint_request {
 				let input = $crate::endpoint::Input::new(path, query, body);
 				let value = Self {
 					$($path_field: input.path()?,)*
-					$($query_field: input.query(stringify!($query_field))?,)*
+					$($query_field: $crate::endpoint_query_field!(input, stringify!($query_field), $qt $(, $query_default)?),)*
 					$($body_field_name: $crate::endpoint_body_field!(input, stringify!($body_field_name), $bt $(, $body_default)?),)*
 				};
 				input.finish()?;
@@ -1138,7 +1162,7 @@ macro_rules! endpoint {
 		method: $method:literal, path: $path:literal,
 		request {
 			path { $($path_field:ident : $pt:ty),* $(,)? }
-			query { $($query_field:ident : $qt:ty),* $(,)? }
+			query { $($query_field:ident : $qt:ty $(= $query_default:expr)?),* $(,)? }
 			body { $($body_field_name:ident : $bt:ty $(= $body_default:expr)?),* $(,)? }
 		}
 		response { $($resp_field:ident : $rt:ty),* $(,)? }
@@ -1147,7 +1171,7 @@ macro_rules! endpoint {
 			method: $method, path: $path,
 			request {
 				path { $($path_field : $pt),* }
-				query { $($query_field : $qt),* }
+				query { $($query_field : $qt $(= $query_default)?),* }
 				body { $($body_field_name : $bt $(= $body_default)?),* }
 			}
 		}
