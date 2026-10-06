@@ -101,6 +101,10 @@ predefined_ids!(PredefinedUnderrideRuleId {
 	PollEndOneToOne => ".org.matrix.msc3930.rule.poll_end_one_to_one",
 	PollEnd => ".org.matrix.msc3930.rule.poll_end",
 });
+predefined_ids!(PredefinedPostContentRuleId {
+	UnsubscribedThread => ".io.element.msc4306.rule.unsubscribed_thread",
+	SubscribedThread => ".io.element.msc4306.rule.subscribed_thread",
+});
 
 /// A condition that must hold for a rule to apply.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -353,6 +357,7 @@ pub enum AnyPushRule {
 	Room(SimplePushRule<OwnedRoomId>),
 	Sender(SimplePushRule<OwnedUserId>),
 	Underride(ConditionalPushRule),
+	PostContent(ConditionalPushRule),
 }
 
 /// A borrowed rule of any kind.
@@ -363,13 +368,14 @@ pub enum AnyPushRuleRef<'a> {
 	Room(&'a SimplePushRule<OwnedRoomId>),
 	Sender(&'a SimplePushRule<OwnedUserId>),
 	Underride(&'a ConditionalPushRule),
+	PostContent(&'a ConditionalPushRule),
 }
 
 impl AnyPushRuleRef<'_> {
 	#[must_use]
 	pub fn actions(&self) -> &[Action] {
 		match self {
-			Self::Override(r) | Self::Underride(r) => &r.actions,
+			Self::Override(r) | Self::Underride(r) | Self::PostContent(r) => &r.actions,
 			Self::Content(r) => &r.actions,
 			Self::Room(r) => &r.actions,
 			Self::Sender(r) => &r.actions,
@@ -379,7 +385,7 @@ impl AnyPushRuleRef<'_> {
 	#[must_use]
 	pub fn enabled(self) -> bool {
 		match self {
-			Self::Override(r) | Self::Underride(r) => r.enabled,
+			Self::Override(r) | Self::Underride(r) | Self::PostContent(r) => r.enabled,
 			Self::Content(r) => r.enabled,
 			Self::Room(r) => r.enabled,
 			Self::Sender(r) => r.enabled,
@@ -389,7 +395,7 @@ impl AnyPushRuleRef<'_> {
 	#[must_use]
 	pub fn rule_id(&self) -> &str {
 		match self {
-			Self::Override(r) | Self::Underride(r) => &r.rule_id,
+			Self::Override(r) | Self::Underride(r) | Self::PostContent(r) => &r.rule_id,
 			Self::Content(r) => &r.rule_id,
 			Self::Room(r) => r.rule_id.as_str(),
 			Self::Sender(r) => r.rule_id.as_str(),
@@ -405,6 +411,7 @@ impl From<AnyPushRuleRef<'_>> for AnyPushRule {
 			AnyPushRuleRef::Room(r) => Self::Room(r.clone()),
 			AnyPushRuleRef::Sender(r) => Self::Sender(r.clone()),
 			AnyPushRuleRef::Underride(r) => Self::Underride(r.clone()),
+			AnyPushRuleRef::PostContent(r) => Self::PostContent(r.clone()),
 		}
 	}
 }
@@ -412,7 +419,7 @@ impl From<AnyPushRuleRef<'_>> for AnyPushRule {
 impl Serialize for AnyPushRule {
 	fn to_json(&self) -> Value {
 		match self {
-			Self::Override(r) | Self::Underride(r) => r.to_json(),
+			Self::Override(r) | Self::Underride(r) | Self::PostContent(r) => r.to_json(),
 			Self::Content(r) => r.to_json(),
 			Self::Room(r) => r.to_json(),
 			Self::Sender(r) => r.to_json(),
@@ -431,6 +438,7 @@ pub enum NewPushRule {
 	Room(NewSimplePushRule<OwnedRoomId>),
 	Sender(NewSimplePushRule<OwnedUserId>),
 	Underride(NewConditionalPushRule),
+	PostContent(NewConditionalPushRule),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -462,13 +470,14 @@ impl NewPushRule {
 			Self::Room(_) => RuleKind::Room,
 			Self::Sender(_) => RuleKind::Sender,
 			Self::Underride(_) => RuleKind::Underride,
+			Self::PostContent(_) => RuleKind::PostContent,
 		}
 	}
 
 	#[must_use]
 	pub fn rule_id(&self) -> &str {
 		match self {
-			Self::Override(r) | Self::Underride(r) => &r.rule_id,
+			Self::Override(r) | Self::Underride(r) | Self::PostContent(r) => &r.rule_id,
 			Self::Content(r) => &r.rule_id,
 			Self::Room(r) => r.rule_id.as_str(),
 			Self::Sender(r) => r.rule_id.as_str(),
@@ -479,7 +488,7 @@ impl NewPushRule {
 	#[must_use]
 	pub fn body_json(&self) -> Value {
 		let (actions, extra) = match self {
-			Self::Override(r) | Self::Underride(r) => {
+			Self::Override(r) | Self::Underride(r) | Self::PostContent(r) => {
 				(&r.actions, vec![("conditions", r.conditions.to_json())])
 			}
 			Self::Content(r) => (&r.actions, vec![("pattern", Value::String(r.pattern.clone()))]),
@@ -510,13 +519,16 @@ impl NewPushRule {
 				conditions: conditions()?,
 				actions,
 			}),
-			RuleKind::Underride | RuleKind::PostContent => {
-				Self::Underride(NewConditionalPushRule {
-					rule_id,
-					conditions: conditions()?,
-					actions,
-				})
-			}
+			RuleKind::Underride => Self::Underride(NewConditionalPushRule {
+				rule_id,
+				conditions: conditions()?,
+				actions,
+			}),
+			RuleKind::PostContent => Self::PostContent(NewConditionalPushRule {
+				rule_id,
+				conditions: conditions()?,
+				actions,
+			}),
 			RuleKind::Content => Self::Content(NewPatternedPushRule {
 				rule_id,
 				pattern: text_field(object, "pattern")?,
@@ -568,6 +580,7 @@ pub struct Ruleset {
 	pub room: RuleList<SimplePushRule<OwnedRoomId>>,
 	pub sender: RuleList<SimplePushRule<OwnedUserId>>,
 	pub underride: RuleList<ConditionalPushRule>,
+	pub postcontent: RuleList<ConditionalPushRule>,
 }
 
 /// A rule with an ID unique within its list.
@@ -743,6 +756,7 @@ impl Ruleset {
 		Self {
 			override_: default_override_rules(user_id).into(),
 			underride: default_underride_rules().into(),
+			postcontent: default_postcontent_rules().into(),
 			..Self::default()
 		}
 	}
@@ -758,7 +772,7 @@ impl Ruleset {
 				self.underride.iter().find(|r| r.rule_id == id).map(AnyPushRuleRef::Underride)
 			}
 			RuleKind::PostContent => {
-				self.underride.iter().find(|r| r.rule_id == id).map(AnyPushRuleRef::Underride)
+				self.postcontent.iter().find(|r| r.rule_id == id).map(AnyPushRuleRef::PostContent)
 			}
 			RuleKind::Content => {
 				self.content.iter().find(|r| r.rule_id == id).map(AnyPushRuleRef::Content)
@@ -865,7 +879,7 @@ impl Ruleset {
 				self.underride.iter_mut().find(|r| r.rule_id == id).map(|r| &mut r.actions)
 			}
 			RuleKind::PostContent => {
-				self.underride.iter_mut().find(|r| r.rule_id == id).map(|r| &mut r.actions)
+				self.postcontent.iter_mut().find(|r| r.rule_id == id).map(|r| &mut r.actions)
 			}
 			RuleKind::Content => {
 				self.content.iter_mut().find(|r| r.rule_id == id).map(|r| &mut r.actions)
@@ -901,7 +915,7 @@ impl Ruleset {
 				self.underride.iter_mut().find(|r| r.rule_id == id).map(|r| &mut r.enabled)
 			}
 			RuleKind::PostContent => {
-				self.underride.iter_mut().find(|r| r.rule_id == id).map(|r| &mut r.enabled)
+				self.postcontent.iter_mut().find(|r| r.rule_id == id).map(|r| &mut r.enabled)
 			}
 			RuleKind::Content => {
 				self.content.iter_mut().find(|r| r.rule_id == id).map(|r| &mut r.enabled)
@@ -923,9 +937,11 @@ impl Ruleset {
 	pub fn update_with_server_default(&mut self, defaults: Self) {
 		merge_conditional(&mut self.override_.0, defaults.override_.0);
 		merge_conditional(&mut self.underride.0, defaults.underride.0);
+		merge_conditional(&mut self.postcontent.0, defaults.postcontent.0);
 		self.content.retain(|r| !r.default);
 		self.room.retain(|r| !r.default);
 		self.sender.retain(|r| !r.default);
+		self.postcontent.retain(|r| !r.default);
 	}
 
 	/// The actions of the first enabled rule matching `event`, or none.
@@ -952,6 +968,11 @@ impl Ruleset {
 				return &rule.actions;
 			}
 		}
+		for rule in self.postcontent.iter().filter(|r| r.enabled) {
+			if rule.conditions.iter().all(|c| matcher.condition(c)) {
+				return &rule.actions;
+			}
+		}
 		for rule in self.room.iter().filter(|r| r.enabled) {
 			if rule.rule_id == ctx.room_id.as_str() {
 				return &rule.actions;
@@ -974,7 +995,7 @@ impl Ruleset {
 		match kind {
 			RuleKind::Override => self.override_.iter().map(|r| r.rule_id.clone()).collect(),
 			RuleKind::Underride => self.underride.iter().map(|r| r.rule_id.clone()).collect(),
-			RuleKind::PostContent => self.underride.iter().map(|r| r.rule_id.clone()).collect(),
+			RuleKind::PostContent => self.postcontent.iter().map(|r| r.rule_id.clone()).collect(),
 			RuleKind::Content => self.content.iter().map(|r| r.rule_id.clone()).collect(),
 			RuleKind::Room => self.room.iter().map(|r| r.rule_id.as_str().to_owned()).collect(),
 			RuleKind::Sender => {
@@ -987,7 +1008,7 @@ impl Ruleset {
 		match kind {
 			RuleKind::Override => self.override_.retain(|r| r.rule_id != id),
 			RuleKind::Underride => self.underride.retain(|r| r.rule_id != id),
-			RuleKind::PostContent => self.underride.retain(|r| r.rule_id != id),
+			RuleKind::PostContent => self.postcontent.retain(|r| r.rule_id != id),
 			RuleKind::Content => self.content.retain(|r| r.rule_id != id),
 			RuleKind::Room => self.room.retain(|r| r.rule_id.as_str() != id),
 			RuleKind::Sender => self.sender.retain(|r| r.rule_id.as_str() != id),
@@ -1001,6 +1022,7 @@ impl Ruleset {
 		match rule {
 			NewPushRule::Override(r) => put(&mut self.override_.0, at, new_conditional(r)),
 			NewPushRule::Underride(r) => put(&mut self.underride.0, at, new_conditional(r)),
+			NewPushRule::PostContent(r) => put(&mut self.postcontent.0, at, new_conditional(r)),
 			NewPushRule::Content(r) => put(
 				&mut self.content,
 				at,
@@ -1174,9 +1196,28 @@ fn default_underride_rules() -> Vec<ConditionalPushRule> {
 	]
 }
 
+fn default_postcontent_rules() -> Vec<ConditionalPushRule> {
+	vec![
+		default_conditional(
+			PredefinedPostContentRuleId::UnsubscribedThread.as_str(),
+			true,
+			vec![event_match("content.m\\.relates_to.rel_type", "m.thread")],
+			Vec::new(),
+		),
+		default_conditional(
+			PredefinedPostContentRuleId::SubscribedThread.as_str(),
+			true,
+			vec![event_match("content.m\\.relates_to.rel_type", "m.thread")],
+			Vec::new(),
+		),
+	]
+}
+
 fn is_default(rule: AnyPushRuleRef<'_>) -> bool {
 	match rule {
-		AnyPushRuleRef::Override(r) | AnyPushRuleRef::Underride(r) => r.default,
+		AnyPushRuleRef::Override(r)
+		| AnyPushRuleRef::Underride(r)
+		| AnyPushRuleRef::PostContent(r) => r.default,
 		AnyPushRuleRef::Content(r) => r.default,
 		AnyPushRuleRef::Room(r) => r.default,
 		AnyPushRuleRef::Sender(r) => r.default,
@@ -1422,6 +1463,7 @@ impl Serialize for Ruleset {
 			("room", list(self.room.iter().map(Serialize::to_json).collect())),
 			("sender", list(self.sender.iter().map(Serialize::to_json).collect())),
 			("underride", list(self.underride.iter().map(Serialize::to_json).collect())),
+			("postcontent", list(self.postcontent.iter().map(Serialize::to_json).collect())),
 		]))
 	}
 }
@@ -1439,6 +1481,7 @@ impl Deserialize for Ruleset {
 			room: list::<_>(object, "room")?.into(),
 			sender: list::<_>(object, "sender")?.into(),
 			underride: list::<_>(object, "underride")?.into(),
+			postcontent: list::<_>(object, "postcontent")?.into(),
 		})
 	}
 }
@@ -1789,6 +1832,17 @@ mod tests {
 			".org.matrix.msc3930.rule.poll_end",
 		] {
 			assert!(rules.get(RuleKind::Underride, id).is_some(), "{id}");
+		}
+	}
+
+	#[test]
+	fn server_default_includes_postcontent_thread_rules() {
+		let rules = Ruleset::server_default("@u:example.org");
+		for id in [
+			PredefinedPostContentRuleId::UnsubscribedThread,
+			PredefinedPostContentRuleId::SubscribedThread,
+		] {
+			assert!(rules.get(RuleKind::PostContent, id).is_some(), "{}", id.as_str());
 		}
 	}
 
