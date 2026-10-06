@@ -18,6 +18,40 @@ pub mod upload_keys {
 	}
 }
 
+#[cfg(test)]
+mod tests {
+	use super::upload_keys::v3::Request;
+	use crate::{
+		endpoint::EndpointRequest,
+		json::{Object, Value},
+	};
+
+	fn parse(body: Value) -> Request {
+		Request::from_parts(&[], &[], Some(&body)).unwrap()
+	}
+
+	#[test]
+	fn upload_keys_defaults_optional_maps() {
+		let request = parse(Value::Object(Object::new()));
+		assert!(request.device_keys.is_none());
+		assert!(request.one_time_keys.is_empty());
+		assert!(request.fallback_keys.is_empty());
+
+		let request = parse(Value::Object(Object::from([("device_keys".into(), Value::Null)])));
+		assert!(request.device_keys.is_none());
+	}
+
+	#[test]
+	fn upload_keys_serializes_all_wire_fields() {
+		let request = Request {
+			device_keys: None,
+			one_time_keys: Default::default(),
+			fallback_keys: Default::default(),
+		};
+		assert!(request.body().unwrap().as_object().unwrap().contains_key("one_time_keys"));
+	}
+}
+
 pub mod get_keys {
 	pub mod v3 {
 		use crate::{

@@ -44,6 +44,25 @@ pub mod change_password {
 		}
 	}
 }
+
+#[cfg(test)]
+mod tests {
+	use super::change_password::v3::Request;
+	use crate::{
+		endpoint::EndpointRequest,
+		json::{Object, Value},
+	};
+
+	#[test]
+	fn change_password_defaults_logout_devices_to_true() {
+		let body = Value::Object(Object::from([(
+			"new_password".into(),
+			Value::String("secret".into()),
+		)]));
+		let request = Request::from_parts(&[], &[], Some(&body)).unwrap();
+		assert!(request.logout_devices);
+	}
+}
 pub mod deactivate {
 	pub mod v3 {
 		use crate::codec::Serialize;
