@@ -1063,10 +1063,11 @@ pub mod api {
 							.map(|(key, value)| (key.clone(), value.clone()))
 							.collect();
 						Ok(Self {
-							room_versions: match o.get("m.room_versions") {
-								Some(v) => crate::codec::Deserialize::from_json(v)?,
-								None => RoomVersionsCapability::default(),
-							},
+							room_versions: crate::codec::Deserialize::from_json(
+								o.get("m.room_versions").ok_or_else(|| {
+									crate::codec::DeError::expected("m.room_versions")
+								})?,
+							)?,
 							change_password: match o.get("m.change_password") {
 								Some(v) => crate::codec::Deserialize::from_json(v)?,
 								None => ChangePasswordCapability::default(),
