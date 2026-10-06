@@ -9,9 +9,6 @@
 
 extern crate alloc;
 
-use base64::Engine as _;
-use rand_core::RngCore as _;
-
 #[cfg(feature = "mimalloc")]
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
@@ -362,10 +359,17 @@ impl OwnedRoomId {
 	/// Generates a fresh random room ID using the v11 room-ID format.
 	///
 	/// This constructor does not generate v12 or later room IDs. Those IDs are
-	/// derived from the room's create event and must be computed by the room
-	/// creation implementation.
+	/// derived from the room's create event, have no `:server_name` suffix, and
+	/// must be computed by the room creation implementation. See MSC4291.
+	///
+	/// # Panics
+	///
+	/// Panics if the operating system's secure random source fails.
 	#[must_use]
 	pub fn new_v11(server_name: &OwnedServerName) -> Self {
+		use base64::Engine as _;
+		use rand_core::RngCore as _;
+
 		let mut random = [0_u8; 18];
 		let mut rng = rand_core::OsRng;
 		rng.fill_bytes(&mut random);
@@ -381,12 +385,6 @@ impl OwnedRoomId {
 	#[must_use]
 	pub fn new(server_name: &OwnedServerName) -> Self {
 		Self::new_v11(server_name)
-	}
-
-	/// Returns the deterministic room ID reserved for the server's admin room.
-	#[must_use]
-	pub fn admin(server_name: &OwnedServerName) -> Self {
-		Self::from(alloc::format!("!admin:{server_name}"))
 	}
 }
 
@@ -1887,10 +1885,12 @@ mod codec_tests {
 		assert_ne!(first, second);
 		for room_id in [&first, &second] {
 			let (localpart, room_server) = room_id.as_str()[1..].split_once(':').unwrap();
-			assert!(!localpart.is_empty());
-			assert!(localpart.bytes().all(|byte| {
-				byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b'=' | b'/')
-			}));
+			assert_eq!(localpart.len(), 24);
+			assert!(
+				localpart
+					.bytes()
+					.all(|byte| { byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_') })
+			);
 			assert_eq!(room_server, server.as_str());
 			assert!(crate::OwnedRoomId::parse(room_id.as_str()).is_ok());
 		}
