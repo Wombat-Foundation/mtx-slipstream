@@ -2009,7 +2009,10 @@ mod codec_tests {
 
 #[cfg(test)]
 mod capabilities_tests {
-	use crate::{api::client::discovery::get_capabilities::Capabilities, codec::Serialize};
+	use crate::{
+		api::client::discovery::get_capabilities::Capabilities,
+		codec::{Deserialize, Serialize, from_str},
+	};
 
 	#[test]
 	fn standard_capabilities_default_to_enabled_and_extras_are_kept() {
@@ -2024,5 +2027,17 @@ mod capabilities_tests {
 		assert!(
 			object.contains_key("m.room_versions") && object.contains_key("org.example.extra")
 		);
+	}
+
+	#[test]
+	fn room_versions_capability_is_required_and_preserves_advertised_versions() {
+		let missing = crate::json::Value::Object(crate::endpoint::object_from(vec![]));
+		assert!(Capabilities::from_json(&missing).is_err());
+
+		let capabilities: Capabilities =
+			from_str(r#"{"m.room_versions":{"available":{"3":"stable"},"default":"3"}}"#)
+				.unwrap();
+		assert_eq!(capabilities.room_versions.default, crate::RoomVersionId::V3);
+		assert!(capabilities.room_versions.available.contains_key(&crate::RoomVersionId::V3));
 	}
 }
