@@ -1063,11 +1063,10 @@ pub mod api {
 							.map(|(key, value)| (key.clone(), value.clone()))
 							.collect();
 						Ok(Self {
-							room_versions: crate::codec::Deserialize::from_json(
-								o.get("m.room_versions").ok_or_else(|| {
-									crate::codec::DeError::expected("m.room_versions")
-								})?,
-							)?,
+							room_versions: match o.get("m.room_versions") {
+								Some(v) => crate::codec::Deserialize::from_json(v)?,
+								None => RoomVersionsCapability::default(),
+							},
 							change_password: match o.get("m.change_password") {
 								Some(v) => crate::codec::Deserialize::from_json(v)?,
 								None => ChangePasswordCapability::default(),
@@ -1080,16 +1079,14 @@ pub mod api {
 								Some(v) => crate::codec::Deserialize::from_json(v)?,
 								None => SetAvatarUrlCapability::default(),
 							},
-							thirdparty_id_changes: crate::codec::Deserialize::from_json(
-								o.get("m.3pid_changes").ok_or_else(|| {
-									crate::codec::DeError::expected("m.3pid_changes")
-								})?,
-							)?,
-							get_login_token: crate::codec::Deserialize::from_json(
-								o.get("m.get_login_token").ok_or_else(|| {
-									crate::codec::DeError::expected("m.get_login_token")
-								})?,
-							)?,
+							thirdparty_id_changes: match o.get("m.3pid_changes") {
+								Some(v) => crate::codec::Deserialize::from_json(v)?,
+								None => ThirdPartyIdChangesCapability::default(),
+							},
+							get_login_token: match o.get("m.get_login_token") {
+								Some(v) => crate::codec::Deserialize::from_json(v)?,
+								None => GetLoginTokenCapability::default(),
+							},
 							extra,
 						})
 					}

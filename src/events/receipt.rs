@@ -130,12 +130,16 @@ impl Deserialize for Receipt {
 	fn from_json(value: &Value) -> Result<Self, DeError> {
 		let object = value.as_object().ok_or_else(|| DeError::expected("receipt object"))?;
 		let ts = object.get("ts").filter(|v| !v.is_null()).map(UInt::from_json).transpose()?;
-		let thread = match object.get("thread_id").and_then(Value::as_str) {
+		let thread = match object.get("thread_id") {
+			Some(value) if !value.is_null() => match value.as_str() {
+				Some("main") => ReceiptThread::Main,
+				Some(root) => ReceiptThread::Thread(
+					OwnedEventId::parse(root).map_err(|_| DeError::expected("thread_id"))?,
+				),
+				None => return Err(DeError::expected("thread_id")),
+			},
 			None => ReceiptThread::Unthreaded,
-			Some("main") => ReceiptThread::Main,
-			Some(root) => ReceiptThread::Thread(
-				OwnedEventId::parse(root).map_err(|_| DeError::expected("thread_id"))?,
-			),
+			Some(_) => ReceiptThread::Unthreaded,
 		};
 		Ok(Self {
 			ts,

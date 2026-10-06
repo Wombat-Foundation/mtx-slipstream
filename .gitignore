@@ -31,5 +31,5 @@ target
 /*.jsonl
 /*.log
 /*.txt
-pr.*.md
+/pr.*.md
 .tmp/

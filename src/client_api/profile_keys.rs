@@ -9,10 +9,14 @@ pub mod get_profile_key {
 		use std::collections::BTreeMap;
 
 		/// The canonical path is the MSC4133 one; the stable profile path is an alias.
-		#[derive(Debug)]
 		pub struct Request {
 			pub user_id: OwnedUserId,
 			pub key_name: String,
+		}
+		impl core::fmt::Debug for Request {
+			fn fmt(&self, f: &mut endpoint::Fmt<'_>) -> endpoint::FmtResult {
+				endpoint::opaque_debug(f, "Request")
+			}
 		}
 
 		impl Request {
