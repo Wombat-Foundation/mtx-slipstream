@@ -216,10 +216,40 @@ pub fn file_to_response<B: Default + BufMut>(
 pub mod config {
 	macro_rules! media_config {
 		($path:literal) => {
-			crate::endpoint! {
+			crate::endpoint_request! {
 				method: "GET", path: $path,
 				request { path {} query {} body {} }
-				response { upload_size: crate::UInt }
+			}
+			pub struct Response {
+				pub upload_size: crate::UInt,
+			}
+			impl ::core::fmt::Debug for Response {
+				fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+					crate::endpoint::opaque_debug(f, "Response")
+				}
+			}
+			impl crate::endpoint::EndpointResponse for Response {
+				fn to_body(&self) -> crate::json::Value {
+					crate::json::Value::Object(crate::json::Object::from([(
+						"m.upload".to_owned(),
+						crate::json::Value::Object(crate::json::Object::from([(
+							"size".to_owned(),
+							crate::endpoint::enc(&self.upload_size),
+						)])),
+					)]))
+				}
+
+				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+					let upload = body
+						.get("m.upload")
+						.ok_or_else(|| crate::codec::DeError::expected("m.upload"))?;
+					let size = upload
+						.get("size")
+						.ok_or_else(|| crate::codec::DeError::expected("size"))?;
+					Ok(Self {
+						upload_size: crate::codec::Deserialize::from_json(size)?,
+					})
+				}
 			}
 		};
 	}
