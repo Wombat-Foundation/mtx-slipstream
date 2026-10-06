@@ -254,7 +254,17 @@ macro_rules! matrix_id {
 
 /// The server part of an identifier of the form `<sigil><local>:<server>`.
 pub(crate) fn server_part(id: &str) -> Option<OwnedServerName> {
-	id.rsplit_once(':').map(|(_, server)| OwnedServerName::from_trusted(server))
+	id.split_once(':').map(|(_, server)| OwnedServerName::from_trusted(server))
+}
+
+#[cfg(test)]
+mod server_part_tests {
+	use super::server_part;
+
+	#[test]
+	fn preserves_server_ports() {
+		assert_eq!(server_part("@user:172.17.0.1:1027").unwrap().as_str(), "172.17.0.1:1027");
+	}
 }
 
 matrix_id!(EventId, OwnedEventId, crate::id_validation::event_id);
