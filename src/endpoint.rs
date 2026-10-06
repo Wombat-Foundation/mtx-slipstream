@@ -878,6 +878,11 @@ impl<'a> Input<'a> {
 	///
 	/// Returns an error if the field is present but malformed.
 	pub fn body_or_default<T: Deserialize + Default>(&self, name: &str) -> Result<T, DeError> {
+		self.body_or(name, T::default())
+	}
+
+	/// The named field of the JSON body, or the supplied default when absent or null.
+	pub fn body_or<T: Deserialize>(&self, name: &str, default: T) -> Result<T, DeError> {
 		let present = self
 			.body
 			.and_then(Value::as_object)
@@ -886,7 +891,7 @@ impl<'a> Input<'a> {
 		if present {
 			self.body(name)
 		} else {
-			Ok(T::default())
+			Ok(default)
 		}
 	}
 
@@ -917,6 +922,20 @@ impl<'a> Input<'a> {
 ///     response { origin: OwnedServerName }
 /// }
 /// ```
+#[doc(hidden)]
+#[macro_export]
+macro_rules! endpoint_body_field {
+	($input:ident, $name:expr, $ty:ty, default) => {
+		$input.body_or_default($name)?
+	};
+	($input:ident, $name:expr, $ty:ty, $default:expr) => {
+		$input.body_or($name, $default)?
+	};
+	($input:ident, $name:expr, $ty:ty) => {
+		$input.body($name)?
+	};
+}
+
 #[macro_export]
 macro_rules! endpoint_request {
 	// Body fields in this form support a Rust-name/wire-name override and a
@@ -987,7 +1006,7 @@ macro_rules! endpoint_request {
 		request {
 			path { $($path_field:ident : $pt:ty),* $(,)? }
 			query { $($query_field:ident : $qt:ty),* $(,)? }
-			body { $($body_field_name:ident : $bt:ty),* $(,)? }
+			body { $($body_field_name:ident : $bt:ty $(= $body_default:expr)?),* $(,)? }
 		}
 	) => {
 		pub struct Request {
@@ -1036,7 +1055,7 @@ macro_rules! endpoint_request {
 				let value = Self {
 					$($path_field: input.path()?,)*
 					$($query_field: input.query(stringify!($query_field))?,)*
-					$($body_field_name: input.body(stringify!($body_field_name))?,)*
+					$($body_field_name: $crate::endpoint_body_field!(input, stringify!($body_field_name), $bt $(, $body_default)?),)*
 				};
 				input.finish()?;
 				Ok(value)
@@ -1082,6 +1101,25 @@ macro_rules! endpoint {
 		request {
 			path { $($path_field:ident : $pt:ty),* $(,)? }
 			query { $($query_field:ident : $qt:ty),* $(,)? }
+			body { $($body_field_name:ident : $bt:ty = default),* $(,)? }
+		}
+		response { $($resp_field:ident : $rt:ty),* $(,)? }
+	) => {
+		$crate::endpoint_request! {
+			method: $method, path: $path,
+			request {
+				path { $($path_field : $pt),* }
+				query { $($query_field : $qt),* }
+				body { $($body_field_name : $bt = ::core::default::Default::default()),* }
+			}
+		}
+		$crate::endpoint_response! { response { $($resp_field : $rt),* } }
+	};
+	(
+		method: $method:literal, path: $path:literal,
+		request {
+			path { $($path_field:ident : $pt:ty),* $(,)? }
+			query { $($query_field:ident : $qt:ty),* $(,)? }
 			body { $($body_field_name:ident => $body_wire_name:literal : $bt:ty = default),* $(,)? }
 		}
 		response { $($resp_field:ident : $rt:ty),* $(,)? }
@@ -1101,7 +1139,7 @@ macro_rules! endpoint {
 		request {
 			path { $($path_field:ident : $pt:ty),* $(,)? }
 			query { $($query_field:ident : $qt:ty),* $(,)? }
-			body { $($body_field_name:ident : $bt:ty),* $(,)? }
+			body { $($body_field_name:ident : $bt:ty $(= $body_default:expr)?),* $(,)? }
 		}
 		response { $($resp_field:ident : $rt:ty),* $(,)? }
 	) => {
@@ -1110,7 +1148,7 @@ macro_rules! endpoint {
 			request {
 				path { $($path_field : $pt),* }
 				query { $($query_field : $qt),* }
-				body { $($body_field_name : $bt),* }
+				body { $($body_field_name : $bt $(= $body_default)?),* }
 			}
 		}
 		$crate::endpoint_response! { response { $($resp_field : $rt),* } }

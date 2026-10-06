@@ -14,15 +14,15 @@ pub mod get_room_account_data {
 }
 pub mod set_global_account_data {
 	pub mod v3 {
-		use crate::{OwnedUserId, endpoint, events::GlobalAccountDataEventType, json::Value};
-		endpoint! { method: "PUT", path: "/_matrix/client/v3/user/{userId}/account_data/{type}", request { path { user_id: OwnedUserId, event_type: GlobalAccountDataEventType } query {} body { data: Value } } response {} }
+		use crate::{OwnedUserId, events::GlobalAccountDataEventType, json::Value};
+		crate::endpoint_request_raw! { method: "PUT", path: "/_matrix/client/v3/user/{userId}/account_data/{type}", request { path { user_id: OwnedUserId, event_type: GlobalAccountDataEventType } query {} raw_body { data: Value } } }
+		crate::endpoint_response! { response {} }
 	}
 }
 pub mod set_room_account_data {
 	pub mod v3 {
-		use crate::{
-			OwnedRoomId, OwnedUserId, endpoint, events::RoomAccountDataEventType, json::Value,
-		};
-		endpoint! { method: "PUT", path: "/_matrix/client/v3/user/{userId}/rooms/{roomId}/account_data/{type}", request { path { user_id: OwnedUserId, room_id: OwnedRoomId, event_type: RoomAccountDataEventType } query {} body { data: Value } } response {} }
+		use crate::{OwnedRoomId, OwnedUserId, events::RoomAccountDataEventType, json::Value};
+		crate::endpoint_request_raw! { method: "PUT", path: "/_matrix/client/v3/user/{userId}/rooms/{roomId}/account_data/{type}", request { path { user_id: OwnedUserId, room_id: OwnedRoomId, event_type: RoomAccountDataEventType } query {} raw_body { data: Value } } }
+		crate::endpoint_response! { response {} }
 	}
 }

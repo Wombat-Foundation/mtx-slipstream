@@ -9,8 +9,8 @@ pub mod upload_keys {
 				path {} query {}
 				body {
 					device_keys: Option<Raw<DeviceKeys>>,
-					one_time_keys: BTreeMap<OwnedOneTimeKeyId, Raw<crate::encryption::OneTimeKey>>,
-					fallback_keys: BTreeMap<OwnedOneTimeKeyId, Raw<crate::encryption::OneTimeKey>>,
+					one_time_keys: BTreeMap<OwnedOneTimeKeyId, Raw<crate::encryption::OneTimeKey>> = BTreeMap::new(),
+					fallback_keys: BTreeMap<OwnedOneTimeKeyId, Raw<crate::encryption::OneTimeKey>> = BTreeMap::new(),
 				}
 			}
 			response { one_time_key_counts: BTreeMap<crate::OneTimeKeyAlgorithm, crate::UInt> }

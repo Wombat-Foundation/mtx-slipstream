@@ -39,7 +39,7 @@ pub mod change_password {
 		use crate::endpoint;
 		endpoint! {
 			method: "POST", path: "/_matrix/client/v3/account/password",
-			request { path {} query {} body { new_password: String, logout_devices: bool, auth: Option<crate::uiaa::AuthData> } }
+			request { path {} query {} body { new_password: String, logout_devices: bool = true, auth: Option<crate::uiaa::AuthData> } }
 			response {}
 		}
 	}
