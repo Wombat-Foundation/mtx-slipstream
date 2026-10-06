@@ -80,6 +80,9 @@ impl Serialize for RoomEventFilter {
 
 impl Deserialize for RoomEventFilter {
 	fn from_json(value: &Value) -> Result<Self, DeError> {
+		if value.as_object().is_none() {
+			return Err(DeError::expected("room event filter object"));
+		}
 		let input = Input::new(&[], &[], Some(value));
 		let contains_url: Option<bool> = input.body("contains_url")?;
 		let lazy: bool = input.body_or_default("lazy_load_members")?;
@@ -266,6 +269,22 @@ pub mod create_filter {
 mod tests {
 	use super::*;
 	use crate::codec::from_str;
+
+	#[test]
+	fn non_object_sub_filters_are_rejected() {
+		for text in [
+			r#"{"presence":"not_an_object"}"#,
+			r#"{"account_data":"not_an_object"}"#,
+			r#"{"room":{"timeline":"not_an_object"}}"#,
+			r#"{"room":{"state":"not_an_object"}}"#,
+			r#"{"room":{"ephemeral":"not_an_object"}}"#,
+			r#"{"room":{"account_data":"not_an_object"}}"#,
+		] {
+			assert!(from_str::<FilterDefinition>(text).is_err(), "{text} must be rejected");
+		}
+		assert!(from_str::<FilterDefinition>(r#"{"room":{"timeline":{"limit":1}}}"#).is_ok());
+		assert!(from_str::<FilterDefinition>("{}").is_ok());
+	}
 
 	#[test]
 	fn unknown_filter_keys_survive_a_round_trip() {

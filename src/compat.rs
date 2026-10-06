@@ -180,9 +180,17 @@ fn id_localpart(value: &str) -> &str {
 	body.split_once(':').map_or(body, |(local, _)| local)
 }
 impl OwnedRoomAliasId {
-	/// The alias part, without the `#` sigil or server name.
+	/// The full alias as a string (`#localpart:server`), like Ruma's
+	/// `RoomAliasId::alias`. Use [`Self::localpart`] for the part between the
+	/// sigil and the server name.
 	#[must_use]
 	pub fn alias(&self) -> &str {
+		self.as_str()
+	}
+
+	/// The part between the `#` sigil and the server name.
+	#[must_use]
+	pub fn localpart(&self) -> &str {
 		id_localpart(self.as_str())
 	}
 }
@@ -306,5 +314,18 @@ mod tests {
 			ContentDisposition::new(ContentDispositionType::Inline)
 		);
 		assert!("download".parse::<ContentDisposition>().is_err());
+	}
+}
+
+#[cfg(test)]
+mod room_alias_tests {
+	use crate::OwnedRoomAliasId;
+
+	#[test]
+	fn alias_is_the_full_alias_like_ruma() {
+		let alias = OwnedRoomAliasId::parse("#room:example.org").unwrap();
+		assert_eq!(alias.alias(), "#room:example.org");
+		assert_eq!(alias.localpart(), "room");
+		assert_eq!(alias.server_name().as_str(), "example.org");
 	}
 }

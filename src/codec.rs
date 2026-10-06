@@ -309,6 +309,10 @@ macro_rules! impl_codec_struct {
 		}
 		impl $crate::codec::Deserialize for $t {
 			fn from_json(value: &$crate::json::Value) -> $crate::endpoint::Parsed<Self> {
+				// A struct is a JSON object; anything else is malformed, not "all defaults".
+				if value.as_object().is_none() {
+					return Err($crate::codec::DeError::expected(stringify!($t)));
+				}
 				let _input = $crate::endpoint::Input::body_only(value);
 				Ok(Self {
 					$($field: _input.body(stringify!($field))?,)*
