@@ -711,6 +711,9 @@ pub struct PushConditionRoomCtx {
 	pub user_display_name: String,
 	pub power_levels: Option<PushConditionPowerLevelsCtx>,
 	pub room_version: Option<RoomVersionId>,
+	/// Precomputed subscription state for the event's thread root.
+	/// `None` means the event is not a valid thread event or the state is unknown.
+	pub thread_subscription: Option<bool>,
 }
 
 fn action_list(tweaks: &[Tweak], notify: bool) -> Vec<Action> {
@@ -1425,8 +1428,14 @@ impl Matcher<'_> {
 				.and_then(Value::as_array)
 				.is_some_and(|items| items.contains(value)),
 			PushCondition::ThreadSubscription {
-				..
-			} => false,
+				subscribed,
+			} => {
+				self.string("content.m\\.relates_to.rel_type") == Some("m.thread")
+					&& self
+						.string("content.m\\.relates_to.event_id")
+						.is_some_and(|id| crate::OwnedEventId::parse(id).is_ok())
+					&& self.ctx.thread_subscription == Some(*subscribed)
+			}
 			PushCondition::Unknown(_) => false,
 		}
 	}
@@ -1774,6 +1783,7 @@ mod tests {
 				notifications: NotificationPowerLevels::new(),
 			}),
 			room_version: None,
+			thread_subscription: None,
 		}
 	}
 
@@ -1860,12 +1870,31 @@ mod tests {
 	#[test]
 	fn server_default_includes_postcontent_thread_rules() {
 		let rules = Ruleset::server_default("@u:example.org");
-		for id in [
-			PredefinedPostContentRuleId::UnsubscribedThread,
-			PredefinedPostContentRuleId::SubscribedThread,
-		] {
-			assert!(rules.get(RuleKind::PostContent, id).is_some(), "{}", id.as_str());
-		}
+		let unsubscribed = rules
+			.postcontent
+			.get(PredefinedPostContentRuleId::UnsubscribedThread.as_str())
+			.unwrap();
+		assert_eq!(
+			unsubscribed.conditions,
+			[PushCondition::ThreadSubscription {
+				subscribed: false
+			}]
+		);
+		assert!(unsubscribed.actions.is_empty());
+		let subscribed = rules
+			.postcontent
+			.get(PredefinedPostContentRuleId::SubscribedThread.as_str())
+			.unwrap();
+		assert_eq!(
+			subscribed.conditions,
+			[PushCondition::ThreadSubscription {
+				subscribed: true
+			}]
+		);
+		assert_eq!(
+			subscribed.actions,
+			[Action::Notify, Action::SetTweak(Tweak::Sound("default".into()))]
+		);
 	}
 
 	#[test]
