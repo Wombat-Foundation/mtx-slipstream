@@ -138,8 +138,7 @@ impl Deserialize for Receipt {
 				),
 				None => return Err(DeError::expected("thread_id")),
 			},
-			None => ReceiptThread::Unthreaded,
-			Some(_) => ReceiptThread::Unthreaded,
+			None | Some(_) => ReceiptThread::Unthreaded,
 		};
 		Ok(Self {
 			ts,
