@@ -63,6 +63,31 @@ pub struct RoomEventFilter {
 	pub unread_thread_notifications: bool,
 }
 
+impl RoomEventFilter {
+	/// Returns whether event content's `m.relates_to.rel_type` passes the
+	/// MSC3874 relation-type filters. Graph filters requiring database lookups
+	/// remain the caller's responsibility.
+	#[must_use]
+	pub fn matches_relation(&self, content: &Value) -> bool {
+		let relation_type = content
+			.as_object()
+			.and_then(|content| content.get("m.relates_to"))
+			.and_then(Value::as_object)
+			.and_then(|relation| relation.get("rel_type"))
+			.and_then(Value::as_str);
+
+		if relation_type
+			.is_some_and(|kind| self.not_rel_types.iter().any(|excluded| excluded == kind))
+		{
+			return false;
+		}
+
+		self.rel_types.as_ref().is_none_or(|allowed| {
+			relation_type.is_some_and(|kind| allowed.iter().any(|allowed| allowed == kind))
+		})
+	}
+}
+
 impl Serialize for RoomEventFilter {
 	fn to_json(&self) -> Value {
 		let (lazy, redundant) = self.lazy_load_options.fields();
@@ -304,6 +329,25 @@ mod tests {
 		let none_allowed: RoomEventFilter =
 			from_str(r#"{"org.matrix.msc3874.rel_types":[]}"#).unwrap();
 		assert_eq!(none_allowed.rel_types.as_deref(), Some(&[][..]));
+	}
+
+	#[test]
+	fn relation_filter_matches_inclusion_and_exclusion() {
+		let related =
+			crate::json::Value::parse(r#"{"m.relates_to":{"rel_type":"m.thread"}}"#).unwrap();
+		let unrelated = crate::json::Value::parse(r"{}").unwrap();
+		let mut filter = RoomEventFilter {
+			rel_types: Some(vec!["m.thread".into()]),
+			..RoomEventFilter::default()
+		};
+		assert!(filter.matches_relation(&related));
+		assert!(!filter.matches_relation(&unrelated));
+		filter.rel_types = Some(Vec::new());
+		assert!(!filter.matches_relation(&related));
+		filter.rel_types = None;
+		filter.not_rel_types = vec!["m.thread".into()];
+		assert!(!filter.matches_relation(&related));
+		assert!(filter.matches_relation(&unrelated));
 	}
 
 	#[test]
