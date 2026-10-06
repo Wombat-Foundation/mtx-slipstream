@@ -1923,6 +1923,42 @@ mod tests {
 	}
 
 	#[test]
+	fn thread_subscription_conditions_match_only_valid_thread_state() {
+		let event = crate::json::Value::parse(
+			r#"{"type":"m.room.message","content":{"m.relates_to":{"rel_type":"m.thread","event_id":"$root:example.org"}}}"#,
+		)
+		.unwrap();
+		let rules = Ruleset::server_default("@u:example.org");
+		let unsubscribed = &rules.postcontent[0].conditions[0];
+		let subscribed = &rules.postcontent[1].conditions[0];
+
+		for (state, expected_unsubscribed, expected_subscribed) in
+			[(Some(false), true, false), (Some(true), false, true), (None, false, false)]
+		{
+			let mut context = ctx(2);
+			context.thread_subscription = state;
+			let matcher = Matcher {
+				event: &event,
+				ctx: &context,
+			};
+			assert_eq!(matcher.condition(unsubscribed), expected_unsubscribed);
+			assert_eq!(matcher.condition(subscribed), expected_subscribed);
+		}
+
+		let malformed = crate::json::Value::parse(
+			r#"{"type":"m.room.message","content":{"m.relates_to":{"rel_type":"m.thread","event_id":"not-an-event-id"}}}"#,
+		)
+		.unwrap();
+		let mut context = ctx(2);
+		context.thread_subscription = Some(true);
+		let matcher = Matcher {
+			event: &malformed,
+			ctx: &context,
+		};
+		assert!(!matcher.condition(subscribed));
+	}
+
+	#[test]
 	fn insert_orders_and_validates() {
 		let mut rules = Ruleset::new();
 		let simple = |id: &str| NewSimplePushRule {
