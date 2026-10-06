@@ -3,7 +3,7 @@ pub mod get_message_events {
 		use crate::{
 			OwnedRoomId, UInt, api::Direction, endpoint, filter::RoomEventFilter, sswire::Raw,
 		};
-		endpoint! { method: "GET", path: "/_matrix/client/v3/rooms/{roomId}/messages", request { path { room_id: OwnedRoomId } query { from: Option<String>, to: Option<String>, dir: Direction = Direction::Backward, limit: UInt = 10, filter: RoomEventFilter = RoomEventFilter::default() } body {} } response { start: String, end: Option<String>, chunk: Vec<Raw<crate::events::AnyTimelineEvent>>, state: Vec<Raw<crate::events::AnyStateEvent>> } }
+		endpoint! { method: "GET", path: "/_matrix/client/v3/rooms/{roomId}/messages", request { path { room_id: OwnedRoomId } query { from: Option<String>, to: Option<String>, dir: Direction, limit: UInt = 10, filter: RoomEventFilter = RoomEventFilter::default() } body {} } response { start: String, end: Option<String>, chunk: Vec<Raw<crate::events::AnyTimelineEvent>>, state: Vec<Raw<crate::events::AnyStateEvent>> } }
 	}
 }
 
@@ -20,11 +20,8 @@ mod tests {
 	}
 
 	#[test]
-	fn messages_query_defaults_match_the_spec() {
-		let request = parse(&[]);
-		assert_eq!(request.limit, 10);
-		assert_eq!(request.dir, Direction::Backward);
-		assert!(request.from.is_none() && request.to.is_none());
+	fn messages_query_requires_direction() {
+		assert!(Request::from_parts(&["!room:example.org".to_owned()], &[], None).is_err());
 	}
 
 	#[test]

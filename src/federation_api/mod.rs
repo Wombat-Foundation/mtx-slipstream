@@ -145,7 +145,7 @@ pub mod event {
 				response {
 					origin: OwnedServerName,
 					origin_server_ts: crate::MilliSecondsSinceUnixEpoch,
-					pdu: RawPdu,
+					pdus: Vec<RawPdu>,
 				}
 			}
 
@@ -378,13 +378,13 @@ mod tests {
 	#[test]
 	fn get_event_response_decodes_and_encodes() {
 		let body =
-			r#"{"origin":"example.org","origin_server_ts":5,"pdu":{"type":"m.room.message"}}"#;
+			r#"{"origin":"example.org","origin_server_ts":5,"pdus":[{"type":"m.room.message"}]}"#;
 		let response =
 			http::Response::builder().status(200).body(body.as_bytes().to_vec()).unwrap();
 		let decoded = get_event::v1::Response::try_from_http_response(response).unwrap();
 		assert_eq!(decoded.origin.as_str(), "example.org");
 		assert_eq!(decoded.origin_server_ts, MilliSecondsSinceUnixEpoch(5));
-		assert!(decoded.pdu.get().contains("m.room.message"));
+		assert!(decoded.pdus[0].get().contains("m.room.message"));
 		let again = decoded.try_into_http_response::<Vec<u8>>().unwrap();
 		assert_eq!(again.status(), http::StatusCode::OK);
 	}

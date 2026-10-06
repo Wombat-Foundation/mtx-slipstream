@@ -39,7 +39,10 @@ macro_rules! event_type {
 			}
 		}
 		impl From<String> for $name {
-			fn from(value: String) -> Self { Self::from(value.as_str()) }
+			fn from(value: String) -> Self {
+				$( if value.as_str() == $wire { return Self::$variant; } )*
+				Self::Custom(value)
+			}
 		}
 		impl fmt::Display for $name {
 			fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str(self.as_str()) }
@@ -102,10 +105,8 @@ event_type!(StateEventType {
 	RoomJoinRules => "m.room.join_rules",
 	RoomMember => "m.room.member",
 	RoomPowerLevels => "m.room.power_levels",
-	RoomRedaction => "m.room.redaction",
 	RoomThirdPartyInvite => "m.room.third_party_invite",
 	RoomTopic => "m.room.topic",
-	RoomEncrypted => "m.room.encrypted",
 	RoomEncryption => "m.room.encryption",
 	RoomName => "m.room.name",
 	RoomAvatar => "m.room.avatar",

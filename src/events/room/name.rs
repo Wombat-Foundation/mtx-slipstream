@@ -1,11 +1,11 @@
 #[derive(Debug, Default)]
 pub struct RoomNameEventContent {
-	pub name: Option<String>,
+	pub name: String,
 }
 impl RoomNameEventContent {
 	pub fn new(name: impl Into<String>) -> Self {
 		Self {
-			name: Some(name.into()),
+			name: name.into(),
 		}
 	}
 }

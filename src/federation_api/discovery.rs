@@ -83,9 +83,10 @@ impl ServerSigningKeys {
 crate::impl_codec_struct!(ServerSigningKeys {
 	server_name: OwnedServerName,
 	verify_keys: BTreeMap<OwnedServerSigningKeyId, VerifyKey>,
-	old_verify_keys: BTreeMap<OwnedServerSigningKeyId, OldVerifyKey>,
 	signatures: Signatures,
 	valid_until_ts: MilliSecondsSinceUnixEpoch,
+} default {
+	old_verify_keys: BTreeMap<OwnedServerSigningKeyId, OldVerifyKey>,
 });
 
 pub mod get_server_version {

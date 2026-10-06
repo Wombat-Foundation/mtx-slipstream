@@ -15,7 +15,7 @@ impl PresenceState {
 			Self::Online => "online",
 			Self::Unavailable => "unavailable",
 			Self::Offline => "offline",
-			Self::Busy => "busy",
+			Self::Busy => "org.matrix.msc3026.busy",
 		}
 	}
 }
@@ -25,7 +25,7 @@ impl core::fmt::Display for PresenceState {
 	}
 }
 crate::impl_codec_enum!(PresenceState {
-	Online => "online", Unavailable => "unavailable", Offline => "offline", Busy => "busy",
+	Online => "online", Unavailable => "unavailable", Offline => "offline", Busy => "org.matrix.msc3026.busy",
 });
 
 #[derive(Debug, Default)]

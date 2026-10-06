@@ -53,16 +53,14 @@ impl Deserialize for RoomHistoryVisibilityEventContent {
 impl Serialize for RoomNameEventContent {
 	fn to_json(&self) -> Value {
 		let mut object = Object::new();
-		if let Some(name) = &self.name {
-			object.insert("name".into(), Value::String(name.clone()));
-		}
+		object.insert("name".into(), Value::String(self.name.clone()));
 		Value::Object(object)
 	}
 }
 impl Deserialize for RoomNameEventContent {
 	fn from_json(value: &Value) -> Result<Self, DeError> {
 		Ok(Self {
-			name: field(object(value)?, "name")?,
+			name: field(object(value)?, "name")?.ok_or_else(|| DeError::expected("name"))?,
 		})
 	}
 }

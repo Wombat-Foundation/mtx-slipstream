@@ -85,7 +85,7 @@ pub fn redact_content_in_place(
 		version.as_str()
 	};
 	let (redacted, _) = rezzy::split_redaction_content(
-		&Value::Object(core::mem::take(content)),
+		&Value::Object(content.clone()),
 		event_type.as_ref(),
 		rules_version,
 	);

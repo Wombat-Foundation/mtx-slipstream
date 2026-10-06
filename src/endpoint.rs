@@ -941,6 +941,12 @@ impl<'a> Input<'a> {
 	///
 	/// Returns an error if the field is present but malformed.
 	pub fn body_or<T: Deserialize>(&self, name: &str, default: T) -> Result<T, DeError> {
+		if let Some(body) = self.body
+			&& !body.is_null()
+			&& body.as_object().is_none()
+		{
+			return Err(DeError::expected("object"));
+		}
 		let present = self
 			.body
 			.and_then(Value::as_object)
