@@ -1,8 +1,7 @@
 //! Grammar checks for Matrix identifiers.
 //!
-//! These follow the Matrix identifier grammar, but stay as lenient as the
-//! specification for historical identifiers: localparts and opaque parts are
-//! not restricted beyond being non-empty.
+//! These follow the Matrix identifier grammar, including the restricted MXC
+//! media-ID alphabet.
 
 use core::net::{Ipv4Addr, Ipv6Addr};
 
@@ -99,7 +98,11 @@ pub fn room_or_alias_id(value: &str) -> bool {
 pub fn mxc_uri(value: &str) -> bool {
 	value.strip_prefix("mxc://").is_some_and(|rest| {
 		rest.split_once('/').is_some_and(|(server, media_id)| {
-			server_name(server) && !media_id.is_empty() && !media_id.contains('/')
+			server_name(server)
+				&& !media_id.is_empty()
+				&& media_id
+					.bytes()
+					.all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'-'))
 		})
 	})
 }
@@ -164,6 +167,7 @@ mod tests {
 		assert!(event_id("$abc:example.org"));
 		assert!(event_id("$Rqnc-F-dvnEYJTyHq_iKxU2bZ1CI92-kuZq3a5lr5Zg"));
 		assert!(!event_id("abc"));
+		assert!(!event_id("legacy-delay-id"));
 		assert!(!event_id("$"));
 		assert!(!event_id("$abc:"));
 
@@ -178,9 +182,15 @@ mod tests {
 	#[test]
 	fn mxc_uris() {
 		assert!(mxc_uri("mxc://example.org/abcDEF123"));
-		for bad in
-			["mxc://example.org", "mxc://example.org/", "mxc:///id", "http://a/b", "mxc://a/b/c"]
-		{
+		assert!(mxc_uri("mxc://example.org/Something"));
+		for bad in [
+			"mxc://example.org",
+			"mxc://example.org/",
+			"mxc:///id",
+			"http://a/b",
+			"mxc://a/b/c",
+			"mxc://example.org/with.dot",
+		] {
 			assert!(!mxc_uri(bad), "{bad}");
 		}
 	}
