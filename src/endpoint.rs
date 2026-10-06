@@ -919,6 +919,69 @@ impl<'a> Input<'a> {
 /// ```
 #[macro_export]
 macro_rules! endpoint_request {
+	// Body fields in this form support a Rust-name/wire-name override and a
+	// default when the wire field is absent or null.
+	(
+		method: $method:literal, path: $path:literal,
+		request {
+			path { $($path_field:ident : $pt:ty),* $(,)? }
+			query { $($query_field:ident : $qt:ty),* $(,)? }
+			body { $($body_field_name:ident => $body_wire_name:literal : $bt:ty = default),* $(,)? }
+		}
+	) => {
+		pub struct Request {
+			$(pub $path_field: $pt,)*
+			$(pub $query_field: $qt,)*
+			$(pub $body_field_name: $bt,)*
+		}
+		impl ::core::fmt::Debug for Request {
+			fn fmt(&self, f: &mut $crate::endpoint::Fmt<'_>) -> $crate::endpoint::FmtResult {
+				$crate::endpoint::opaque_debug(f, "Request")
+			}
+		}
+
+		const _: $crate::endpoint::Metadata =
+			<Request as $crate::endpoint::EndpointRequest>::METADATA;
+		impl $crate::endpoint::EndpointRequest for Request {
+			type Response = Response;
+			const METADATA: $crate::endpoint::Metadata =
+				$crate::endpoint::Metadata::new($method, $path);
+
+			fn path_args(&self) -> $crate::endpoint::Strs {
+				$crate::endpoint::path_args_from(&mut [
+					$($crate::endpoint::path_param(&self.$path_field)),*
+				])
+			}
+
+			fn query(&self) -> $crate::endpoint::Pairs {
+				$crate::endpoint::query_pairs_mut(&mut [
+					$((stringify!($query_field), $crate::endpoint::enc(&self.$query_field))),*
+				])
+			}
+
+			fn body(&self) -> Option<$crate::json::Value> {
+				$crate::endpoint::body_value(
+					<Self as $crate::endpoint::EndpointRequest>::METADATA.method,
+					&mut [$(($body_wire_name, $crate::endpoint::enc(&self.$body_field_name))),*],
+				)
+			}
+
+			fn from_parts(
+				path: &[$crate::endpoint::Str],
+				query: &[$crate::endpoint::Pair],
+				body: Option<&$crate::json::Value>,
+			) -> $crate::endpoint::Parsed<Self> {
+				let input = $crate::endpoint::Input::new(path, query, body);
+				let value = Self {
+					$($path_field: input.path()?,)*
+					$($query_field: input.query(stringify!($query_field))?,)*
+					$($body_field_name: input.body_or_default($body_wire_name)?,)*
+				};
+				input.finish()?;
+				Ok(value)
+			}
+		}
+	};
 	(
 		method: $method:literal, path: $path:literal,
 		request {
@@ -1014,6 +1077,25 @@ macro_rules! endpoint_response {
 
 #[macro_export]
 macro_rules! endpoint {
+	(
+		method: $method:literal, path: $path:literal,
+		request {
+			path { $($path_field:ident : $pt:ty),* $(,)? }
+			query { $($query_field:ident : $qt:ty),* $(,)? }
+			body { $($body_field_name:ident => $body_wire_name:literal : $bt:ty = default),* $(,)? }
+		}
+		response { $($resp_field:ident : $rt:ty),* $(,)? }
+	) => {
+		$crate::endpoint_request! {
+			method: $method, path: $path,
+			request {
+				path { $($path_field : $pt),* }
+				query { $($query_field : $qt),* }
+				body { $($body_field_name => $body_wire_name : $bt = default),* }
+			}
+		}
+		$crate::endpoint_response! { response { $($resp_field : $rt),* } }
+	};
 	(
 		method: $method:literal, path: $path:literal,
 		request {
