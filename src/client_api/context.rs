@@ -3,7 +3,7 @@ pub mod get_context {
 		use crate::{
 			OwnedEventId, OwnedRoomId, UInt, endpoint, filter::RoomEventFilter, sswire::Raw,
 		};
-		endpoint! { method: "GET", path: "/_matrix/client/v3/rooms/{roomId}/context/{eventId}", request { path { room_id: OwnedRoomId, event_id: OwnedEventId } query { limit: UInt = 10, filter: Option<RoomEventFilter> } body {} } response { start: Option<OwnedEventId>, end: Option<OwnedEventId>, events_before: Vec<Raw<crate::events::AnyTimelineEvent>>, event: Option<Raw<crate::events::AnyTimelineEvent>>, events_after: Vec<Raw<crate::events::AnyTimelineEvent>>, state: Vec<Raw<crate::events::AnyStateEvent>> } }
+		endpoint! { method: "GET", path: "/_matrix/client/v3/rooms/{roomId}/context/{eventId}", request { path { room_id: OwnedRoomId, event_id: OwnedEventId } query { limit: UInt = 10, filter: Option<RoomEventFilter> } body {} } response { start: Option<String>, end: Option<String>, events_before: Vec<Raw<crate::events::AnyTimelineEvent>>, event: Option<Raw<crate::events::AnyTimelineEvent>>, events_after: Vec<Raw<crate::events::AnyTimelineEvent>>, state: Vec<Raw<crate::events::AnyStateEvent>> } }
 	}
 }
 

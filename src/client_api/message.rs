@@ -13,7 +13,7 @@ pub mod send_message_event {
 			method: "PUT", path: "/_matrix/client/v3/rooms/{roomId}/send/{eventType}/{txnId}",
 			request {
 				path { room_id: OwnedRoomId, event_type: MessageLikeEventType, txn_id: OwnedTransactionId }
-				query { timestamp: Option<MilliSecondsSinceUnixEpoch> }
+				query { ts: Option<MilliSecondsSinceUnixEpoch> }
 				raw_body { body: Raw<crate::events::AnyMessageLikeEventContent> }
 			}
 		}
@@ -39,7 +39,7 @@ mod tests {
 		.unwrap();
 		let request = Request::from_parts(&path(), &[], Some(&content)).unwrap();
 		assert!(request.body.0.contains("m.relates_to"));
-		assert!(request.timestamp.is_none());
+		assert!(request.ts.is_none());
 	}
 
 	#[test]

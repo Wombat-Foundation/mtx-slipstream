@@ -197,7 +197,7 @@ pub mod send_state_event {
 			}
 
 			fn query(&self) -> Vec<(String, String)> {
-				query_pairs(alloc::vec![("timestamp", self.timestamp.to_json())])
+				query_pairs(alloc::vec![("ts", self.timestamp.to_json())])
 			}
 
 			fn body(&self) -> Option<Value> {
@@ -214,7 +214,7 @@ pub mod send_state_event {
 					room_id: input.path()?,
 					event_type: input.path()?,
 					state_key: input.path::<Option<String>>()?.unwrap_or_default(),
-					timestamp: input.query("timestamp")?,
+					timestamp: input.query("ts")?,
 					body: crate::codec::Deserialize::from_json(
 						body.ok_or_else(|| DeError::expected("request body"))?,
 					)?,
