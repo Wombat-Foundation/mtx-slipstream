@@ -71,7 +71,7 @@ mod tests {
 	#[test]
 	fn profile_update_nulls_removed_values() {
 		let update = ProfileUpdate {
-			user_id: OwnedUserId::from("@a:x"),
+			user_id: OwnedUserId::parse("@a:x").unwrap(),
 			field: "displayname".into(),
 			value: None,
 		};

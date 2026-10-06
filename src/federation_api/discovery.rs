@@ -248,20 +248,20 @@ mod tests {
 	#[test]
 	fn server_signing_keys_round_trip() {
 		let mut keys = ServerSigningKeys::new(
-			OwnedServerName::from("example.org"),
+			OwnedServerName::parse("example.org").unwrap(),
 			MilliSecondsSinceUnixEpoch(99),
 		);
 		keys.verify_keys.insert(
-			OwnedServerSigningKeyId::from("ed25519:a"),
+			OwnedServerSigningKeyId::parse("ed25519:a").unwrap(),
 			VerifyKey::new(Base64::new(alloc::vec![1, 2, 3])),
 		);
 		keys.old_verify_keys.insert(
-			OwnedServerSigningKeyId::from("ed25519:b"),
+			OwnedServerSigningKeyId::parse("ed25519:b").unwrap(),
 			OldVerifyKey::new(MilliSecondsSinceUnixEpoch(5), Base64::new(alloc::vec![4])),
 		);
 		let mut inner = BTreeMap::new();
-		inner.insert(crate::OwnedKeyId::from("ed25519:a"), String::from("sig"));
-		keys.signatures.insert(OwnedServerName::from("example.org"), inner);
+		inner.insert(crate::OwnedKeyId::parse("ed25519:a").unwrap(), String::from("sig"));
+		keys.signatures.insert(OwnedServerName::parse("example.org").unwrap(), inner);
 
 		let back: ServerSigningKeys = from_str(&to_string(&keys)).unwrap();
 		assert_eq!(back, keys);

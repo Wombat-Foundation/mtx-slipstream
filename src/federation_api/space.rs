@@ -348,11 +348,11 @@ mod tests {
 	fn summary_round_trips_and_defaults_lists() {
 		let summary: SpaceHierarchyParentSummary = SpaceHierarchyParentSummaryInit {
 			num_joined_members: 3,
-			room_id: OwnedRoomId::from("!r:b"),
+			room_id: OwnedRoomId::parse("!r:b").unwrap(),
 			world_readable: true,
 			guest_can_join: false,
 			join_rule: SpaceRoomJoinRule::Restricted,
-			allowed_room_ids: alloc::vec![OwnedRoomId::from("!p:b")],
+			allowed_room_ids: alloc::vec![OwnedRoomId::parse("!p:b").unwrap()],
 			children_state: Vec::new(),
 		}
 		.into();
@@ -375,7 +375,7 @@ mod tests {
 		)
 		.unwrap();
 		let rooms: Vec<OwnedRoomId> = rule.join_rule.allowed_rooms().collect();
-		assert_eq!(rooms, alloc::vec![OwnedRoomId::from("!a:b")]);
+		assert_eq!(rooms, alloc::vec![OwnedRoomId::parse("!a:b").unwrap()]);
 		assert_eq!(SpaceRoomJoinRule::from(rule.join_rule), SpaceRoomJoinRule::Restricted);
 	}
 }

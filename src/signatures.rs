@@ -387,13 +387,20 @@ pub fn required_keys(
 		.ok_or_else(|| Error::Json("missing signatures".into()))?;
 	let mut required = RequiredKeys::new();
 	for (server, entry) in signatures {
+		let server = OwnedServerName::parse(server.as_str())
+			.map_err(|_| Error::Json("invalid signing server".into()))?;
 		let ids = entry
 			.as_object()
 			.map(|entry| {
-				entry.keys().map(|k| OwnedServerSigningKeyId::from_trusted(k.as_str())).collect()
+				entry
+					.keys()
+					.map(|k| OwnedServerSigningKeyId::parse(k.as_str()))
+					.collect::<Result<_, _>>()
 			})
+			.transpose()
+			.map_err(|_| Error::Json("invalid signing key ID".into()))?
 			.unwrap_or_default();
-		required.insert(OwnedServerName::from_trusted(server.as_str()), ids);
+		required.insert(server, ids);
 	}
 	let _ = version;
 	if required.is_empty() {
@@ -422,11 +429,11 @@ mod tests {
 	fn keys_for(server: &str, pair: &Ed25519KeyPair) -> PublicKeyMap {
 		let mut set = PublicKeySet::new();
 		set.insert(
-			OwnedServerSigningKeyId::from(alloc::format!("ed25519:{}", pair.version())),
+			OwnedServerSigningKeyId::from_trusted(alloc::format!("ed25519:{}", pair.version())),
 			Base64::new(pair.public_key().to_vec()),
 		);
 		let mut map = PublicKeyMap::new();
-		map.insert(OwnedServerName::from(server), set);
+		map.insert(OwnedServerName::parse(server).unwrap(), set);
 		map
 	}
 
@@ -509,6 +516,6 @@ mod tests {
 		let keys = keys_for("example.org", &pair);
 		assert_eq!(verify_event(&keys, &event, &version).unwrap(), Verified::All);
 		let required = required_keys(&event, &version).unwrap();
-		assert!(required.contains_key(&OwnedServerName::from("example.org")));
+		assert!(required.contains_key(&OwnedServerName::parse("example.org").unwrap()));
 	}
 }

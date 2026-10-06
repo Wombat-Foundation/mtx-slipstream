@@ -50,7 +50,7 @@ mod tests {
 	fn ignored_list_round_trips_through_event_wrapper() {
 		let event: IgnoredUserListEvent =
 			from_str(r#"{"content":{"ignored_users":{"@bad:b":{}}}}"#).unwrap();
-		assert!(event.content.ignored_users.contains_key(&OwnedUserId::from("@bad:b")));
+		assert!(event.content.ignored_users.contains_key(&OwnedUserId::parse("@bad:b").unwrap()));
 		assert_eq!(from_str::<IgnoredUserListEvent>(&to_string(&event)).unwrap(), event);
 	}
 }

@@ -620,9 +620,9 @@ mod tests {
 	#[test]
 	fn invite_by_user_id_round_trips() {
 		let request = invite_user::v3::Request {
-			room_id: OwnedRoomId::from("!r:example.org"),
+			room_id: OwnedRoomId::parse("!r:example.org").unwrap(),
 			recipient: InvitationRecipient::UserId {
-				user_id: OwnedUserId::from("@carl:example.org"),
+				user_id: OwnedUserId::parse("@carl:example.org").unwrap(),
 			},
 			reason: Some("hi".into()),
 		};

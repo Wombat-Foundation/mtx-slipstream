@@ -259,8 +259,8 @@ mod tests {
 			event_type: TimelineEventType::from("m.room.message"),
 			state_key: None,
 			content: content(),
-			user_id: OwnedUserId::from("@a:x"),
-			room_id: OwnedRoomId::from("!r:x"),
+			user_id: OwnedUserId::parse("@a:x").unwrap(),
+			room_id: OwnedRoomId::parse("!r:x").unwrap(),
 			running_since: SystemTime::UNIX_EPOCH + Duration::new(100, 5),
 			delay: Duration::from_millis(1500),
 		};
@@ -277,7 +277,7 @@ mod tests {
 	fn data_uses_milliseconds_and_derives_status() {
 		let mut data = DelayedEventData::new(
 			"id".into(),
-			OwnedRoomId::from("!r:x"),
+			OwnedRoomId::parse("!r:x").unwrap(),
 			TimelineEventType::from("m.room.message"),
 			None,
 			content(),
@@ -288,7 +288,7 @@ mod tests {
 		let text = to_string(&data);
 		assert!(text.contains(r#""delay":2500"#) && !text.contains("finalised_ts"));
 		data.finalized_ts = Some(MilliSecondsSinceUnixEpoch(10));
-		data.event_id = Some(OwnedEventId::from("$e"));
+		data.event_id = Some(OwnedEventId::parse("$e").unwrap());
 		assert_eq!(data.status(), DelayedEventStatus::Send);
 		assert!(to_string(&data).contains(r#""finalised_ts":10"#));
 		let again = from_str::<DelayedEventData>(&to_string(&data)).unwrap();

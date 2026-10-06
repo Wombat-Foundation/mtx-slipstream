@@ -334,8 +334,10 @@ mod tests {
 
 	#[test]
 	fn get_event_request_builds_path_and_query() {
-		let request =
-			get_event::v1::Request::new(OwnedEventId::from("$ev:example.org"), Some(false));
+		let request = get_event::v1::Request::new(
+			OwnedEventId::parse("$ev:example.org").unwrap(),
+			Some(false),
+		);
 		let http = request
 			.try_into_http_request::<Vec<u8>>(
 				"https://example.org/",
@@ -355,11 +357,11 @@ mod tests {
 	#[test]
 	fn get_missing_events_request_round_trips_through_http() {
 		let request = get_missing_events::v1::Request {
-			room_id: OwnedRoomId::from("!room:example.org"),
+			room_id: OwnedRoomId::parse("!room:example.org").unwrap(),
 			limit: 50,
 			min_depth: 0,
-			earliest_events: alloc::vec![OwnedEventId::from("$a")],
-			latest_events: alloc::vec![OwnedEventId::from("$b")],
+			earliest_events: alloc::vec![OwnedEventId::parse("$a").unwrap()],
+			latest_events: alloc::vec![OwnedEventId::parse("$b").unwrap()],
 		};
 		let http = request
 			.try_into_http_request::<Vec<u8>>("https://example.org", SendAccessToken::None, &[])
@@ -369,7 +371,7 @@ mod tests {
 			get_missing_events::v1::Request::try_from_http_request(http, &["!room:example.org"])
 				.unwrap();
 		assert_eq!(parsed.limit, 50);
-		assert_eq!(parsed.latest_events, alloc::vec![OwnedEventId::from("$b")]);
+		assert_eq!(parsed.latest_events, alloc::vec![OwnedEventId::parse("$b").unwrap()]);
 		assert_eq!(parsed.room_id.as_str(), "!room:example.org");
 	}
 

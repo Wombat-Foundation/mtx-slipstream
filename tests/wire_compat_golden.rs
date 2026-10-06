@@ -12,7 +12,7 @@ fn redaction_reason_is_optional_and_round_trips() {
 	};
 	assert_eq!(to_string(&without), "{}");
 	let with = RoomRedactionEventContent {
-		redacts: Some(OwnedEventId::from("$redact:example.org")),
+		redacts: Some(OwnedEventId::parse("$redact:example.org").unwrap()),
 		reason: Some("because".into()),
 	};
 	let json = r#"{"reason":"because","redacts":"$redact:example.org"}"#;

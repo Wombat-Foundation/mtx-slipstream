@@ -196,15 +196,12 @@ mod tests {
 	}
 
 	#[test]
-	fn try_from_does_not_validate_but_parse_does() {
+	fn trusted_construction_bypasses_parse_but_try_from_validates() {
 		use crate::OwnedUserId;
 		assert!(OwnedUserId::parse("@a:example.org").is_ok());
 		assert!(OwnedUserId::parse("nonsense").is_err());
 		assert!("nonsense".parse::<OwnedUserId>().is_err());
-		assert_eq!(OwnedUserId::from("nonsense").as_str(), "nonsense");
-		// `TryFrom<&str>` is core's blanket impl over the infallible `From`, so
-		// it never validates; ruma's did. Use `parse` where validation matters.
-		assert_eq!(OwnedUserId::from("nonsense").as_str(), "nonsense");
+		assert_eq!(OwnedUserId::from_trusted("nonsense").as_str(), "nonsense");
 	}
 
 	#[test]

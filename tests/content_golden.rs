@@ -28,7 +28,8 @@ fn member_keeps_renamed_keys() {
 	let mut content = RoomMemberEventContent::new(MembershipState::Join);
 	content.blurhash = Some("hash".into());
 	content.redact_events = Some(true);
-	content.join_authorized_via_users_server = Some("@a:b".into());
+	content.join_authorized_via_users_server =
+		Some(mtx_slipstream::OwnedUserId::parse("@a:b").unwrap());
 	assert_eq!(
 		to_string(&content),
 		concat!(

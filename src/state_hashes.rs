@@ -157,7 +157,7 @@ mod tests {
 			entries: BTreeMap::new(),
 		};
 		hashes.entries.insert(
-			OwnedEventId::from("$e"),
+			OwnedEventId::parse("$e").unwrap(),
 			StateHashEntry {
 				before: Some("b".into()),
 				after: Some("a".into()),

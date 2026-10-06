@@ -752,7 +752,13 @@ pub mod legacy {
 					};
 					let query = crate::endpoint::parse_query(request.uri());
 					Ok(Self {
-						server_name: OwnedServerName::from_trusted(server_name.as_ref()),
+						server_name: OwnedServerName::parse(server_name.as_ref()).map_err(
+							|_| {
+								FromHttpRequestError::Deserialization(DeError::expected(
+									"server name",
+								))
+							},
+						)?,
 						media_id: media_id.as_ref().into(),
 						filename: query
 							.iter()
@@ -1150,7 +1156,7 @@ mod tests {
 	fn download_request_round_trips_with_defaults() {
 		let request = legacy::get_content::v3::Request::new(
 			"abc".into(),
-			OwnedServerName::from("example.org"),
+			OwnedServerName::parse("example.org").unwrap(),
 		);
 		let http: http::Request<Vec<u8>> = request
 			.try_into_http_request(

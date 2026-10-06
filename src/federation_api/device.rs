@@ -62,10 +62,10 @@ mod tests {
 	#[test]
 	fn user_device_round_trip() {
 		let device = UserDevice {
-			device_id: OwnedDeviceId::from("DEVICE"),
+			device_id: OwnedDeviceId::parse("DEVICE").unwrap(),
 			keys: Raw::from_value(&DeviceKeys::new(
-				OwnedUserId::from("@alice:example.org"),
-				OwnedDeviceId::from("DEVICE"),
+				OwnedUserId::parse("@alice:example.org").unwrap(),
+				OwnedDeviceId::parse("DEVICE").unwrap(),
 				Vec::new(),
 				BTreeMap::new(),
 				BTreeMap::new(),
@@ -84,10 +84,10 @@ mod tests {
 		use super::get_devices;
 		use crate::endpoint::{EndpointRequest, EndpointResponse};
 		let response = get_devices::v1::Response {
-			user_id: OwnedUserId::from("@alice:example.org"),
+			user_id: OwnedUserId::parse("@alice:example.org").unwrap(),
 			stream_id: 7_u64,
 			devices: vec![UserDevice {
-				device_id: OwnedDeviceId::from("DEVICE"),
+				device_id: OwnedDeviceId::parse("DEVICE").unwrap(),
 				keys: Raw::from_json_text("{}").unwrap(),
 				device_display_name: Some("phone".into()),
 			}],

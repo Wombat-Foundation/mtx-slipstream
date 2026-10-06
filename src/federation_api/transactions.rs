@@ -322,8 +322,8 @@ mod tests {
 	#[test]
 	fn edu_round_trips_by_type() {
 		let typing = edu::Edu::Typing(edu::TypingContent::new(
-			OwnedRoomId::from("!r:b"),
-			OwnedUserId::from("@u:b"),
+			OwnedRoomId::parse("!r:b").unwrap(),
+			OwnedUserId::parse("@u:b").unwrap(),
 			true,
 		));
 		let json = to_string(&typing);
@@ -341,14 +341,14 @@ mod tests {
 			r#"{"!r:b":{"m.read":{"@u:b":{"data":{"ts":5,"thread_id":"main"},"event_ids":["$e"]}}}}"#,
 		)
 		.unwrap();
-		let map = &content.receipts[&OwnedRoomId::from("!r:b")];
-		let data = &map.read[&OwnedUserId::from("@u:b")];
+		let map = &content.receipts[&OwnedRoomId::parse("!r:b").unwrap()];
+		let data = &map.read[&OwnedUserId::parse("@u:b").unwrap()];
 		assert_eq!(data.data.ts, Some(5));
 		assert_eq!(data.event_ids.len(), 1);
 
 		let results: BTreeMap<OwnedEventId, PduResult> =
 			from_str(r#"{"$a":{},"$b":{"error":"bad"}}"#).unwrap();
-		assert_eq!(results[&OwnedEventId::from("$a")], Ok(()));
-		assert_eq!(results[&OwnedEventId::from("$b")], Err("bad".to_string()));
+		assert_eq!(results[&OwnedEventId::parse("$a").unwrap()], Ok(()));
+		assert_eq!(results[&OwnedEventId::parse("$b").unwrap()], Err("bad".to_string()));
 	}
 }

@@ -254,7 +254,7 @@ mod tests {
 	}
 
 	fn room() -> OwnedRoomId {
-		OwnedRoomId::from("!r:example.org")
+		OwnedRoomId::parse("!r:example.org").unwrap()
 	}
 
 	#[test]

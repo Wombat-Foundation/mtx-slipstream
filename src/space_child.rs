@@ -100,10 +100,14 @@ mod tests {
 
 	#[test]
 	fn golden_omits_absent_order_and_false_suggested() {
-		let bare = SpaceChildEventContent::new(alloc::vec!["a.org".into()]);
+		let bare =
+			SpaceChildEventContent::new(alloc::vec![OwnedServerName::parse("a.org").unwrap()]);
 		assert_eq!(to_string(&bare), r#"{"via":["a.org"]}"#);
 		let full = SpaceChildEventContent {
-			via: alloc::vec!["a.org".into(), "b.org".into()],
+			via: alloc::vec![
+				OwnedServerName::parse("a.org").unwrap(),
+				OwnedServerName::parse("b.org").unwrap()
+			],
 			order: Some("01".into()),
 			suggested: true,
 		};

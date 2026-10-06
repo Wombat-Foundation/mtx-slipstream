@@ -188,8 +188,8 @@ mod tests {
 	#[test]
 	fn repeated_query_values_round_trip() {
 		let request = prepare_join_event::v1::Request {
-			room_id: OwnedRoomId::from("!r:b"),
-			user_id: OwnedUserId::from("@u:b"),
+			room_id: OwnedRoomId::parse("!r:b").unwrap(),
+			user_id: OwnedUserId::parse("@u:b").unwrap(),
 			ver: alloc::vec![RoomVersionId::V10, RoomVersionId::V11],
 		};
 		let http = request
@@ -202,8 +202,8 @@ mod tests {
 		assert_eq!(parsed.ver, alloc::vec![RoomVersionId::V10, RoomVersionId::V11]);
 
 		let backfill = get_backfill::v1::Request {
-			room_id: OwnedRoomId::from("!r:b"),
-			v: alloc::vec![OwnedEventId::from("$a")],
+			room_id: OwnedRoomId::parse("!r:b").unwrap(),
+			v: alloc::vec![OwnedEventId::parse("$a").unwrap()],
 			limit: 10,
 		};
 		let http = backfill
@@ -218,8 +218,8 @@ mod tests {
 		let pdu: RawPdu =
 			Raw::new(&crate::json::Value::parse(r#"{"type":"m.room.member"}"#).unwrap()).unwrap();
 		let request = create_join_event::v2::Request {
-			room_id: OwnedRoomId::from("!r:b"),
-			event_id: OwnedEventId::from("$e"),
+			room_id: OwnedRoomId::parse("!r:b").unwrap(),
+			event_id: OwnedEventId::parse("$e").unwrap(),
 			omit_members: true,
 			pdu,
 		};

@@ -110,15 +110,16 @@ mod tests {
 
 	fn levels() -> RoomPowerLevels {
 		let mut content = RoomPowerLevelsEventContent::new();
-		content.users.insert(OwnedUserId::from("@admin:x"), 100);
-		content.users.insert(OwnedUserId::from("@mod:x"), 50);
+		content.users.insert(OwnedUserId::parse("@admin:x").unwrap(), 100);
+		content.users.insert(OwnedUserId::parse("@mod:x").unwrap(), 50);
 		RoomPowerLevels::from(content)
 	}
 
 	#[test]
 	fn admin_outranks_moderator() {
 		let pl = levels();
-		let (admin, moderator) = (OwnedUserId::from("@admin:x"), OwnedUserId::from("@mod:x"));
+		let (admin, moderator) =
+			(OwnedUserId::parse("@admin:x").unwrap(), OwnedUserId::parse("@mod:x").unwrap());
 		assert!(pl.user_can_change_user_power_level(&admin, &moderator));
 		assert!(!pl.user_can_change_user_power_level(&moderator, &admin));
 		assert!(pl.user_can_change_user_power_level(&admin, &admin));
@@ -127,8 +128,11 @@ mod tests {
 	#[test]
 	fn default_user_cannot_send_state() {
 		let pl = levels();
-		let nobody = OwnedUserId::from("@nobody:x");
+		let nobody = OwnedUserId::parse("@nobody:x").unwrap();
 		assert!(!pl.user_can_send_state(&nobody, StateEventType::RoomName));
-		assert!(pl.user_can_send_state(&OwnedUserId::from("@mod:x"), StateEventType::RoomName));
+		assert!(pl.user_can_send_state(
+			&OwnedUserId::parse("@mod:x").unwrap(),
+			StateEventType::RoomName
+		));
 	}
 }

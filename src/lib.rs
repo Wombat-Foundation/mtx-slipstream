@@ -459,7 +459,7 @@ macro_rules! room_id {
 #[macro_export]
 macro_rules! user_id {
 	($value:expr) => {
-		$crate::OwnedUserId::from($value)
+		$crate::OwnedUserId::parse($value).expect("invalid user ID literal")
 	};
 }
 
@@ -1874,7 +1874,7 @@ mod codec_tests {
 
 	#[test]
 	fn ids_and_enums_round_trip() {
-		let id = OwnedEventId::from("$abc:example.org");
+		let id = OwnedEventId::parse("$abc:example.org").unwrap();
 		assert_eq!(from_str::<OwnedEventId>(&to_string(&id)).unwrap(), id);
 		let ty = TimelineEventType::RoomMember;
 		assert_eq!(to_string(&ty), "\"m.room.member\"");
@@ -1885,7 +1885,7 @@ mod codec_tests {
 
 	#[test]
 	fn new_v11_generates_random_valid_ids() {
-		let server = OwnedServerName::from("example.org");
+		let server = OwnedServerName::parse("example.org").unwrap();
 		let first = crate::OwnedRoomId::new_v11(&server);
 		let second = crate::OwnedRoomId::new_v11(&server);
 

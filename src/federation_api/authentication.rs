@@ -96,9 +96,9 @@ mod tests {
 	#[test]
 	fn x_matrix_round_trips() {
 		let value = XMatrix {
-			origin: OwnedServerName::from("origin.example"),
-			destination: Some(OwnedServerName::from("destination.example")),
-			key: OwnedServerSigningKeyId::from("ed25519:auto"),
+			origin: OwnedServerName::parse("origin.example").unwrap(),
+			destination: Some(OwnedServerName::parse("destination.example").unwrap()),
+			key: OwnedServerSigningKeyId::parse("ed25519:auto").unwrap(),
 			sig: "signature".into(),
 		};
 		assert_eq!(codec::from_value::<XMatrix>(&codec::to_value(&value)).unwrap(), value);
@@ -107,9 +107,9 @@ mod tests {
 	#[test]
 	fn x_matrix_omits_optional_destination() {
 		let value = XMatrix {
-			origin: OwnedServerName::from("origin.example"),
+			origin: OwnedServerName::parse("origin.example").unwrap(),
 			destination: None,
-			key: OwnedServerSigningKeyId::from("ed25519:auto"),
+			key: OwnedServerSigningKeyId::parse("ed25519:auto").unwrap(),
 			sig: "signature".into(),
 		};
 		let encoded = value.encode();

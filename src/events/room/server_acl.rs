@@ -133,12 +133,12 @@ mod tests {
 			alloc::vec!["*".into()],
 			alloc::vec!["*.evil.org".into(), "bad?.net".into()],
 		);
-		assert!(acl.is_allowed(&crate::OwnedServerName::from("good.org:8448")));
-		assert!(!acl.is_allowed(&crate::OwnedServerName::from("a.evil.org")));
-		assert!(!acl.is_allowed(&crate::OwnedServerName::from("bad1.net")));
-		assert!(!acl.is_allowed(&crate::OwnedServerName::from("1.2.3.4:8448")));
-		assert!(!acl.is_allowed(&crate::OwnedServerName::from("[::1]:8448")));
-		assert!(!acl.is_allowed(&crate::OwnedServerName::from("bad1.net:8448")));
+		assert!(acl.is_allowed(&crate::OwnedServerName::parse("good.org:8448").unwrap()));
+		assert!(!acl.is_allowed(&crate::OwnedServerName::parse("a.evil.org").unwrap()));
+		assert!(!acl.is_allowed(&crate::OwnedServerName::parse("bad1.net").unwrap()));
+		assert!(!acl.is_allowed(&crate::OwnedServerName::parse("1.2.3.4:8448").unwrap()));
+		assert!(!acl.is_allowed(&crate::OwnedServerName::parse("[::1]:8448").unwrap()));
+		assert!(!acl.is_allowed(&crate::OwnedServerName::parse("bad1.net:8448").unwrap()));
 	}
 
 	#[test]
@@ -148,7 +148,7 @@ mod tests {
 			alloc::vec!["*".into()],
 			alloc::vec!["*.Evil.ORG".into()],
 		);
-		assert!(!acl.is_allowed(&crate::OwnedServerName::from("A.EVIL.org")));
+		assert!(!acl.is_allowed(&crate::OwnedServerName::parse("A.EVIL.org").unwrap()));
 		assert!(acl.deny_matches("a.evil.org"));
 		assert!(acl.deny_contains("*.evil.org"));
 		assert!(acl.allow_contains("*"));
@@ -173,7 +173,7 @@ mod tests {
 	#[test]
 	fn allow_ip_literals_permits_them_when_globs_match() {
 		let acl = RoomServerAclEventContent::new(true, alloc::vec!["*".into()], Vec::new());
-		assert!(acl.is_allowed(&crate::OwnedServerName::from("1.2.3.4:8448")));
-		assert!(acl.is_allowed(&crate::OwnedServerName::from("[::1]:8448")));
+		assert!(acl.is_allowed(&crate::OwnedServerName::parse("1.2.3.4:8448").unwrap()));
+		assert!(acl.is_allowed(&crate::OwnedServerName::parse("[::1]:8448").unwrap()));
 	}
 }

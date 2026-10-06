@@ -57,7 +57,9 @@ mod tests {
 	#[test]
 	fn sync_typing_event_carries_its_type() {
 		let event = SyncTypingEvent {
-			content: TypingEventContent::new(alloc::vec![crate::OwnedUserId::from("@a:x")]),
+			content: TypingEventContent::new(alloc::vec![
+				crate::OwnedUserId::parse("@a:x").unwrap()
+			]),
 		};
 		let text = to_string(&event);
 		assert!(text.contains("\"type\":\"m.typing\""), "{text}");

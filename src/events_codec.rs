@@ -476,7 +476,7 @@ mod tests {
 		.unwrap();
 		assert_eq!(c.ban, 70);
 		assert_eq!(c.kick, 50);
-		assert_eq!(c.users[&crate::OwnedUserId::from("@a:b")], 100);
+		assert_eq!(c.users[&crate::OwnedUserId::parse("@a:b").unwrap()], 100);
 		let back = from_str::<RoomPowerLevelsEventContent>(&to_string(&c)).unwrap();
 		assert_eq!(back.users, c.users);
 		assert_eq!(back.events, c.events);

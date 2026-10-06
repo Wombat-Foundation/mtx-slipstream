@@ -295,7 +295,7 @@ mod tests {
 
 	#[test]
 	fn key_id_splits_into_algorithm_and_name() {
-		let id: OwnedOneTimeKeyId = OwnedKeyId::from("signed_curve25519:AAAAHg");
+		let id: OwnedOneTimeKeyId = OwnedKeyId::parse("signed_curve25519:AAAAHg").unwrap();
 		assert_eq!(id.algorithm(), OneTimeKeyAlgorithm::SignedCurve25519);
 		assert_eq!(id.key_name(), OneTimeKeyName("AAAAHg".into()));
 		assert_eq!(OwnedOneTimeKeyId::from_parts(&id.algorithm(), &id.key_name()), id);

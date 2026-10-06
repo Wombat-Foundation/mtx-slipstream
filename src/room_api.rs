@@ -538,7 +538,7 @@ mod room_endpoint_tests {
 	#[test]
 	fn timestamp_request_uses_f_and_b() {
 		let request = get_event_by_timestamp::v1::Request::new(
-			OwnedRoomId::from("!r:x"),
+			OwnedRoomId::parse("!r:x").unwrap(),
 			MilliSecondsSinceUnixEpoch(42),
 			Direction::Backward,
 		);
@@ -555,7 +555,7 @@ mod room_endpoint_tests {
 	#[test]
 	fn summary_response_omits_empty_allowed_rooms_and_round_trips() {
 		let response = get_summary::msc3266::Response {
-			room_id: OwnedRoomId::from("!r:x"),
+			room_id: OwnedRoomId::parse("!r:x").unwrap(),
 			canonical_alias: None,
 			avatar_url: None,
 			guest_can_join: false,

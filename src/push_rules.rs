@@ -513,11 +513,13 @@ impl NewPushRule {
 				actions,
 			}),
 			RuleKind::Room => Self::Room(NewSimplePushRule {
-				rule_id: OwnedRoomId::from_trusted(rule_id),
+				rule_id: OwnedRoomId::parse(rule_id)
+					.map_err(|_| DeError::expected("room rule ID"))?,
 				actions,
 			}),
 			RuleKind::Sender => Self::Sender(NewSimplePushRule {
-				rule_id: OwnedUserId::from_trusted(rule_id),
+				rule_id: OwnedUserId::parse(rule_id)
+					.map_err(|_| DeError::expected("user rule ID"))?,
 				actions,
 			}),
 		})
@@ -1636,12 +1638,12 @@ mod tests {
 
 	fn ctx(members: UInt) -> PushConditionRoomCtx {
 		PushConditionRoomCtx {
-			room_id: OwnedRoomId::from("!r:x"),
+			room_id: OwnedRoomId::parse("!r:x").unwrap(),
 			member_count: members,
-			user_id: OwnedUserId::from("@me:x"),
+			user_id: OwnedUserId::parse("@me:x").unwrap(),
 			user_display_name: "Me".into(),
 			power_levels: Some(PushConditionPowerLevelsCtx {
-				users: BTreeMap::from([(OwnedUserId::from("@admin:x"), 100)]),
+				users: BTreeMap::from([(OwnedUserId::parse("@admin:x").unwrap(), 100)]),
 				users_default: 0,
 				notifications: NotificationPowerLevels::new(),
 			}),
@@ -1717,14 +1719,19 @@ mod tests {
 	fn insert_orders_and_validates() {
 		let mut rules = Ruleset::new();
 		let simple = |id: &str| NewSimplePushRule {
-			rule_id: id.into(),
+			rule_id: OwnedRoomId::parse(id).unwrap(),
 			actions: Vec::new(),
 		};
-		rules.insert(NewPushRule::Room(simple("!a:x")), None, None).unwrap();
-		rules.insert(NewPushRule::Room(simple("!b:x")), None, None).unwrap();
-		assert_eq!(rules.ids(RuleKind::Room), ["!b:x", "!a:x"]);
-		rules.insert(NewPushRule::Room(simple("!b:x")), Some("!a:x"), None).unwrap();
-		assert_eq!(rules.ids(RuleKind::Room), ["!a:x", "!b:x"]);
+		rules.insert(NewPushRule::Room(simple("!a:example.org")), None, None).unwrap();
+		rules.insert(NewPushRule::Room(simple("!b:example.org")), None, None).unwrap();
+		assert_eq!(rules.ids(RuleKind::Room), ["!b:example.org", "!a:example.org"]);
+		rules.insert(
+			NewPushRule::Room(simple("!b:example.org")),
+			Some("!a:example.org"),
+			None,
+		)
+		.unwrap();
+		assert_eq!(rules.ids(RuleKind::Room), ["!a:example.org", "!b:example.org"]);
 		assert_eq!(
 			rules.insert(NewPushRule::Room(simple(".m.x")), None, None),
 			Err(InsertPushRuleError::ServerDefaultRuleId)

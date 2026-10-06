@@ -1210,7 +1210,7 @@ mod tests {
 		assert!(!to_string(&room).contains("avatar"));
 		room.avatar = JsOption::Null;
 		assert!(to_string(&room).contains("\"avatar\":null"));
-		room.avatar = JsOption::Some(crate::OwnedMxcUri::from("mxc://x/y"));
+		room.avatar = JsOption::Some(crate::OwnedMxcUri::parse("mxc://x/y").unwrap());
 		room.unread_notifications.highlight_count = Some(1);
 		let text = to_string(&room);
 		assert!(

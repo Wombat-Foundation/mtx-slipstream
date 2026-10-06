@@ -40,7 +40,7 @@ mod tests {
 	fn request_shape_and_auth_are_pinned() {
 		let request = Request {
 			event_type: "m.test".into(),
-			txn_id: OwnedTransactionId::from("txn"),
+			txn_id: OwnedTransactionId::parse("txn").unwrap(),
 			messages: Messages::new(),
 		};
 		assert_eq!(Request::METADATA.authentication, AuthScheme::AccessToken);

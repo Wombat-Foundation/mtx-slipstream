@@ -64,7 +64,9 @@ impl InvitePermissionConfigEventContent {
 		let user = sender.as_str();
 		let server = sender.server_name();
 		let ignored = self.ignored_users.iter().any(|glob| glob_match(glob, user))
-			|| self.ignored_servers.iter().any(|glob| glob_match(glob, server.as_str()));
+			|| server.as_ref().is_some_and(|server| {
+				self.ignored_servers.iter().any(|glob| glob_match(glob, server.as_str()))
+			});
 		if ignored {
 			FilterLevel::Ignore
 		} else {
@@ -85,15 +87,15 @@ mod tests {
 		)
 		.unwrap();
 		assert_eq!(
-			config.user_filter_level(&OwnedUserId::from("@spam1:ok.org")),
+			config.user_filter_level(&OwnedUserId::parse("@spam1:ok.org").unwrap()),
 			FilterLevel::Ignore
 		);
 		assert_eq!(
-			config.user_filter_level(&OwnedUserId::from("@bob:evil.org")),
+			config.user_filter_level(&OwnedUserId::parse("@bob:evil.org").unwrap()),
 			FilterLevel::Ignore
 		);
 		assert_eq!(
-			config.user_filter_level(&OwnedUserId::from("@bob:ok.org")),
+			config.user_filter_level(&OwnedUserId::parse("@bob:ok.org").unwrap()),
 			FilterLevel::Allow
 		);
 	}

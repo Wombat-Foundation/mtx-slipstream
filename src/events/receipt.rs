@@ -186,8 +186,8 @@ mod tests {
 	fn receipt_event_round_trips() {
 		let text = r#"{"content":{"$e":{"m.read":{"@u:x":{"thread_id":"main","ts":5}}}},"room_id":"!r:x"}"#;
 		let event = from_str::<ReceiptEvent>(text).unwrap();
-		let receipt = &event.content.0[&OwnedEventId::from("$e")][&ReceiptType::Read]
-			[&OwnedUserId::from("@u:x")];
+		let receipt = &event.content.0[&OwnedEventId::parse("$e").unwrap()][&ReceiptType::Read]
+			[&OwnedUserId::parse("@u:x").unwrap()];
 		assert_eq!(receipt.thread, ReceiptThread::Main);
 		assert_eq!(receipt.ts, Some(5));
 		assert_eq!(to_string(&event), text);
