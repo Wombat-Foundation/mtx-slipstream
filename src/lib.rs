@@ -123,6 +123,9 @@ macro_rules! matrix_id {
 		matrix_id!($borrowed, $owned, $crate::id_validation::any);
 	};
 	($borrowed:ident, $owned:ident, $validate:path) => {
+		matrix_id!($borrowed, $owned, $validate, true);
+	};
+	($borrowed:ident, $owned:ident, $validate:path, $validate_deserialize:literal) => {
 		#[derive(Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 		pub struct $owned(alloc::string::String);
 
@@ -240,7 +243,15 @@ macro_rules! matrix_id {
 			fn from_json(value: &json::Value) -> Result<Self, codec::DeError> {
 				value
 					.as_str()
-					.and_then(|text| Self::parse(text).ok())
+					.and_then(|text| {
+						if $validate_deserialize {
+							Self::parse(text).ok()
+						} else {
+							// ruma-compatible: MXC URIs are accepted verbatim on the wire;
+							// validation happens in `parse`/`is_valid` for callers that need it.
+							Some(Self::from_trusted(text))
+						}
+					})
 					.ok_or_else(|| codec::DeError::expected(stringify!($owned)))
 			}
 		}
@@ -293,7 +304,7 @@ matrix_id!(DeviceId, OwnedDeviceId);
 matrix_id!(TransactionId, OwnedTransactionId);
 matrix_id!(ClientSecret, OwnedClientSecret);
 matrix_id!(SessionId, OwnedSessionId);
-matrix_id!(MxcUri, OwnedMxcUri, crate::id_validation::mxc_uri);
+matrix_id!(MxcUri, OwnedMxcUri, crate::id_validation::mxc_uri, false);
 
 /// Borrowed MXC URI components used by media services.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
