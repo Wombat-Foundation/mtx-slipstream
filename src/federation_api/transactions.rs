@@ -301,7 +301,7 @@ pub mod send_transaction_message {
 					origin: OwnedServerName,
 					origin_server_ts: MilliSecondsSinceUnixEpoch,
 					pdus: Vec<RawPdu>,
-					edus: Vec<Raw<Edu>>
+					edus: Vec<Raw<Edu>> = Vec::new()
 				}
 			}
 			response { pdus: BTreeMap<OwnedEventId, PduResult> }
