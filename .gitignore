@@ -27,8 +27,9 @@ target
 # tests / coverage
 .coverage/
 
-# top-level stuff
+# top-level & junk stuff
 /*.jsonl
 /*.log
 /*.txt
+pr.*.md
 .tmp/
