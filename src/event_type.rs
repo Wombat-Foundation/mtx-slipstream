@@ -94,7 +94,7 @@ event_type!(TimelineEventType {
 	Video => "m.video",
 	Voice => "m.voice",
 	CallNotify => "m.call.notify",
-	PollStart => "org.matrix.msc3381.poll.start",
+	PollStart => "m.poll.start",
 	Sticker => "m.sticker",
 	UnstablePollStart => "org.matrix.msc3381.poll.start",
 });

@@ -135,7 +135,7 @@ fn bench_parse_small(b: &mut Bencher) {
 
 	b.iter(|| {
 		json.clone_from_slice(&original);
-		simd_json::to_owned_value(&mut json).unwrap();
+		std::hint::black_box(simd_json::to_owned_value(&mut json).unwrap());
 	});
 }
 
@@ -147,7 +147,7 @@ fn bench_parse_medium(b: &mut Bencher) {
 
 	b.iter(|| {
 		json.clone_from_slice(&original);
-		simd_json::to_owned_value(&mut json).unwrap();
+		std::hint::black_box(simd_json::to_owned_value(&mut json).unwrap());
 	});
 }
 
@@ -159,7 +159,7 @@ fn bench_parse_sync_response(b: &mut Bencher) {
 
 	b.iter(|| {
 		json.clone_from_slice(&original);
-		simd_json::to_owned_value(&mut json).unwrap();
+		std::hint::black_box(simd_json::to_owned_value(&mut json).unwrap());
 	});
 }
 

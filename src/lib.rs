@@ -1121,7 +1121,7 @@ pub mod api {
 				crate::endpoint! { method: "GET", path: "/_matrix/client/v3/capabilities", request { path {} query {} body {} } response { capabilities: Capabilities } }
 			}
 			pub mod get_supported_versions {
-				crate::endpoint! { method: "GET", path: "/_matrix/client/versions", request { path {} query {} body {} } response { versions: alloc::vec::Vec<String>, unstable_features: alloc::collections::BTreeMap<String, bool> } }
+				crate::endpoint! { method: "GET", path: "/_matrix/client/versions", request { path {} query {} body {} } response { versions: alloc::vec::Vec<String>, unstable_features: Option<alloc::collections::BTreeMap<String, bool>> } }
 			}
 			pub mod get_rtc_transports {
 				crate::endpoint! { method: "GET", path: "/_matrix/client/unstable/org.matrix.msc4143/rtc/transports", request { path {} query {} body {} } response { transports: alloc::vec::Vec<crate::json::Value> } }
