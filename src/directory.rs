@@ -238,18 +238,84 @@ macro_rules! filtered_request {
 
 pub mod get_public_rooms {
 	pub mod v3 {
-		crate::endpoint! {
-			method: "GET", path: "/_matrix/client/v3/publicRooms",
-			request {
-				path {}
-				query { limit: Option<crate::UInt>, since: Option<alloc::string::String>, server: Option<crate::OwnedServerName> }
-				body {}
+		pub struct Request {
+			pub limit: Option<crate::UInt>,
+			pub since: Option<alloc::string::String>,
+			pub server: Option<crate::OwnedServerName>,
+		}
+		impl ::core::fmt::Debug for Request {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Request")
 			}
-			response {
-				chunk: alloc::vec::Vec<crate::directory::PublicRoomsChunk>,
-				next_batch: Option<alloc::string::String>,
-				prev_batch: Option<alloc::string::String>,
-				total_room_count_estimate: Option<crate::UInt>,
+		}
+		const _: crate::endpoint::Metadata =
+			<Request as crate::endpoint::EndpointRequest>::METADATA;
+		impl crate::endpoint::EndpointRequest for Request {
+			type Response = Response;
+			const METADATA: crate::endpoint::Metadata =
+				crate::endpoint::Metadata::new("GET", "/_matrix/client/v3/publicRooms");
+			fn path_args(&self) -> crate::endpoint::Strs {
+				crate::endpoint::path_args_from(&mut [])
+			}
+			fn query(&self) -> crate::endpoint::Pairs {
+				crate::endpoint::query_pairs_mut(&mut [
+					("limit", crate::endpoint::enc(&self.limit)),
+					("since", crate::endpoint::enc(&self.since)),
+					("server", crate::endpoint::enc(&self.server)),
+				])
+			}
+			fn body(&self) -> Option<crate::json::Value> {
+				crate::endpoint::body_value(
+					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
+					&mut [],
+				)
+			}
+			fn from_parts(
+				path: &[crate::endpoint::Str],
+				query: &[crate::endpoint::Pair],
+				body: Option<&crate::json::Value>,
+			) -> crate::endpoint::Parsed<Self> {
+				let input = crate::endpoint::Input::new(path, query, body);
+				let value = Self {
+					limit: input.query("limit")?,
+					since: input.query("since")?,
+					server: input.query("server")?,
+				};
+				input.finish()?;
+				Ok(value)
+			}
+		}
+		pub struct Response {
+			pub chunk: alloc::vec::Vec<crate::directory::PublicRoomsChunk>,
+			pub next_batch: Option<alloc::string::String>,
+			pub prev_batch: Option<alloc::string::String>,
+			pub total_room_count_estimate: Option<crate::UInt>,
+		}
+		impl ::core::fmt::Debug for Response {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Response")
+			}
+		}
+		impl crate::endpoint::EndpointResponse for Response {
+			fn to_body(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [
+					("chunk", crate::endpoint::enc(&self.chunk)),
+					("next_batch", crate::endpoint::enc(&self.next_batch)),
+					("prev_batch", crate::endpoint::enc(&self.prev_batch)),
+					(
+						"total_room_count_estimate",
+						crate::endpoint::enc(&self.total_room_count_estimate),
+					),
+				])
+			}
+			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				let _input = crate::endpoint::Input::body_only(body);
+				Ok(Self {
+					chunk: _input.body("chunk")?,
+					next_batch: _input.body("next_batch")?,
+					prev_batch: _input.body("prev_batch")?,
+					total_room_count_estimate: _input.body("total_room_count_estimate")?,
+				})
 			}
 		}
 	}
@@ -266,12 +332,39 @@ pub mod federation {
 		pub mod v1 {
 			use crate::{directory::RoomNetwork, json::Value};
 
-			crate::endpoint_response! { response {
-					chunk: alloc::vec::Vec<crate::directory::PublicRoomsChunk>,
-					next_batch: Option<alloc::string::String>,
-					prev_batch: Option<alloc::string::String>,
-					total_room_count_estimate: Option<crate::UInt>,
-			} }
+			pub struct Response {
+				pub chunk: alloc::vec::Vec<crate::directory::PublicRoomsChunk>,
+				pub next_batch: Option<alloc::string::String>,
+				pub prev_batch: Option<alloc::string::String>,
+				pub total_room_count_estimate: Option<crate::UInt>,
+			}
+			impl ::core::fmt::Debug for Response {
+				fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+					crate::endpoint::opaque_debug(f, "Response")
+				}
+			}
+			impl crate::endpoint::EndpointResponse for Response {
+				fn to_body(&self) -> crate::json::Value {
+					crate::endpoint::body_object(&mut [
+						("chunk", crate::endpoint::enc(&self.chunk)),
+						("next_batch", crate::endpoint::enc(&self.next_batch)),
+						("prev_batch", crate::endpoint::enc(&self.prev_batch)),
+						(
+							"total_room_count_estimate",
+							crate::endpoint::enc(&self.total_room_count_estimate),
+						),
+					])
+				}
+				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+					let _input = crate::endpoint::Input::body_only(body);
+					Ok(Self {
+						chunk: _input.body("chunk")?,
+						next_batch: _input.body("next_batch")?,
+						prev_batch: _input.body("prev_batch")?,
+						total_room_count_estimate: _input.body("total_room_count_estimate")?,
+					})
+				}
+			}
 			pub struct Request {
 				pub limit: Option<crate::UInt>,
 				pub since: Option<alloc::string::String>,

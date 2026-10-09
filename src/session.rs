@@ -10,12 +10,39 @@ pub mod get_login_types {
 			json::Value,
 		};
 
-		crate::endpoint_request! {
-			method: "GET", path: "/_matrix/client/v3/login",
-			request {
-				path {}
-				query {}
-				body {}
+		pub struct Request {}
+		impl ::core::fmt::Debug for Request {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Request")
+			}
+		}
+		const _: crate::endpoint::Metadata =
+			<Request as crate::endpoint::EndpointRequest>::METADATA;
+		impl crate::endpoint::EndpointRequest for Request {
+			type Response = Response;
+			const METADATA: crate::endpoint::Metadata =
+				crate::endpoint::Metadata::new("GET", "/_matrix/client/v3/login");
+			fn path_args(&self) -> crate::endpoint::Strs {
+				crate::endpoint::path_args_from(&mut [])
+			}
+			fn query(&self) -> crate::endpoint::Pairs {
+				crate::endpoint::query_pairs_mut(&mut [])
+			}
+			fn body(&self) -> Option<crate::json::Value> {
+				crate::endpoint::body_value(
+					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
+					&mut [],
+				)
+			}
+			fn from_parts(
+				path: &[crate::endpoint::Str],
+				query: &[crate::endpoint::Pair],
+				body: Option<&crate::json::Value>,
+			) -> crate::endpoint::Parsed<Self> {
+				let input = crate::endpoint::Input::new(path, query, body);
+				let value = Self {};
+				input.finish()?;
+				Ok(value)
 			}
 		}
 
@@ -397,12 +424,43 @@ pub mod get_login_token {
 			json::Value,
 		};
 
-		crate::endpoint_request! {
-			method: "POST", path: "/_matrix/client/v1/login/get_token",
-			request {
-				path {}
-				query {}
-				body { auth: Option<crate::api::client::uiaa::AuthData> }
+		pub struct Request {
+			pub auth: Option<crate::api::client::uiaa::AuthData>,
+		}
+		impl ::core::fmt::Debug for Request {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Request")
+			}
+		}
+		const _: crate::endpoint::Metadata =
+			<Request as crate::endpoint::EndpointRequest>::METADATA;
+		impl crate::endpoint::EndpointRequest for Request {
+			type Response = Response;
+			const METADATA: crate::endpoint::Metadata =
+				crate::endpoint::Metadata::new("POST", "/_matrix/client/v1/login/get_token");
+			fn path_args(&self) -> crate::endpoint::Strs {
+				crate::endpoint::path_args_from(&mut [])
+			}
+			fn query(&self) -> crate::endpoint::Pairs {
+				crate::endpoint::query_pairs_mut(&mut [])
+			}
+			fn body(&self) -> Option<crate::json::Value> {
+				crate::endpoint::body_value(
+					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
+					&mut [("auth", crate::endpoint::enc(&self.auth))],
+				)
+			}
+			fn from_parts(
+				path: &[crate::endpoint::Str],
+				query: &[crate::endpoint::Pair],
+				body: Option<&crate::json::Value>,
+			) -> crate::endpoint::Parsed<Self> {
+				let input = crate::endpoint::Input::new(path, query, body);
+				let value = Self {
+					auth: input.body("auth")?,
+				};
+				input.finish()?;
+				Ok(value)
 			}
 		}
 

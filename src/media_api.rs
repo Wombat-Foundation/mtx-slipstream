@@ -514,12 +514,63 @@ pub mod legacy {
 		pub mod v1 {
 			use crate::{MilliSecondsSinceUnixEpoch, OwnedMxcUri};
 
-			crate::endpoint! {
-				method: "POST", path: "/_matrix/media/v1/create",
-				request { path {} query {} body {} }
-				response {
-					content_uri: OwnedMxcUri,
-					unused_expires_at: Option<MilliSecondsSinceUnixEpoch>
+			pub struct Request {}
+			impl ::core::fmt::Debug for Request {
+				fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+					crate::endpoint::opaque_debug(f, "Request")
+				}
+			}
+			const _: crate::endpoint::Metadata =
+				<Request as crate::endpoint::EndpointRequest>::METADATA;
+			impl crate::endpoint::EndpointRequest for Request {
+				type Response = Response;
+				const METADATA: crate::endpoint::Metadata =
+					crate::endpoint::Metadata::new("POST", "/_matrix/media/v1/create");
+				fn path_args(&self) -> crate::endpoint::Strs {
+					crate::endpoint::path_args_from(&mut [])
+				}
+				fn query(&self) -> crate::endpoint::Pairs {
+					crate::endpoint::query_pairs_mut(&mut [])
+				}
+				fn body(&self) -> Option<crate::json::Value> {
+					crate::endpoint::body_value(
+						<Self as crate::endpoint::EndpointRequest>::METADATA.method,
+						&mut [],
+					)
+				}
+				fn from_parts(
+					path: &[crate::endpoint::Str],
+					query: &[crate::endpoint::Pair],
+					body: Option<&crate::json::Value>,
+				) -> crate::endpoint::Parsed<Self> {
+					let input = crate::endpoint::Input::new(path, query, body);
+					let value = Self {};
+					input.finish()?;
+					Ok(value)
+				}
+			}
+			pub struct Response {
+				pub content_uri: OwnedMxcUri,
+				pub unused_expires_at: Option<MilliSecondsSinceUnixEpoch>,
+			}
+			impl ::core::fmt::Debug for Response {
+				fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+					crate::endpoint::opaque_debug(f, "Response")
+				}
+			}
+			impl crate::endpoint::EndpointResponse for Response {
+				fn to_body(&self) -> crate::json::Value {
+					crate::endpoint::body_object(&mut [
+						("content_uri", crate::endpoint::enc(&self.content_uri)),
+						("unused_expires_at", crate::endpoint::enc(&self.unused_expires_at)),
+					])
+				}
+				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+					let _input = crate::endpoint::Input::body_only(body);
+					Ok(Self {
+						content_uri: _input.body("content_uri")?,
+						unused_expires_at: _input.body("unused_expires_at")?,
+					})
 				}
 			}
 

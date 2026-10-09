@@ -289,22 +289,83 @@ pub mod send_transaction_message {
 		use super::super::{PduResult, edu::Edu};
 		use crate::{
 			MilliSecondsSinceUnixEpoch, OwnedEventId, OwnedServerName, OwnedTransactionId,
-			endpoint, federation_api::RawPdu, sswire::Raw,
+			federation_api::RawPdu, sswire::Raw,
 		};
 
-		endpoint! {
-			method: "PUT", path: "/_matrix/federation/v1/send/{transaction_id}",
-			request {
-				path { transaction_id: OwnedTransactionId }
-				query {}
-				body {
-					origin: OwnedServerName,
-					origin_server_ts: MilliSecondsSinceUnixEpoch,
-					pdus: Vec<RawPdu>,
-					edus: Vec<Raw<Edu>> = Vec::new()
-				}
+		pub struct Request {
+			pub transaction_id: OwnedTransactionId,
+			pub origin: OwnedServerName,
+			pub origin_server_ts: MilliSecondsSinceUnixEpoch,
+			pub pdus: Vec<RawPdu>,
+			pub edus: Vec<Raw<Edu>>,
+		}
+		impl ::core::fmt::Debug for Request {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Request")
 			}
-			response { pdus: BTreeMap<OwnedEventId, PduResult> }
+		}
+		const _: crate::endpoint::Metadata =
+			<Request as crate::endpoint::EndpointRequest>::METADATA;
+		impl crate::endpoint::EndpointRequest for Request {
+			type Response = Response;
+			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
+				"PUT",
+				"/_matrix/federation/v1/send/{transaction_id}",
+			);
+			fn path_args(&self) -> crate::endpoint::Strs {
+				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(
+					&self.transaction_id,
+				)])
+			}
+			fn query(&self) -> crate::endpoint::Pairs {
+				crate::endpoint::query_pairs_mut(&mut [])
+			}
+			fn body(&self) -> Option<crate::json::Value> {
+				crate::endpoint::body_value(
+					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
+					&mut [
+						("origin", crate::endpoint::enc(&self.origin)),
+						("origin_server_ts", crate::endpoint::enc(&self.origin_server_ts)),
+						("pdus", crate::endpoint::enc(&self.pdus)),
+						("edus", crate::endpoint::enc(&self.edus)),
+					],
+				)
+			}
+			fn from_parts(
+				path: &[crate::endpoint::Str],
+				query: &[crate::endpoint::Pair],
+				body: Option<&crate::json::Value>,
+			) -> crate::endpoint::Parsed<Self> {
+				let input = crate::endpoint::Input::new(path, query, body);
+				let value = Self {
+					transaction_id: input.path()?,
+					origin: input.body("origin")?,
+					origin_server_ts: input.body("origin_server_ts")?,
+					pdus: input.body("pdus")?,
+					edus: input.body_or("edus", Vec::new())?,
+				};
+				input.finish()?;
+				Ok(value)
+			}
+		}
+		pub struct Response {
+			pub pdus: BTreeMap<OwnedEventId, PduResult>,
+		}
+		impl ::core::fmt::Debug for Response {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Response")
+			}
+		}
+		impl crate::endpoint::EndpointResponse for Response {
+			fn to_body(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [("pdus", crate::endpoint::enc(&self.pdus))])
+			}
+			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				let _input = crate::endpoint::Input::body_only(body);
+				Ok(Self {
+					pdus: _input.body("pdus")?,
+				})
+			}
 		}
 	}
 }

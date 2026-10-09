@@ -278,21 +278,87 @@ pub mod client {
 			use alloc::{string::String, vec::Vec};
 
 			use super::super::super::SpaceHierarchyRoomsChunk;
-			use crate::{OwnedRoomId, UInt, endpoint};
+			use crate::{OwnedRoomId, UInt};
 
-			endpoint! {
-				method: "GET", path: "/_matrix/client/v1/rooms/{room_id}/hierarchy",
-				request {
-					path { room_id: OwnedRoomId }
-					query {
-						from: Option<String>,
-						limit: Option<UInt>,
-						max_depth: Option<UInt>,
-						suggested_only: bool
-					}
-					body {}
+			pub struct Request {
+				pub room_id: OwnedRoomId,
+				pub from: Option<String>,
+				pub limit: Option<UInt>,
+				pub max_depth: Option<UInt>,
+				pub suggested_only: bool,
+			}
+			impl ::core::fmt::Debug for Request {
+				fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+					crate::endpoint::opaque_debug(f, "Request")
 				}
-				response { next_batch: Option<String>, rooms: Vec<SpaceHierarchyRoomsChunk> }
+			}
+			const _: crate::endpoint::Metadata =
+				<Request as crate::endpoint::EndpointRequest>::METADATA;
+			impl crate::endpoint::EndpointRequest for Request {
+				type Response = Response;
+				const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
+					"GET",
+					"/_matrix/client/v1/rooms/{room_id}/hierarchy",
+				);
+				fn path_args(&self) -> crate::endpoint::Strs {
+					crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(
+						&self.room_id,
+					)])
+				}
+				fn query(&self) -> crate::endpoint::Pairs {
+					crate::endpoint::query_pairs_mut(&mut [
+						("from", crate::endpoint::enc(&self.from)),
+						("limit", crate::endpoint::enc(&self.limit)),
+						("max_depth", crate::endpoint::enc(&self.max_depth)),
+						("suggested_only", crate::endpoint::enc(&self.suggested_only)),
+					])
+				}
+				fn body(&self) -> Option<crate::json::Value> {
+					crate::endpoint::body_value(
+						<Self as crate::endpoint::EndpointRequest>::METADATA.method,
+						&mut [],
+					)
+				}
+				fn from_parts(
+					path: &[crate::endpoint::Str],
+					query: &[crate::endpoint::Pair],
+					body: Option<&crate::json::Value>,
+				) -> crate::endpoint::Parsed<Self> {
+					let input = crate::endpoint::Input::new(path, query, body);
+					let value = Self {
+						room_id: input.path()?,
+						from: input.query("from")?,
+						limit: input.query("limit")?,
+						max_depth: input.query("max_depth")?,
+						suggested_only: input.query("suggested_only")?,
+					};
+					input.finish()?;
+					Ok(value)
+				}
+			}
+			pub struct Response {
+				pub next_batch: Option<String>,
+				pub rooms: Vec<SpaceHierarchyRoomsChunk>,
+			}
+			impl ::core::fmt::Debug for Response {
+				fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+					crate::endpoint::opaque_debug(f, "Response")
+				}
+			}
+			impl crate::endpoint::EndpointResponse for Response {
+				fn to_body(&self) -> crate::json::Value {
+					crate::endpoint::body_object(&mut [
+						("next_batch", crate::endpoint::enc(&self.next_batch)),
+						("rooms", crate::endpoint::enc(&self.rooms)),
+					])
+				}
+				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+					let _input = crate::endpoint::Input::body_only(body);
+					Ok(Self {
+						next_batch: _input.body("next_batch")?,
+						rooms: _input.body("rooms")?,
+					})
+				}
 			}
 		}
 	}
@@ -303,19 +369,79 @@ pub mod get_hierarchy {
 		use alloc::vec::Vec;
 
 		use super::super::{SpaceHierarchyChildSummary, SpaceHierarchyParentSummary};
-		use crate::{OwnedRoomId, endpoint};
+		use crate::OwnedRoomId;
 
-		endpoint! {
-			method: "GET", path: "/_matrix/federation/v1/hierarchy/{room_id}",
-			request {
-				path { room_id: OwnedRoomId }
-				query { suggested_only: bool }
-				body {}
+		pub struct Request {
+			pub room_id: OwnedRoomId,
+			pub suggested_only: bool,
+		}
+		impl ::core::fmt::Debug for Request {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Request")
 			}
-			response {
-				room: SpaceHierarchyParentSummary,
-				children: Vec<SpaceHierarchyChildSummary>,
-				inaccessible_children: Vec<OwnedRoomId>
+		}
+		const _: crate::endpoint::Metadata =
+			<Request as crate::endpoint::EndpointRequest>::METADATA;
+		impl crate::endpoint::EndpointRequest for Request {
+			type Response = Response;
+			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
+				"GET",
+				"/_matrix/federation/v1/hierarchy/{room_id}",
+			);
+			fn path_args(&self) -> crate::endpoint::Strs {
+				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(&self.room_id)])
+			}
+			fn query(&self) -> crate::endpoint::Pairs {
+				crate::endpoint::query_pairs_mut(&mut [(
+					"suggested_only",
+					crate::endpoint::enc(&self.suggested_only),
+				)])
+			}
+			fn body(&self) -> Option<crate::json::Value> {
+				crate::endpoint::body_value(
+					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
+					&mut [],
+				)
+			}
+			fn from_parts(
+				path: &[crate::endpoint::Str],
+				query: &[crate::endpoint::Pair],
+				body: Option<&crate::json::Value>,
+			) -> crate::endpoint::Parsed<Self> {
+				let input = crate::endpoint::Input::new(path, query, body);
+				let value = Self {
+					room_id: input.path()?,
+					suggested_only: input.query("suggested_only")?,
+				};
+				input.finish()?;
+				Ok(value)
+			}
+		}
+		pub struct Response {
+			pub room: SpaceHierarchyParentSummary,
+			pub children: Vec<SpaceHierarchyChildSummary>,
+			pub inaccessible_children: Vec<OwnedRoomId>,
+		}
+		impl ::core::fmt::Debug for Response {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Response")
+			}
+		}
+		impl crate::endpoint::EndpointResponse for Response {
+			fn to_body(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [
+					("room", crate::endpoint::enc(&self.room)),
+					("children", crate::endpoint::enc(&self.children)),
+					("inaccessible_children", crate::endpoint::enc(&self.inaccessible_children)),
+				])
+			}
+			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				let _input = crate::endpoint::Input::body_only(body);
+				Ok(Self {
+					room: _input.body("room")?,
+					children: _input.body("children")?,
+					inaccessible_children: _input.body("inaccessible_children")?,
+				})
 			}
 		}
 

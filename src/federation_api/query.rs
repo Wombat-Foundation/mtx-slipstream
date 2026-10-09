@@ -4,16 +4,73 @@ pub mod get_room_information {
 	pub mod v1 {
 		use alloc::vec::Vec;
 
-		use crate::{OwnedRoomAliasId, OwnedRoomId, OwnedServerName, endpoint};
+		use crate::{OwnedRoomAliasId, OwnedRoomId, OwnedServerName};
 
-		endpoint! {
-			method: "GET", path: "/_matrix/federation/v1/query/directory",
-			request {
-				path {}
-				query { room_alias: OwnedRoomAliasId }
-				body {}
+		pub struct Request {
+			pub room_alias: OwnedRoomAliasId,
+		}
+		impl ::core::fmt::Debug for Request {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Request")
 			}
-			response { room_id: OwnedRoomId, servers: Vec<OwnedServerName> }
+		}
+		const _: crate::endpoint::Metadata =
+			<Request as crate::endpoint::EndpointRequest>::METADATA;
+		impl crate::endpoint::EndpointRequest for Request {
+			type Response = Response;
+			const METADATA: crate::endpoint::Metadata =
+				crate::endpoint::Metadata::new("GET", "/_matrix/federation/v1/query/directory");
+			fn path_args(&self) -> crate::endpoint::Strs {
+				crate::endpoint::path_args_from(&mut [])
+			}
+			fn query(&self) -> crate::endpoint::Pairs {
+				crate::endpoint::query_pairs_mut(&mut [(
+					"room_alias",
+					crate::endpoint::enc(&self.room_alias),
+				)])
+			}
+			fn body(&self) -> Option<crate::json::Value> {
+				crate::endpoint::body_value(
+					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
+					&mut [],
+				)
+			}
+			fn from_parts(
+				path: &[crate::endpoint::Str],
+				query: &[crate::endpoint::Pair],
+				body: Option<&crate::json::Value>,
+			) -> crate::endpoint::Parsed<Self> {
+				let input = crate::endpoint::Input::new(path, query, body);
+				let value = Self {
+					room_alias: input.query("room_alias")?,
+				};
+				input.finish()?;
+				Ok(value)
+			}
+		}
+		pub struct Response {
+			pub room_id: OwnedRoomId,
+			pub servers: Vec<OwnedServerName>,
+		}
+		impl ::core::fmt::Debug for Response {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Response")
+			}
+		}
+		impl crate::endpoint::EndpointResponse for Response {
+			fn to_body(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [
+					("room_id", crate::endpoint::enc(&self.room_id)),
+					("servers", crate::endpoint::enc(&self.servers)),
+				])
+			}
+			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				let _input = crate::endpoint::Input::body_only(body);
+				Ok(Self {
+					room_id: _input.body("room_id")?,
+					servers: _input.body("servers")?,
+				})
+			}
 		}
 
 		impl Response {
@@ -88,12 +145,48 @@ pub mod get_profile_information {
 			}
 		}
 
-		crate::endpoint_request! {
-			method: "GET", path: "/_matrix/federation/v1/query/profile",
-			request {
-				path {}
-				query { user_id: OwnedUserId, field: Option<ProfileField> }
-				body {}
+		pub struct Request {
+			pub user_id: OwnedUserId,
+			pub field: Option<ProfileField>,
+		}
+		impl ::core::fmt::Debug for Request {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Request")
+			}
+		}
+		const _: crate::endpoint::Metadata =
+			<Request as crate::endpoint::EndpointRequest>::METADATA;
+		impl crate::endpoint::EndpointRequest for Request {
+			type Response = Response;
+			const METADATA: crate::endpoint::Metadata =
+				crate::endpoint::Metadata::new("GET", "/_matrix/federation/v1/query/profile");
+			fn path_args(&self) -> crate::endpoint::Strs {
+				crate::endpoint::path_args_from(&mut [])
+			}
+			fn query(&self) -> crate::endpoint::Pairs {
+				crate::endpoint::query_pairs_mut(&mut [
+					("user_id", crate::endpoint::enc(&self.user_id)),
+					("field", crate::endpoint::enc(&self.field)),
+				])
+			}
+			fn body(&self) -> Option<crate::json::Value> {
+				crate::endpoint::body_value(
+					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
+					&mut [],
+				)
+			}
+			fn from_parts(
+				path: &[crate::endpoint::Str],
+				query: &[crate::endpoint::Pair],
+				body: Option<&crate::json::Value>,
+			) -> crate::endpoint::Parsed<Self> {
+				let input = crate::endpoint::Input::new(path, query, body);
+				let value = Self {
+					user_id: input.query("user_id")?,
+					field: input.query("field")?,
+				};
+				input.finish()?;
+				Ok(value)
 			}
 		}
 

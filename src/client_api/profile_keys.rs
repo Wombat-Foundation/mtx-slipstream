@@ -65,7 +65,24 @@ pub mod get_profile_key {
 		}
 
 		// The wire body is the bare `{"<keyName>": <value>}` map, not `{"value": ..}`.
-		crate::endpoint_response_flat!(value: BTreeMap<String, Value>);
+		pub struct Response {
+			pub value: BTreeMap<String, Value>,
+		}
+		impl ::core::fmt::Debug for Response {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Response")
+			}
+		}
+		impl crate::endpoint::EndpointResponse for Response {
+			fn to_body(&self) -> crate::json::Value {
+				crate::endpoint::enc(&self.value)
+			}
+			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				Ok(Self {
+					value: crate::codec::Deserialize::from_json(body)?,
+				})
+			}
+		}
 	}
 }
 
@@ -143,7 +160,21 @@ pub mod set_profile_key {
 			}
 		}
 
-		crate::endpoint_response! { response {} }
+		pub struct Response {}
+		impl ::core::fmt::Debug for Response {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Response")
+			}
+		}
+		impl crate::endpoint::EndpointResponse for Response {
+			fn to_body(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [])
+			}
+			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				let _input = crate::endpoint::Input::body_only(body);
+				Ok(Self {})
+			}
+		}
 	}
 }
 pub mod delete_profile_key {
@@ -215,7 +246,21 @@ pub mod delete_profile_key {
 			}
 		}
 
-		crate::endpoint_response! { response {} }
+		pub struct Response {}
+		impl ::core::fmt::Debug for Response {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Response")
+			}
+		}
+		impl crate::endpoint::EndpointResponse for Response {
+			fn to_body(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [])
+			}
+			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				let _input = crate::endpoint::Input::body_only(body);
+				Ok(Self {})
+			}
+		}
 	}
 }
 
