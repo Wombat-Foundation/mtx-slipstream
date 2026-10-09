@@ -166,76 +166,6 @@ impl_codec_struct!(PublicRoomsChunk {
 	world_readable: bool,
 });
 
-macro_rules! filtered_request {
-	($method:literal, $path:literal $(, $server:ident)?) => {
-		#[derive(Debug, Default)]
-		pub struct Request {
-			$(pub $server: Option<$crate::OwnedServerName>,)?
-			pub limit: Option<$crate::UInt>,
-			pub since: Option<::alloc::string::String>,
-			pub filter: $crate::directory::Filter,
-			pub room_network: $crate::directory::RoomNetwork,
-		}
-
-		const _: $crate::endpoint::Metadata = $crate::endpoint::Metadata::new($method, $path);
-		impl $crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: $crate::endpoint::Metadata =
-				$crate::endpoint::Metadata::new($method, $path);
-
-			fn path_args(&self) -> ::alloc::vec::Vec<::alloc::string::String> {
-				::alloc::vec::Vec::new()
-			}
-
-			fn query(&self) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)> {
-				$crate::endpoint::query_pairs(::alloc::vec![
-					$((stringify!($server), $crate::codec::Serialize::to_json(&self.$server)))?
-				])
-			}
-
-			fn body(&self) -> Option<$crate::json::Value> {
-				let (include_all, third_party) = self.room_network.fields();
-				Some($crate::json::Value::Object($crate::endpoint::object_from(::alloc::vec![
-					("limit", $crate::codec::Serialize::to_json(&self.limit)),
-					("since", $crate::codec::Serialize::to_json(&self.since)),
-					("filter", $crate::codec::Serialize::to_json(&self.filter)),
-					("include_all_networks", $crate::codec::Serialize::to_json(&include_all)),
-					("third_party_instance_id", $crate::codec::Serialize::to_json(&third_party)),
-				])))
-			}
-
-			fn from_parts(
-				path: &[::alloc::string::String],
-				query: &[(::alloc::string::String, ::alloc::string::String)],
-				body: Option<&$crate::json::Value>,
-			) -> Result<Self, $crate::codec::DeError> {
-				let input = $crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					$($server: input.query(stringify!($server))?,)?
-					limit: input.body("limit")?,
-					since: input.body("since")?,
-					filter: input.body_or_default("filter")?,
-					room_network: $crate::directory::RoomNetwork::from_fields(
-						input.body_or_default("include_all_networks")?,
-						input.body("third_party_instance_id")?,
-					),
-				};
-				input.finish()?;
-				Ok(value)
-			}
-		}
-
-		$crate::endpoint_response! {
-			response {
-				chunk: ::alloc::vec::Vec<$crate::directory::PublicRoomsChunk>,
-				next_batch: Option<::alloc::string::String>,
-				prev_batch: Option<::alloc::string::String>,
-				total_room_count_estimate: Option<$crate::UInt>,
-			}
-		}
-	};
-}
-
 pub mod get_public_rooms {
 	pub mod v3 {
 		pub struct Request {
@@ -323,7 +253,95 @@ pub mod get_public_rooms {
 
 pub mod get_public_rooms_filtered {
 	pub mod v3 {
-		filtered_request!("POST", "/_matrix/client/v3/publicRooms", server);
+		#[derive(Debug, Default)]
+		pub struct Request {
+			pub server: Option<crate::OwnedServerName>,
+			pub limit: Option<crate::UInt>,
+			pub since: Option<::alloc::string::String>,
+			pub filter: crate::directory::Filter,
+			pub room_network: crate::directory::RoomNetwork,
+		}
+		const _: crate::endpoint::Metadata =
+			crate::endpoint::Metadata::new("POST", "/_matrix/client/v3/publicRooms");
+		impl crate::endpoint::EndpointRequest for Request {
+			type Response = Response;
+			const METADATA: crate::endpoint::Metadata =
+				crate::endpoint::Metadata::new("POST", "/_matrix/client/v3/publicRooms");
+			fn path_args(&self) -> ::alloc::vec::Vec<::alloc::string::String> {
+				::alloc::vec::Vec::new()
+			}
+			fn query(
+				&self,
+			) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)>
+			{
+				crate::endpoint::query_pairs(::alloc::vec![(
+					stringify!(server),
+					crate::codec::Serialize::to_json(&self.server)
+				)])
+			}
+			fn body(&self) -> Option<crate::json::Value> {
+				let (include_all, third_party) = self.room_network.fields();
+				Some(crate::json::Value::Object(crate::endpoint::object_from(::alloc::vec![
+					("limit", crate::codec::Serialize::to_json(&self.limit)),
+					("since", crate::codec::Serialize::to_json(&self.since)),
+					("filter", crate::codec::Serialize::to_json(&self.filter)),
+					("include_all_networks", crate::codec::Serialize::to_json(&include_all)),
+					("third_party_instance_id", crate::codec::Serialize::to_json(&third_party)),
+				])))
+			}
+			fn from_parts(
+				path: &[::alloc::string::String],
+				query: &[(::alloc::string::String, ::alloc::string::String)],
+				body: Option<&crate::json::Value>,
+			) -> Result<Self, crate::codec::DeError> {
+				let input = crate::endpoint::Input::new(path, query, body);
+				let value = Self {
+					server: input.query(stringify!(server))?,
+					limit: input.body("limit")?,
+					since: input.body("since")?,
+					filter: input.body_or_default("filter")?,
+					room_network: crate::directory::RoomNetwork::from_fields(
+						input.body_or_default("include_all_networks")?,
+						input.body("third_party_instance_id")?,
+					),
+				};
+				input.finish()?;
+				Ok(value)
+			}
+		}
+		pub struct Response {
+			pub chunk: ::alloc::vec::Vec<crate::directory::PublicRoomsChunk>,
+			pub next_batch: Option<::alloc::string::String>,
+			pub prev_batch: Option<::alloc::string::String>,
+			pub total_room_count_estimate: Option<crate::UInt>,
+		}
+		impl ::core::fmt::Debug for Response {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Response")
+			}
+		}
+		impl crate::endpoint::EndpointResponse for Response {
+			fn to_body(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [
+					("chunk", crate::endpoint::enc(&self.chunk)),
+					("next_batch", crate::endpoint::enc(&self.next_batch)),
+					("prev_batch", crate::endpoint::enc(&self.prev_batch)),
+					(
+						"total_room_count_estimate",
+						crate::endpoint::enc(&self.total_room_count_estimate),
+					),
+				])
+			}
+			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				let _input = crate::endpoint::Input::body_only(body);
+				Ok(Self {
+					chunk: _input.body("chunk")?,
+					next_batch: _input.body("next_batch")?,
+					prev_batch: _input.body("prev_batch")?,
+					total_room_count_estimate: _input.body("total_room_count_estimate")?,
+				})
+			}
+		}
 	}
 }
 
@@ -421,7 +439,93 @@ pub mod federation {
 
 	pub mod get_public_rooms_filtered {
 		pub mod v1 {
-			filtered_request!("POST", "/_matrix/federation/v1/publicRooms");
+			#[derive(Debug, Default)]
+			pub struct Request {
+				pub limit: Option<crate::UInt>,
+				pub since: Option<::alloc::string::String>,
+				pub filter: crate::directory::Filter,
+				pub room_network: crate::directory::RoomNetwork,
+			}
+			const _: crate::endpoint::Metadata =
+				crate::endpoint::Metadata::new("POST", "/_matrix/federation/v1/publicRooms");
+			impl crate::endpoint::EndpointRequest for Request {
+				type Response = Response;
+				const METADATA: crate::endpoint::Metadata =
+					crate::endpoint::Metadata::new("POST", "/_matrix/federation/v1/publicRooms");
+				fn path_args(&self) -> ::alloc::vec::Vec<::alloc::string::String> {
+					::alloc::vec::Vec::new()
+				}
+				fn query(
+					&self,
+				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)>
+				{
+					crate::endpoint::query_pairs(::alloc::vec![])
+				}
+				fn body(&self) -> Option<crate::json::Value> {
+					let (include_all, third_party) = self.room_network.fields();
+					Some(crate::json::Value::Object(crate::endpoint::object_from(::alloc::vec![
+						("limit", crate::codec::Serialize::to_json(&self.limit)),
+						("since", crate::codec::Serialize::to_json(&self.since)),
+						("filter", crate::codec::Serialize::to_json(&self.filter)),
+						("include_all_networks", crate::codec::Serialize::to_json(&include_all)),
+						(
+							"third_party_instance_id",
+							crate::codec::Serialize::to_json(&third_party)
+						),
+					])))
+				}
+				fn from_parts(
+					path: &[::alloc::string::String],
+					query: &[(::alloc::string::String, ::alloc::string::String)],
+					body: Option<&crate::json::Value>,
+				) -> Result<Self, crate::codec::DeError> {
+					let input = crate::endpoint::Input::new(path, query, body);
+					let value = Self {
+						limit: input.body("limit")?,
+						since: input.body("since")?,
+						filter: input.body_or_default("filter")?,
+						room_network: crate::directory::RoomNetwork::from_fields(
+							input.body_or_default("include_all_networks")?,
+							input.body("third_party_instance_id")?,
+						),
+					};
+					input.finish()?;
+					Ok(value)
+				}
+			}
+			pub struct Response {
+				pub chunk: ::alloc::vec::Vec<crate::directory::PublicRoomsChunk>,
+				pub next_batch: Option<::alloc::string::String>,
+				pub prev_batch: Option<::alloc::string::String>,
+				pub total_room_count_estimate: Option<crate::UInt>,
+			}
+			impl ::core::fmt::Debug for Response {
+				fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+					crate::endpoint::opaque_debug(f, "Response")
+				}
+			}
+			impl crate::endpoint::EndpointResponse for Response {
+				fn to_body(&self) -> crate::json::Value {
+					crate::endpoint::body_object(&mut [
+						("chunk", crate::endpoint::enc(&self.chunk)),
+						("next_batch", crate::endpoint::enc(&self.next_batch)),
+						("prev_batch", crate::endpoint::enc(&self.prev_batch)),
+						(
+							"total_room_count_estimate",
+							crate::endpoint::enc(&self.total_room_count_estimate),
+						),
+					])
+				}
+				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+					let _input = crate::endpoint::Input::body_only(body);
+					Ok(Self {
+						chunk: _input.body("chunk")?,
+						next_batch: _input.body("next_batch")?,
+						prev_batch: _input.body("prev_batch")?,
+						total_room_count_estimate: _input.body("total_room_count_estimate")?,
+					})
+				}
+			}
 		}
 	}
 }

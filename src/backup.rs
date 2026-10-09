@@ -41,45 +41,6 @@ pub struct RoomKeyBackup {
 
 impl_codec_struct!(RoomKeyBackup { sessions: BTreeMap<String, Raw<KeyBackupData>> });
 
-/// Response body of the backup-version endpoints: the algorithm fields sit at
-/// the top level next to `count`, `etag` and `version`.
-macro_rules! backup_info_response {
-	() => {
-		#[derive(Debug)]
-		pub struct Response {
-			pub algorithm: $crate::sswire::Raw<$crate::backup::BackupAlgorithm>,
-			pub count: $crate::UInt,
-			pub etag: ::alloc::string::String,
-			pub version: ::alloc::string::String,
-		}
-
-		impl $crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> $crate::json::Value {
-				let mut object = match $crate::codec::Serialize::to_json(&self.algorithm) {
-					$crate::json::Value::Object(object) => object,
-					_ => $crate::json::Object::new(),
-				};
-				object.extend($crate::endpoint::object_from(::alloc::vec![
-					("count", $crate::codec::Serialize::to_json(&self.count)),
-					("etag", $crate::codec::Serialize::to_json(&self.etag)),
-					("version", $crate::codec::Serialize::to_json(&self.version)),
-				]));
-				$crate::json::Value::Object(object)
-			}
-
-			fn from_body(body: &$crate::json::Value) -> Result<Self, $crate::codec::DeError> {
-				let input = $crate::endpoint::Input::new(&[], &[], Some(body));
-				Ok(Self {
-					algorithm: $crate::codec::Deserialize::from_json(body)?,
-					count: input.body("count")?,
-					etag: input.body("etag")?,
-					version: input.body("version")?,
-				})
-			}
-		}
-	};
-}
-
 pub mod create_backup_version {
 	pub mod v3 {
 		pub struct Request {
@@ -245,7 +206,36 @@ pub mod get_latest_backup_info {
 				Ok(value)
 			}
 		}
-		backup_info_response!();
+		#[derive(Debug)]
+		pub struct Response {
+			pub algorithm: crate::sswire::Raw<crate::backup::BackupAlgorithm>,
+			pub count: crate::UInt,
+			pub etag: ::alloc::string::String,
+			pub version: ::alloc::string::String,
+		}
+		impl crate::endpoint::EndpointResponse for Response {
+			fn to_body(&self) -> crate::json::Value {
+				let mut object = match crate::codec::Serialize::to_json(&self.algorithm) {
+					crate::json::Value::Object(object) => object,
+					_ => crate::json::Object::new(),
+				};
+				object.extend(crate::endpoint::object_from(::alloc::vec![
+					("count", crate::codec::Serialize::to_json(&self.count)),
+					("etag", crate::codec::Serialize::to_json(&self.etag)),
+					("version", crate::codec::Serialize::to_json(&self.version)),
+				]));
+				crate::json::Value::Object(object)
+			}
+			fn from_body(body: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+				let input = crate::endpoint::Input::new(&[], &[], Some(body));
+				Ok(Self {
+					algorithm: crate::codec::Deserialize::from_json(body)?,
+					count: input.body("count")?,
+					etag: input.body("etag")?,
+					version: input.body("version")?,
+				})
+			}
+		}
 	}
 }
 
@@ -292,7 +282,36 @@ pub mod get_backup_info {
 				Ok(value)
 			}
 		}
-		backup_info_response!();
+		#[derive(Debug)]
+		pub struct Response {
+			pub algorithm: crate::sswire::Raw<crate::backup::BackupAlgorithm>,
+			pub count: crate::UInt,
+			pub etag: ::alloc::string::String,
+			pub version: ::alloc::string::String,
+		}
+		impl crate::endpoint::EndpointResponse for Response {
+			fn to_body(&self) -> crate::json::Value {
+				let mut object = match crate::codec::Serialize::to_json(&self.algorithm) {
+					crate::json::Value::Object(object) => object,
+					_ => crate::json::Object::new(),
+				};
+				object.extend(crate::endpoint::object_from(::alloc::vec![
+					("count", crate::codec::Serialize::to_json(&self.count)),
+					("etag", crate::codec::Serialize::to_json(&self.etag)),
+					("version", crate::codec::Serialize::to_json(&self.version)),
+				]));
+				crate::json::Value::Object(object)
+			}
+			fn from_body(body: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+				let input = crate::endpoint::Input::new(&[], &[], Some(body));
+				Ok(Self {
+					algorithm: crate::codec::Deserialize::from_json(body)?,
+					count: input.body("count")?,
+					etag: input.body("etag")?,
+					version: input.body("version")?,
+				})
+			}
+		}
 	}
 }
 
