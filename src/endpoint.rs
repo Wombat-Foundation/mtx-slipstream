@@ -1,8 +1,7 @@
 //! Minimal typed-endpoint machinery: requests, responses and HTTP conversion.
 //!
-//! An endpoint is a request type and a response type described once with
-//! the generated request and response types. They implement [`EndpointRequest`] and
-//! [`EndpointResponse`]; blanket impls then provide the ruma-style
+//! An endpoint is a `Request` type and a `Response` type that implement
+//! [`EndpointRequest`] and [`EndpointResponse`]; blanket impls then provide the ruma-style
 //! `OutgoingRequest`, `IncomingResponse`, `IncomingRequest` and
 //! `OutgoingResponse` traits in both directions.
 
