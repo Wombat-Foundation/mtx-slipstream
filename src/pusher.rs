@@ -373,9 +373,9 @@ pub mod get_pushers {
 				)])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					pushers: _input.body("pushers")?,
+					pushers: input.body("pushers")?,
 				})
 			}
 		}
@@ -390,7 +390,6 @@ pub mod send_event_notification {
 			OwnedRoomId, OwnedUserId, UInt,
 			codec::{DeError, Deserialize, Serialize},
 			events::TimelineEventType,
-			impl_codec_enum, impl_codec_struct,
 			json::{Object, Value},
 			push::{PushFormat, Tweak},
 			sswire::Raw,
@@ -402,7 +401,23 @@ pub mod send_event_notification {
 			High,
 			Low,
 		}
-		impl_codec_enum!(NotificationPriority { High => "high", Low => "low" });
+		impl crate::codec::Serialize for NotificationPriority {
+			fn to_json(&self) -> crate::json::Value {
+				crate::json::Value::String(::alloc::string::String::from(match self {
+					Self::High => "high",
+					Self::Low => "low",
+				}))
+			}
+		}
+		impl crate::codec::Deserialize for NotificationPriority {
+			fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+				match value.as_str() {
+					Some("high") => Ok(Self::High),
+					Some("low") => Ok(Self::Low),
+					_ => Err(crate::codec::DeError::expected(stringify!(NotificationPriority))),
+				}
+			}
+		}
 
 		#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 		pub struct NotificationCounts {
@@ -424,7 +439,27 @@ pub mod send_event_notification {
 				*self == Self::default()
 			}
 		}
-		impl_codec_struct!(NotificationCounts {} default { unread: UInt, missed_calls: UInt });
+		impl crate::codec::Serialize for NotificationCounts {
+			fn to_json(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [
+					(stringify!(unread), crate::endpoint::enc(&self.unread)),
+					(stringify!(missed_calls), crate::endpoint::enc(&self.missed_calls)),
+				])
+			}
+		}
+		impl crate::codec::Deserialize for NotificationCounts {
+			fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				// A struct is a JSON object; anything else is malformed, not "all defaults".
+				if value.as_object().is_none() {
+					return Err(crate::codec::DeError::expected(stringify!(NotificationCounts)));
+				}
+				let input = crate::endpoint::Input::body_only(value);
+				Ok(Self {
+					unread: input.body_or_default(stringify!(unread))?,
+					missed_calls: input.body_or_default(stringify!(missed_calls))?,
+				})
+			}
+		}
 
 		/// The `data` object a gateway receives for a device.
 		#[derive(Debug, Default, Eq, PartialEq)]
@@ -476,10 +511,31 @@ pub mod send_event_notification {
 				}
 			}
 		}
-		impl_codec_struct!(Device { app_id: String, pushkey: String } default {
-			data: PusherData,
-			tweaks: Vec<Tweak>,
-		});
+		impl crate::codec::Serialize for Device {
+			fn to_json(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [
+					(stringify!(app_id), crate::endpoint::enc(&self.app_id)),
+					(stringify!(pushkey), crate::endpoint::enc(&self.pushkey)),
+					(stringify!(data), crate::endpoint::enc(&self.data)),
+					(stringify!(tweaks), crate::endpoint::enc(&self.tweaks)),
+				])
+			}
+		}
+		impl crate::codec::Deserialize for Device {
+			fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				// A struct is a JSON object; anything else is malformed, not "all defaults".
+				if value.as_object().is_none() {
+					return Err(crate::codec::DeError::expected(stringify!(Device)));
+				}
+				let input = crate::endpoint::Input::body_only(value);
+				Ok(Self {
+					app_id: input.body(stringify!(app_id))?,
+					pushkey: input.body(stringify!(pushkey))?,
+					data: input.body_or_default(stringify!(data))?,
+					tweaks: input.body_or_default(stringify!(tweaks))?,
+				})
+			}
+		}
 
 		impl Default for Device {
 			fn default() -> Self {
@@ -612,9 +668,9 @@ pub mod send_event_notification {
 				)])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					rejected: _input.body("rejected")?,
+					rejected: input.body("rejected")?,
 				})
 			}
 		}

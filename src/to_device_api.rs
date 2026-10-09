@@ -73,8 +73,7 @@ pub mod send_event_to_device {
 			fn to_body(&self) -> crate::json::Value {
 				crate::endpoint::body_object(&mut [])
 			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
 				Ok(Self {})
 			}
 		}

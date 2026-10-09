@@ -35,9 +35,26 @@ pub struct IgnoredUserListEventContent {
 	pub ignored_users: BTreeMap<OwnedUserId, IgnoredUser>,
 }
 
-crate::impl_codec_struct!(IgnoredUserListEventContent {
-	ignored_users: BTreeMap<OwnedUserId, IgnoredUser>,
-});
+impl crate::codec::Serialize for IgnoredUserListEventContent {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [(
+			stringify!(ignored_users),
+			crate::endpoint::enc(&self.ignored_users),
+		)])
+	}
+}
+impl crate::codec::Deserialize for IgnoredUserListEventContent {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(IgnoredUserListEventContent)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			ignored_users: input.body(stringify!(ignored_users))?,
+		})
+	}
+}
 
 pub type IgnoredUserListEvent = GlobalAccountDataEvent<IgnoredUserListEventContent>;
 

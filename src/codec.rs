@@ -136,24 +136,91 @@ impl Deserialize for bool {
 	}
 }
 
-macro_rules! int_impl {
-	($($t:ty => $as:ident),*) => {$(
-		impl Serialize for $t {
-			fn to_json(&self) -> Value {
-				Value::parse(&self.to_string()).unwrap_or_default()
-			}
-		}
-		impl Deserialize for $t {
-			fn from_json(value: &Value) -> Result<Self, DeError> {
-				value
-					.$as()
-					.and_then(|n| <$t>::try_from(n).ok())
-					.ok_or_else(|| DeError::expected("integer"))
-			}
-		}
-	)*};
+impl Serialize for i64 {
+	fn to_json(&self) -> Value {
+		Value::parse(&self.to_string()).unwrap_or_default()
+	}
 }
-int_impl!(i64 => as_i64, u64 => as_u64, i32 => as_i64, u32 => as_u64, u16 => as_u64, i16 => as_i64, u8 => as_u64);
+impl Deserialize for i64 {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		value.as_i64().ok_or_else(|| DeError::expected("integer"))
+	}
+}
+impl Serialize for u64 {
+	fn to_json(&self) -> Value {
+		Value::parse(&self.to_string()).unwrap_or_default()
+	}
+}
+impl Deserialize for u64 {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		value.as_u64().ok_or_else(|| DeError::expected("integer"))
+	}
+}
+impl Serialize for i32 {
+	fn to_json(&self) -> Value {
+		Value::parse(&self.to_string()).unwrap_or_default()
+	}
+}
+impl Deserialize for i32 {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		value
+			.as_i64()
+			.and_then(|n| <i32>::try_from(n).ok())
+			.ok_or_else(|| DeError::expected("integer"))
+	}
+}
+impl Serialize for u32 {
+	fn to_json(&self) -> Value {
+		Value::parse(&self.to_string()).unwrap_or_default()
+	}
+}
+impl Deserialize for u32 {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		value
+			.as_u64()
+			.and_then(|n| <u32>::try_from(n).ok())
+			.ok_or_else(|| DeError::expected("integer"))
+	}
+}
+impl Serialize for u16 {
+	fn to_json(&self) -> Value {
+		Value::parse(&self.to_string()).unwrap_or_default()
+	}
+}
+impl Deserialize for u16 {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		value
+			.as_u64()
+			.and_then(|n| <u16>::try_from(n).ok())
+			.ok_or_else(|| DeError::expected("integer"))
+	}
+}
+impl Serialize for i16 {
+	fn to_json(&self) -> Value {
+		Value::parse(&self.to_string()).unwrap_or_default()
+	}
+}
+impl Deserialize for i16 {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		value
+			.as_i64()
+			.and_then(|n| <i16>::try_from(n).ok())
+			.ok_or_else(|| DeError::expected("integer"))
+	}
+}
+impl Serialize for u8 {
+	fn to_json(&self) -> Value {
+		Value::parse(&self.to_string()).unwrap_or_default()
+	}
+}
+impl Deserialize for u8 {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		value
+			.as_u64()
+			.and_then(|n| <u8>::try_from(n).ok())
+			.ok_or_else(|| DeError::expected("integer"))
+	}
+}
 
 impl Serialize for usize {
 	fn to_json(&self) -> Value {
@@ -243,84 +310,6 @@ impl<K: Deserialize + Ord, V: Deserialize> Deserialize for BTreeMap<K, V> {
 			.map(|(k, v)| Ok((K::from_json(&Value::String(k.clone()))?, V::from_json(v)?)))
 			.collect()
 	}
-}
-
-/// Implements the traits for a type that is a transparent string wrapper.
-#[macro_export]
-macro_rules! impl_codec_string {
-	($t:ty, |$s:ident| $from:expr, |$v:ident| $to:expr) => {
-		impl $crate::codec::Serialize for $t {
-			fn to_json(&self) -> $crate::json::Value {
-				let $v = self;
-				$crate::json::Value::String(::alloc::string::String::from($to))
-			}
-		}
-		impl $crate::codec::Deserialize for $t {
-			fn from_json(value: &$crate::json::Value) -> Result<Self, $crate::codec::DeError> {
-				let $s =
-					value.as_str().ok_or_else(|| $crate::codec::DeError::expected("string"))?;
-				$from
-			}
-		}
-	};
-}
-
-/// Implements the traits for a fieldless enum using fixed string names.
-#[macro_export]
-macro_rules! impl_codec_enum {
-	($t:ty { $($variant:ident => $name:literal),* $(,)? }) => {
-		impl $crate::codec::Serialize for $t {
-			fn to_json(&self) -> $crate::json::Value {
-				$crate::json::Value::String(::alloc::string::String::from(match self {
-					$(Self::$variant => $name,)*
-				}))
-			}
-		}
-		impl $crate::codec::Deserialize for $t {
-			fn from_json(
-				value: &$crate::json::Value,
-			) -> Result<Self, $crate::codec::DeError> {
-				match value.as_str() {
-					$(Some($name) => Ok(Self::$variant),)*
-					_ => Err($crate::codec::DeError::expected(stringify!($t))),
-				}
-			}
-		}
-	};
-}
-
-/// Implements the codec traits for a struct of named fields.
-///
-/// Fields in the optional `default { .. }` block may be absent or null when
-/// decoding, and then take their `Default` value.
-#[macro_export]
-macro_rules! impl_codec_struct {
-	(
-		$t:ident { $($field:ident : $ty:ty),* $(,)? }
-		$(default { $($dfield:ident : $dty:ty),* $(,)? })?
-	) => {
-		impl $crate::codec::Serialize for $t {
-			fn to_json(&self) -> $crate::json::Value {
-				$crate::endpoint::body_object(&mut [
-					$((stringify!($field), $crate::endpoint::enc(&self.$field)),)*
-					$($((stringify!($dfield), $crate::endpoint::enc(&self.$dfield)),)*)?
-				])
-			}
-		}
-		impl $crate::codec::Deserialize for $t {
-			fn from_json(value: &$crate::json::Value) -> $crate::endpoint::Parsed<Self> {
-				// A struct is a JSON object; anything else is malformed, not "all defaults".
-				if value.as_object().is_none() {
-					return Err($crate::codec::DeError::expected(stringify!($t)));
-				}
-				let _input = $crate::endpoint::Input::body_only(value);
-				Ok(Self {
-					$($field: _input.body(stringify!($field))?,)*
-					$($($dfield: _input.body_or_default(stringify!($dfield))?,)*)?
-				})
-			}
-		}
-	};
 }
 
 /// Implements the codec traits for a struct with explicit JSON keys.

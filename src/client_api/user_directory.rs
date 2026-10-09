@@ -7,7 +7,29 @@ pub mod search_users {
 			pub display_name: Option<String>,
 			pub avatar_url: Option<OwnedMxcUri>,
 		}
-		crate::impl_codec_struct!(User { user_id: crate::OwnedUserId, display_name: Option<String>, avatar_url: Option<OwnedMxcUri> });
+		impl crate::codec::Serialize for User {
+			fn to_json(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [
+					(stringify!(user_id), crate::endpoint::enc(&self.user_id)),
+					(stringify!(display_name), crate::endpoint::enc(&self.display_name)),
+					(stringify!(avatar_url), crate::endpoint::enc(&self.avatar_url)),
+				])
+			}
+		}
+		impl crate::codec::Deserialize for User {
+			fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				// A struct is a JSON object; anything else is malformed, not "all defaults".
+				if value.as_object().is_none() {
+					return Err(crate::codec::DeError::expected(stringify!(User)));
+				}
+				let input = crate::endpoint::Input::body_only(value);
+				Ok(Self {
+					user_id: input.body(stringify!(user_id))?,
+					display_name: input.body(stringify!(display_name))?,
+					avatar_url: input.body(stringify!(avatar_url))?,
+				})
+			}
+		}
 		pub struct Request {
 			pub search_term: String,
 			pub limit: UInt,
@@ -74,10 +96,10 @@ pub mod search_users {
 				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					results: _input.body("results")?,
-					limited: _input.body("limited")?,
+					results: input.body("results")?,
+					limited: input.body("limited")?,
 				})
 			}
 		}

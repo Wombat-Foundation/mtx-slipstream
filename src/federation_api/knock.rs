@@ -71,9 +71,9 @@ pub mod send_knock {
 				)])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					knock_room_state: _input.body("knock_room_state")?,
+					knock_room_state: input.body("knock_room_state")?,
 				})
 			}
 		}
@@ -151,10 +151,10 @@ pub mod create_knock_event_template {
 				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					room_version: _input.body("room_version")?,
-					event: _input.body("event")?,
+					room_version: input.body("room_version")?,
+					event: input.body("event")?,
 				})
 			}
 		}

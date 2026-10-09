@@ -66,9 +66,9 @@ pub mod upload_keys {
 				)])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					one_time_key_counts: _input.body("one_time_key_counts")?,
+					one_time_key_counts: input.body("one_time_key_counts")?,
 				})
 			}
 		}
@@ -186,13 +186,13 @@ pub mod get_keys {
 				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					device_keys: _input.body("device_keys")?,
-					master_keys: _input.body("master_keys")?,
-					self_signing_keys: _input.body("self_signing_keys")?,
-					user_signing_keys: _input.body("user_signing_keys")?,
-					failures: _input.body("failures")?,
+					device_keys: input.body("device_keys")?,
+					master_keys: input.body("master_keys")?,
+					self_signing_keys: input.body("self_signing_keys")?,
+					user_signing_keys: input.body("user_signing_keys")?,
+					failures: input.body("failures")?,
 				})
 			}
 		}
@@ -274,10 +274,10 @@ pub mod claim_keys {
 				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					one_time_keys: _input.body("one_time_keys")?,
-					failures: _input.body("failures")?,
+					one_time_keys: input.body("one_time_keys")?,
+					failures: input.body("failures")?,
 				})
 			}
 		}
@@ -361,8 +361,7 @@ pub mod upload_signing_keys {
 			fn to_body(&self) -> crate::json::Value {
 				crate::endpoint::body_object(&mut [])
 			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
 				Ok(Self {})
 			}
 		}
@@ -431,9 +430,9 @@ pub mod upload_signatures {
 				)])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					failures: _input.body("failures")?,
+					failures: input.body("failures")?,
 				})
 			}
 		}
@@ -505,10 +504,10 @@ pub mod get_key_changes {
 				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					changed: _input.body("changed")?,
-					left: _input.body("left")?,
+					changed: input.body("changed")?,
+					left: input.body("left")?,
 				})
 			}
 		}

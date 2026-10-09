@@ -11,26 +11,36 @@ use crate::{
 	http_headers::{ContentDisposition, ContentDispositionParseError, ContentDispositionType},
 };
 
-/// Gives each type a fixed `Display` message and an empty `std::error::Error` impl.
-macro_rules! simple_error {
-	($($t:ty => $msg:literal),* $(,)?) => {$(
-		impl core::fmt::Display for $t {
-			fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-				f.write_str($msg)
-			}
-		}
-		impl core::error::Error for $t {}
-	)*};
+impl core::fmt::Display for JsParseIntError {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+		f.write_str("failed to parse integer")
+	}
 }
-pub(crate) use simple_error;
-
-simple_error! {
-	JsParseIntError => "failed to parse integer",
-	JsTryFromIntError => "integer out of range",
-	MxcUriError => "invalid MXC URI",
-	IdParseError => "invalid identifier",
-	ContentDispositionParseError => "invalid Content-Disposition header",
+impl core::error::Error for JsParseIntError {}
+impl core::fmt::Display for JsTryFromIntError {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+		f.write_str("integer out of range")
+	}
 }
+impl core::error::Error for JsTryFromIntError {}
+impl core::fmt::Display for MxcUriError {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+		f.write_str("invalid MXC URI")
+	}
+}
+impl core::error::Error for MxcUriError {}
+impl core::fmt::Display for IdParseError {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+		f.write_str("invalid identifier")
+	}
+}
+impl core::error::Error for IdParseError {}
+impl core::fmt::Display for ContentDispositionParseError {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+		f.write_str("invalid Content-Disposition header")
+	}
+}
+impl core::error::Error for ContentDispositionParseError {}
 
 impl fmt::Display for ErrorKind {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -76,33 +86,156 @@ impl fmt::Display for MembershipState {
 	}
 }
 
-macro_rules! str_eq {
-	($($t:ty),*) => {$(
-		impl PartialEq<str> for $t {
-			fn eq(&self, other: &str) -> bool { self.as_str() == other }
-		}
-		impl PartialEq<&str> for $t {
-			fn eq(&self, other: &&str) -> bool { self.as_str() == *other }
-		}
-		impl PartialEq<$t> for &str {
-			fn eq(&self, other: &$t) -> bool { *self == other.as_str() }
-		}
-		impl PartialEq<$t> for str {
-			fn eq(&self, other: &$t) -> bool { self == other.as_str() }
-		}
-		impl PartialEq<String> for $t {
-			fn eq(&self, other: &String) -> bool { self.as_str() == other }
-		}
-	)*};
+impl PartialEq<str> for OwnedEventId {
+	fn eq(&self, other: &str) -> bool {
+		self.as_str() == other
+	}
 }
-str_eq!(
-	OwnedEventId,
-	OwnedRoomId,
-	OwnedRoomAliasId,
-	OwnedServerName,
-	OwnedUserId,
-	OwnedRoomOrAliasId
-);
+impl PartialEq<&str> for OwnedEventId {
+	fn eq(&self, other: &&str) -> bool {
+		self.as_str() == *other
+	}
+}
+impl PartialEq<OwnedEventId> for &str {
+	fn eq(&self, other: &OwnedEventId) -> bool {
+		*self == other.as_str()
+	}
+}
+impl PartialEq<OwnedEventId> for str {
+	fn eq(&self, other: &OwnedEventId) -> bool {
+		self == other.as_str()
+	}
+}
+impl PartialEq<String> for OwnedEventId {
+	fn eq(&self, other: &String) -> bool {
+		self.as_str() == other
+	}
+}
+impl PartialEq<str> for OwnedRoomId {
+	fn eq(&self, other: &str) -> bool {
+		self.as_str() == other
+	}
+}
+impl PartialEq<&str> for OwnedRoomId {
+	fn eq(&self, other: &&str) -> bool {
+		self.as_str() == *other
+	}
+}
+impl PartialEq<OwnedRoomId> for &str {
+	fn eq(&self, other: &OwnedRoomId) -> bool {
+		*self == other.as_str()
+	}
+}
+impl PartialEq<OwnedRoomId> for str {
+	fn eq(&self, other: &OwnedRoomId) -> bool {
+		self == other.as_str()
+	}
+}
+impl PartialEq<String> for OwnedRoomId {
+	fn eq(&self, other: &String) -> bool {
+		self.as_str() == other
+	}
+}
+impl PartialEq<str> for OwnedRoomAliasId {
+	fn eq(&self, other: &str) -> bool {
+		self.as_str() == other
+	}
+}
+impl PartialEq<&str> for OwnedRoomAliasId {
+	fn eq(&self, other: &&str) -> bool {
+		self.as_str() == *other
+	}
+}
+impl PartialEq<OwnedRoomAliasId> for &str {
+	fn eq(&self, other: &OwnedRoomAliasId) -> bool {
+		*self == other.as_str()
+	}
+}
+impl PartialEq<OwnedRoomAliasId> for str {
+	fn eq(&self, other: &OwnedRoomAliasId) -> bool {
+		self == other.as_str()
+	}
+}
+impl PartialEq<String> for OwnedRoomAliasId {
+	fn eq(&self, other: &String) -> bool {
+		self.as_str() == other
+	}
+}
+impl PartialEq<str> for OwnedServerName {
+	fn eq(&self, other: &str) -> bool {
+		self.as_str() == other
+	}
+}
+impl PartialEq<&str> for OwnedServerName {
+	fn eq(&self, other: &&str) -> bool {
+		self.as_str() == *other
+	}
+}
+impl PartialEq<OwnedServerName> for &str {
+	fn eq(&self, other: &OwnedServerName) -> bool {
+		*self == other.as_str()
+	}
+}
+impl PartialEq<OwnedServerName> for str {
+	fn eq(&self, other: &OwnedServerName) -> bool {
+		self == other.as_str()
+	}
+}
+impl PartialEq<String> for OwnedServerName {
+	fn eq(&self, other: &String) -> bool {
+		self.as_str() == other
+	}
+}
+impl PartialEq<str> for OwnedUserId {
+	fn eq(&self, other: &str) -> bool {
+		self.as_str() == other
+	}
+}
+impl PartialEq<&str> for OwnedUserId {
+	fn eq(&self, other: &&str) -> bool {
+		self.as_str() == *other
+	}
+}
+impl PartialEq<OwnedUserId> for &str {
+	fn eq(&self, other: &OwnedUserId) -> bool {
+		*self == other.as_str()
+	}
+}
+impl PartialEq<OwnedUserId> for str {
+	fn eq(&self, other: &OwnedUserId) -> bool {
+		self == other.as_str()
+	}
+}
+impl PartialEq<String> for OwnedUserId {
+	fn eq(&self, other: &String) -> bool {
+		self.as_str() == other
+	}
+}
+impl PartialEq<str> for OwnedRoomOrAliasId {
+	fn eq(&self, other: &str) -> bool {
+		self.as_str() == other
+	}
+}
+impl PartialEq<&str> for OwnedRoomOrAliasId {
+	fn eq(&self, other: &&str) -> bool {
+		self.as_str() == *other
+	}
+}
+impl PartialEq<OwnedRoomOrAliasId> for &str {
+	fn eq(&self, other: &OwnedRoomOrAliasId) -> bool {
+		*self == other.as_str()
+	}
+}
+impl PartialEq<OwnedRoomOrAliasId> for str {
+	fn eq(&self, other: &OwnedRoomOrAliasId) -> bool {
+		self == other.as_str()
+	}
+}
+impl PartialEq<String> for OwnedRoomOrAliasId {
+	fn eq(&self, other: &String) -> bool {
+		self.as_str() == other
+	}
+}
 
 impl OwnedEventId {
 	#[must_use]

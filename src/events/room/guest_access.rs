@@ -4,7 +4,23 @@ pub enum GuestAccess {
 	Forbidden,
 	CanJoin,
 }
-crate::impl_codec_enum!(GuestAccess { Forbidden => "forbidden", CanJoin => "can_join" });
+impl crate::codec::Serialize for GuestAccess {
+	fn to_json(&self) -> crate::json::Value {
+		crate::json::Value::String(::alloc::string::String::from(match self {
+			Self::Forbidden => "forbidden",
+			Self::CanJoin => "can_join",
+		}))
+	}
+}
+impl crate::codec::Deserialize for GuestAccess {
+	fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+		match value.as_str() {
+			Some("forbidden") => Ok(Self::Forbidden),
+			Some("can_join") => Ok(Self::CanJoin),
+			_ => Err(crate::codec::DeError::expected(stringify!(GuestAccess))),
+		}
+	}
+}
 #[derive(Debug, Default)]
 pub struct RoomGuestAccessEventContent {
 	pub guest_access: GuestAccess,

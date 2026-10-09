@@ -30,17 +30,26 @@ impl Deserialize for MilliSecondsSinceUnixEpoch {
 	}
 }
 
-macro_rules! transparent_value {
-	($($t:ty),*) => {$(
-		impl Serialize for $t {
-			fn to_json(&self) -> Value { self.0.clone() }
-		}
-		impl Deserialize for $t {
-			fn from_json(value: &Value) -> Result<Self, DeError> { Ok(Self(value.clone())) }
-		}
-	)*};
+impl Serialize for RtcFocusInfo {
+	fn to_json(&self) -> Value {
+		self.0.clone()
+	}
 }
-transparent_value!(RtcFocusInfo, ContactRole);
+impl Deserialize for RtcFocusInfo {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		Ok(Self(value.clone()))
+	}
+}
+impl Serialize for ContactRole {
+	fn to_json(&self) -> Value {
+		self.0.clone()
+	}
+}
+impl Deserialize for ContactRole {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		Ok(Self(value.clone()))
+	}
+}
 
 impl From<String> for ContactRole {
 	fn from(value: String) -> Self {

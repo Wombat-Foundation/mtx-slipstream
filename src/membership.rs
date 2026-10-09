@@ -22,12 +22,31 @@ pub struct ThirdPartySigned {
 	pub signatures: Signatures,
 }
 
-crate::impl_codec_struct!(ThirdPartySigned {
-	sender: OwnedUserId,
-	mxid: OwnedUserId,
-	token: String,
-	signatures: Signatures,
-});
+impl crate::codec::Serialize for ThirdPartySigned {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			(stringify!(sender), crate::endpoint::enc(&self.sender)),
+			(stringify!(mxid), crate::endpoint::enc(&self.mxid)),
+			(stringify!(token), crate::endpoint::enc(&self.token)),
+			(stringify!(signatures), crate::endpoint::enc(&self.signatures)),
+		])
+	}
+}
+impl crate::codec::Deserialize for ThirdPartySigned {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(ThirdPartySigned)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			sender: input.body(stringify!(sender))?,
+			mxid: input.body(stringify!(mxid))?,
+			token: input.body(stringify!(token))?,
+			signatures: input.body(stringify!(signatures))?,
+		})
+	}
+}
 
 /// Who an invitation is for.
 #[derive(Debug)]
@@ -48,13 +67,29 @@ pub enum MembershipEventFilter {
 	Knock,
 }
 
-crate::impl_codec_enum!(MembershipEventFilter {
-	Join => "join",
-	Invite => "invite",
-	Leave => "leave",
-	Ban => "ban",
-	Knock => "knock",
-});
+impl crate::codec::Serialize for MembershipEventFilter {
+	fn to_json(&self) -> crate::json::Value {
+		crate::json::Value::String(::alloc::string::String::from(match self {
+			Self::Join => "join",
+			Self::Invite => "invite",
+			Self::Leave => "leave",
+			Self::Ban => "ban",
+			Self::Knock => "knock",
+		}))
+	}
+}
+impl crate::codec::Deserialize for MembershipEventFilter {
+	fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+		match value.as_str() {
+			Some("join") => Ok(Self::Join),
+			Some("invite") => Ok(Self::Invite),
+			Some("leave") => Ok(Self::Leave),
+			Some("ban") => Ok(Self::Ban),
+			Some("knock") => Ok(Self::Knock),
+			_ => Err(crate::codec::DeError::expected(stringify!(MembershipEventFilter))),
+		}
+	}
+}
 
 /// A joined member's profile.
 #[derive(Debug, Default)]
@@ -156,8 +191,7 @@ pub mod ban_user {
 			fn to_body(&self) -> crate::json::Value {
 				crate::endpoint::body_object(&mut [])
 			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
 				Ok(Self {})
 			}
 		}
@@ -237,8 +271,7 @@ pub mod kick_user {
 			fn to_body(&self) -> crate::json::Value {
 				crate::endpoint::body_object(&mut [])
 			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
 				Ok(Self {})
 			}
 		}
@@ -320,8 +353,7 @@ pub mod unban_user {
 			fn to_body(&self) -> crate::json::Value {
 				crate::endpoint::body_object(&mut [])
 			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
 				Ok(Self {})
 			}
 		}
@@ -394,8 +426,7 @@ pub mod forget_room {
 			fn to_body(&self) -> crate::json::Value {
 				crate::endpoint::body_object(&mut [])
 			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
 				Ok(Self {})
 			}
 		}
@@ -472,8 +503,7 @@ pub mod leave_room {
 			fn to_body(&self) -> crate::json::Value {
 				crate::endpoint::body_object(&mut [])
 			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
 				Ok(Self {})
 			}
 		}
@@ -549,9 +579,9 @@ pub mod joined_rooms {
 				)])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					joined_rooms: _input.body("joined_rooms")?,
+					joined_rooms: input.body("joined_rooms")?,
 				})
 			}
 		}
@@ -624,9 +654,9 @@ pub mod joined_members {
 				)])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					joined: _input.body("joined")?,
+					joined: input.body("joined")?,
 				})
 			}
 		}
@@ -705,9 +735,9 @@ pub mod get_member_events {
 				crate::endpoint::body_object(&mut [("chunk", crate::endpoint::enc(&self.chunk))])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					chunk: _input.body("chunk")?,
+					chunk: input.body("chunk")?,
 				})
 			}
 		}
@@ -783,9 +813,9 @@ pub mod join_room_by_id {
 				)])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					room_id: _input.body("room_id")?,
+					room_id: input.body("room_id")?,
 				})
 			}
 		}

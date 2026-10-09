@@ -10,7 +10,6 @@ pub mod search_events {
 			endpoint::{Input, object_from},
 			federation_api::RawPdu,
 			filter::RoomEventFilter,
-			impl_codec_struct,
 			json::Value,
 			sswire::Raw,
 		};
@@ -68,18 +67,57 @@ pub mod search_events {
 			pub include_state: Option<bool>,
 		}
 
-		impl_codec_struct!(Criteria { search_term: String } default {
-			event_context: EventContext,
-			filter: RoomEventFilter,
-			include_state: Option<bool>,
-		});
+		impl crate::codec::Serialize for Criteria {
+			fn to_json(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [
+					(stringify!(search_term), crate::endpoint::enc(&self.search_term)),
+					(stringify!(event_context), crate::endpoint::enc(&self.event_context)),
+					(stringify!(filter), crate::endpoint::enc(&self.filter)),
+					(stringify!(include_state), crate::endpoint::enc(&self.include_state)),
+				])
+			}
+		}
+		impl crate::codec::Deserialize for Criteria {
+			fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				// A struct is a JSON object; anything else is malformed, not "all defaults".
+				if value.as_object().is_none() {
+					return Err(crate::codec::DeError::expected(stringify!(Criteria)));
+				}
+				let input = crate::endpoint::Input::body_only(value);
+				Ok(Self {
+					search_term: input.body(stringify!(search_term))?,
+					event_context: input.body_or_default(stringify!(event_context))?,
+					filter: input.body_or_default(stringify!(filter))?,
+					include_state: input.body_or_default(stringify!(include_state))?,
+				})
+			}
+		}
 
 		#[derive(Debug, Default)]
 		pub struct Categories {
 			pub room_events: Option<Criteria>,
 		}
 
-		impl_codec_struct!(Categories {} default { room_events: Option<Criteria> });
+		impl crate::codec::Serialize for Categories {
+			fn to_json(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [(
+					stringify!(room_events),
+					crate::endpoint::enc(&self.room_events),
+				)])
+			}
+		}
+		impl crate::codec::Deserialize for Categories {
+			fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				// A struct is a JSON object; anything else is malformed, not "all defaults".
+				if value.as_object().is_none() {
+					return Err(crate::codec::DeError::expected(stringify!(Categories)));
+				}
+				let input = crate::endpoint::Input::body_only(value);
+				Ok(Self {
+					room_events: input.body_or_default(stringify!(room_events))?,
+				})
+			}
+		}
 
 		/// A user's profile, as returned alongside context events.
 		#[derive(Debug, Default)]
@@ -88,10 +126,27 @@ pub mod search_events {
 			pub avatar_url: Option<OwnedMxcUri>,
 		}
 
-		impl_codec_struct!(UserProfile {} default {
-			displayname: Option<String>,
-			avatar_url: Option<OwnedMxcUri>,
-		});
+		impl crate::codec::Serialize for UserProfile {
+			fn to_json(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [
+					(stringify!(displayname), crate::endpoint::enc(&self.displayname)),
+					(stringify!(avatar_url), crate::endpoint::enc(&self.avatar_url)),
+				])
+			}
+		}
+		impl crate::codec::Deserialize for UserProfile {
+			fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				// A struct is a JSON object; anything else is malformed, not "all defaults".
+				if value.as_object().is_none() {
+					return Err(crate::codec::DeError::expected(stringify!(UserProfile)));
+				}
+				let input = crate::endpoint::Input::body_only(value);
+				Ok(Self {
+					displayname: input.body_or_default(stringify!(displayname))?,
+					avatar_url: input.body_or_default(stringify!(avatar_url))?,
+				})
+			}
+		}
 
 		/// Events around a hit.
 		#[derive(Debug, Default)]
@@ -103,13 +158,33 @@ pub mod search_events {
 			pub start: Option<String>,
 		}
 
-		impl_codec_struct!(EventContextResult {} default {
-			end: Option<String>,
-			events_after: Vec<RawPdu>,
-			events_before: Vec<RawPdu>,
-			profile_info: BTreeMap<OwnedUserId, UserProfile>,
-			start: Option<String>,
-		});
+		impl crate::codec::Serialize for EventContextResult {
+			fn to_json(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [
+					(stringify!(end), crate::endpoint::enc(&self.end)),
+					(stringify!(events_after), crate::endpoint::enc(&self.events_after)),
+					(stringify!(events_before), crate::endpoint::enc(&self.events_before)),
+					(stringify!(profile_info), crate::endpoint::enc(&self.profile_info)),
+					(stringify!(start), crate::endpoint::enc(&self.start)),
+				])
+			}
+		}
+		impl crate::codec::Deserialize for EventContextResult {
+			fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				// A struct is a JSON object; anything else is malformed, not "all defaults".
+				if value.as_object().is_none() {
+					return Err(crate::codec::DeError::expected(stringify!(EventContextResult)));
+				}
+				let input = crate::endpoint::Input::body_only(value);
+				Ok(Self {
+					end: input.body_or_default(stringify!(end))?,
+					events_after: input.body_or_default(stringify!(events_after))?,
+					events_before: input.body_or_default(stringify!(events_before))?,
+					profile_info: input.body_or_default(stringify!(profile_info))?,
+					start: input.body_or_default(stringify!(start))?,
+				})
+			}
+		}
 
 		#[derive(Debug, Default)]
 		pub struct SearchResult {
@@ -118,11 +193,29 @@ pub mod search_events {
 			pub result: Option<RawPdu>,
 		}
 
-		impl_codec_struct!(SearchResult {} default {
-			context: EventContextResult,
-			rank: Option<f64>,
-			result: Option<RawPdu>,
-		});
+		impl crate::codec::Serialize for SearchResult {
+			fn to_json(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [
+					(stringify!(context), crate::endpoint::enc(&self.context)),
+					(stringify!(rank), crate::endpoint::enc(&self.rank)),
+					(stringify!(result), crate::endpoint::enc(&self.result)),
+				])
+			}
+		}
+		impl crate::codec::Deserialize for SearchResult {
+			fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				// A struct is a JSON object; anything else is malformed, not "all defaults".
+				if value.as_object().is_none() {
+					return Err(crate::codec::DeError::expected(stringify!(SearchResult)));
+				}
+				let input = crate::endpoint::Input::body_only(value);
+				Ok(Self {
+					context: input.body_or_default(stringify!(context))?,
+					rank: input.body_or_default(stringify!(rank))?,
+					result: input.body_or_default(stringify!(result))?,
+				})
+			}
+		}
 
 		/// The results for the `room_events` category.
 		#[derive(Debug, Default)]
@@ -136,21 +229,61 @@ pub mod search_events {
 			pub state: BTreeMap<OwnedRoomId, Vec<Raw<crate::events::AnyStateEvent>>>,
 		}
 
-		impl_codec_struct!(ResultRoomEvents {} default {
-			count: Option<UInt>,
-			groups: BTreeMap<String, Value>,
-			highlights: Vec<String>,
-			next_batch: Option<String>,
-			results: Vec<SearchResult>,
-			state: BTreeMap<OwnedRoomId, Vec<Raw<crate::events::AnyStateEvent>>>,
-		});
+		impl crate::codec::Serialize for ResultRoomEvents {
+			fn to_json(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [
+					(stringify!(count), crate::endpoint::enc(&self.count)),
+					(stringify!(groups), crate::endpoint::enc(&self.groups)),
+					(stringify!(highlights), crate::endpoint::enc(&self.highlights)),
+					(stringify!(next_batch), crate::endpoint::enc(&self.next_batch)),
+					(stringify!(results), crate::endpoint::enc(&self.results)),
+					(stringify!(state), crate::endpoint::enc(&self.state)),
+				])
+			}
+		}
+		impl crate::codec::Deserialize for ResultRoomEvents {
+			fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				// A struct is a JSON object; anything else is malformed, not "all defaults".
+				if value.as_object().is_none() {
+					return Err(crate::codec::DeError::expected(stringify!(ResultRoomEvents)));
+				}
+				let input = crate::endpoint::Input::body_only(value);
+				Ok(Self {
+					count: input.body_or_default(stringify!(count))?,
+					groups: input.body_or_default(stringify!(groups))?,
+					highlights: input.body_or_default(stringify!(highlights))?,
+					next_batch: input.body_or_default(stringify!(next_batch))?,
+					results: input.body_or_default(stringify!(results))?,
+					state: input.body_or_default(stringify!(state))?,
+				})
+			}
+		}
 
 		#[derive(Debug, Default)]
 		pub struct ResultCategories {
 			pub room_events: ResultRoomEvents,
 		}
 
-		impl_codec_struct!(ResultCategories {} default { room_events: ResultRoomEvents });
+		impl crate::codec::Serialize for ResultCategories {
+			fn to_json(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [(
+					stringify!(room_events),
+					crate::endpoint::enc(&self.room_events),
+				)])
+			}
+		}
+		impl crate::codec::Deserialize for ResultCategories {
+			fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				// A struct is a JSON object; anything else is malformed, not "all defaults".
+				if value.as_object().is_none() {
+					return Err(crate::codec::DeError::expected(stringify!(ResultCategories)));
+				}
+				let input = crate::endpoint::Input::body_only(value);
+				Ok(Self {
+					room_events: input.body_or_default(stringify!(room_events))?,
+				})
+			}
+		}
 
 		pub struct Request {
 			pub next_batch: Option<String>,
@@ -212,9 +345,9 @@ pub mod search_events {
 				)])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					search_categories: _input.body("search_categories")?,
+					search_categories: input.body("search_categories")?,
 				})
 			}
 		}

@@ -22,7 +22,21 @@ use crate::{
 pub enum RuleScope {
 	Global,
 }
-crate::impl_codec_enum!(RuleScope { Global => "global" });
+impl crate::codec::Serialize for RuleScope {
+	fn to_json(&self) -> crate::json::Value {
+		crate::json::Value::String(::alloc::string::String::from(match self {
+			Self::Global => "global",
+		}))
+	}
+}
+impl crate::codec::Deserialize for RuleScope {
+	fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+		match value.as_str() {
+			Some("global") => Ok(Self::Global),
+			_ => Err(crate::codec::DeError::expected(stringify!(RuleScope))),
+		}
+	}
+}
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum RuleKind {
@@ -33,14 +47,31 @@ pub enum RuleKind {
 	Room,
 	Content,
 }
-crate::impl_codec_enum!(RuleKind {
-	Override => "override",
-	Underride => "underride",
-	PostContent => "postcontent",
-	Sender => "sender",
-	Room => "room",
-	Content => "content",
-});
+impl crate::codec::Serialize for RuleKind {
+	fn to_json(&self) -> crate::json::Value {
+		crate::json::Value::String(::alloc::string::String::from(match self {
+			Self::Override => "override",
+			Self::Underride => "underride",
+			Self::PostContent => "postcontent",
+			Self::Sender => "sender",
+			Self::Room => "room",
+			Self::Content => "content",
+		}))
+	}
+}
+impl crate::codec::Deserialize for RuleKind {
+	fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+		match value.as_str() {
+			Some("override") => Ok(Self::Override),
+			Some("underride") => Ok(Self::Underride),
+			Some("postcontent") => Ok(Self::PostContent),
+			Some("sender") => Ok(Self::Sender),
+			Some("room") => Ok(Self::Room),
+			Some("content") => Ok(Self::Content),
+			_ => Err(crate::codec::DeError::expected(stringify!(RuleKind))),
+		}
+	}
+}
 
 impl RuleKind {
 	#[must_use]
@@ -56,55 +87,116 @@ impl RuleKind {
 	}
 }
 
-macro_rules! predefined_ids {
-	($name:ident { $($variant:ident => $id:literal),* $(,)? }) => {
-		#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-		pub enum $name { $($variant),* }
-		impl $name {
-			#[must_use]
-			pub fn as_str(self) -> &'static str {
-				match self { $(Self::$variant => $id),* }
-			}
-		}
-		impl AsRef<str> for $name {
-			fn as_ref(&self) -> &str { self.as_str() }
-		}
-	};
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PredefinedOverrideRuleId {
+	Master,
+	SuppressNotices,
+	InviteForMe,
+	MemberEvent,
+	IsUserMention,
+	ContainsDisplayName,
+	IsRoomMention,
+	RoomNotif,
+	Tombstone,
+	Reaction,
+	ServerAcl,
+	SuppressEdits,
+	PollResponse,
 }
-
-predefined_ids!(PredefinedOverrideRuleId {
-	Master => ".m.rule.master",
-	SuppressNotices => ".m.rule.suppress_notices",
-	InviteForMe => ".m.rule.invite_for_me",
-	MemberEvent => ".m.rule.member_event",
-	IsUserMention => ".m.rule.is_user_mention",
-	ContainsDisplayName => ".m.rule.contains_display_name",
-	IsRoomMention => ".m.rule.is_room_mention",
-	RoomNotif => ".m.rule.roomnotif",
-	Tombstone => ".m.rule.tombstone",
-	Reaction => ".m.rule.reaction",
-	ServerAcl => ".m.rule.room.server_acl",
-	SuppressEdits => ".m.rule.suppress_edits",
-	PollResponse => ".org.matrix.msc3930.rule.poll_response",
-});
-predefined_ids!(PredefinedContentRuleId {
-	ContainsUserName => ".m.rule.contains_user_name",
-});
-predefined_ids!(PredefinedUnderrideRuleId {
-	Call => ".m.rule.call",
-	EncryptedRoomOneToOne => ".m.rule.encrypted_room_one_to_one",
-	RoomOneToOne => ".m.rule.room_one_to_one",
-	Message => ".m.rule.message",
-	Encrypted => ".m.rule.encrypted",
-	PollStartOneToOne => ".org.matrix.msc3930.rule.poll_start_one_to_one",
-	PollStart => ".org.matrix.msc3930.rule.poll_start",
-	PollEndOneToOne => ".org.matrix.msc3930.rule.poll_end_one_to_one",
-	PollEnd => ".org.matrix.msc3930.rule.poll_end",
-});
-predefined_ids!(PredefinedPostContentRuleId {
-	UnsubscribedThread => ".io.element.msc4306.rule.unsubscribed_thread",
-	SubscribedThread => ".io.element.msc4306.rule.subscribed_thread",
-});
+impl PredefinedOverrideRuleId {
+	#[must_use]
+	pub fn as_str(self) -> &'static str {
+		match self {
+			Self::Master => ".m.rule.master",
+			Self::SuppressNotices => ".m.rule.suppress_notices",
+			Self::InviteForMe => ".m.rule.invite_for_me",
+			Self::MemberEvent => ".m.rule.member_event",
+			Self::IsUserMention => ".m.rule.is_user_mention",
+			Self::ContainsDisplayName => ".m.rule.contains_display_name",
+			Self::IsRoomMention => ".m.rule.is_room_mention",
+			Self::RoomNotif => ".m.rule.roomnotif",
+			Self::Tombstone => ".m.rule.tombstone",
+			Self::Reaction => ".m.rule.reaction",
+			Self::ServerAcl => ".m.rule.room.server_acl",
+			Self::SuppressEdits => ".m.rule.suppress_edits",
+			Self::PollResponse => ".org.matrix.msc3930.rule.poll_response",
+		}
+	}
+}
+impl AsRef<str> for PredefinedOverrideRuleId {
+	fn as_ref(&self) -> &str {
+		self.as_str()
+	}
+}
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PredefinedContentRuleId {
+	ContainsUserName,
+}
+impl PredefinedContentRuleId {
+	#[must_use]
+	pub fn as_str(self) -> &'static str {
+		match self {
+			Self::ContainsUserName => ".m.rule.contains_user_name",
+		}
+	}
+}
+impl AsRef<str> for PredefinedContentRuleId {
+	fn as_ref(&self) -> &str {
+		self.as_str()
+	}
+}
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PredefinedUnderrideRuleId {
+	Call,
+	EncryptedRoomOneToOne,
+	RoomOneToOne,
+	Message,
+	Encrypted,
+	PollStartOneToOne,
+	PollStart,
+	PollEndOneToOne,
+	PollEnd,
+}
+impl PredefinedUnderrideRuleId {
+	#[must_use]
+	pub fn as_str(self) -> &'static str {
+		match self {
+			Self::Call => ".m.rule.call",
+			Self::EncryptedRoomOneToOne => ".m.rule.encrypted_room_one_to_one",
+			Self::RoomOneToOne => ".m.rule.room_one_to_one",
+			Self::Message => ".m.rule.message",
+			Self::Encrypted => ".m.rule.encrypted",
+			Self::PollStartOneToOne => ".org.matrix.msc3930.rule.poll_start_one_to_one",
+			Self::PollStart => ".org.matrix.msc3930.rule.poll_start",
+			Self::PollEndOneToOne => ".org.matrix.msc3930.rule.poll_end_one_to_one",
+			Self::PollEnd => ".org.matrix.msc3930.rule.poll_end",
+		}
+	}
+}
+impl AsRef<str> for PredefinedUnderrideRuleId {
+	fn as_ref(&self) -> &str {
+		self.as_str()
+	}
+}
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PredefinedPostContentRuleId {
+	UnsubscribedThread,
+	SubscribedThread,
+}
+impl PredefinedPostContentRuleId {
+	#[must_use]
+	pub fn as_str(self) -> &'static str {
+		match self {
+			Self::UnsubscribedThread => ".io.element.msc4306.rule.unsubscribed_thread",
+			Self::SubscribedThread => ".io.element.msc4306.rule.subscribed_thread",
+		}
+	}
+}
+impl AsRef<str> for PredefinedPostContentRuleId {
+	fn as_ref(&self) -> &str {
+		self.as_str()
+	}
+}
 
 /// A condition that must hold for a rule to apply.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -581,11 +673,24 @@ pub enum RemovePushRuleError {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct RuleNotFoundError;
 
-crate::compat::simple_error! {
-	InsertPushRuleError => "invalid push rule insertion",
-	RemovePushRuleError => "cannot remove push rule",
-	RuleNotFoundError => "push rule not found",
+impl core::fmt::Display for InsertPushRuleError {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+		f.write_str("invalid push rule insertion")
+	}
 }
+impl core::error::Error for InsertPushRuleError {}
+impl core::fmt::Display for RemovePushRuleError {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+		f.write_str("cannot remove push rule")
+	}
+}
+impl core::error::Error for RemovePushRuleError {}
+impl core::fmt::Display for RuleNotFoundError {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+		f.write_str("push rule not found")
+	}
+}
+impl core::error::Error for RuleNotFoundError {}
 
 /// A user's push rules, ordered by priority within each kind.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -1606,9 +1711,9 @@ pub mod get_pushrules_all {
 				)])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					global: _input.body("global")?,
+					global: input.body("global")?,
 				})
 			}
 		}
@@ -1821,8 +1926,7 @@ pub mod delete_pushrule {
 			fn to_body(&self) -> crate::json::Value {
 				crate::endpoint::body_object(&mut [])
 			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
 				Ok(Self {})
 			}
 		}
@@ -1896,9 +2000,9 @@ pub mod get_pushrule_actions {
 				)])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					actions: _input.body("actions")?,
+					actions: input.body("actions")?,
 				})
 			}
 		}
@@ -1968,8 +2072,7 @@ pub mod set_pushrule_actions {
 			fn to_body(&self) -> crate::json::Value {
 				crate::endpoint::body_object(&mut [])
 			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
 				Ok(Self {})
 			}
 		}
@@ -2043,9 +2146,9 @@ pub mod get_pushrule_enabled {
 				)])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					enabled: _input.body("enabled")?,
+					enabled: input.body("enabled")?,
 				})
 			}
 		}
@@ -2115,8 +2218,7 @@ pub mod set_pushrule_enabled {
 			fn to_body(&self) -> crate::json::Value {
 				crate::endpoint::body_object(&mut [])
 			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
 				Ok(Self {})
 			}
 		}

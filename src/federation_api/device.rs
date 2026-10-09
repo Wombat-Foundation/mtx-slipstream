@@ -79,13 +79,13 @@ pub mod get_devices {
 				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					user_id: _input.body("user_id")?,
-					stream_id: _input.body("stream_id")?,
-					devices: _input.body("devices")?,
-					master_key: _input.body("master_key")?,
-					self_signing_key: _input.body("self_signing_key")?,
+					user_id: input.body("user_id")?,
+					stream_id: input.body("stream_id")?,
+					devices: input.body("devices")?,
+					master_key: input.body("master_key")?,
+					self_signing_key: input.body("self_signing_key")?,
 				})
 			}
 		}
@@ -97,11 +97,32 @@ pub mod get_devices {
 			pub device_display_name: Option<String>,
 		}
 
-		crate::impl_codec_struct!(UserDevice {
-			device_id: OwnedDeviceId,
-			keys: Raw<DeviceKeys>,
-			device_display_name: Option<String>,
-		});
+		impl crate::codec::Serialize for UserDevice {
+			fn to_json(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [
+					(stringify!(device_id), crate::endpoint::enc(&self.device_id)),
+					(stringify!(keys), crate::endpoint::enc(&self.keys)),
+					(
+						stringify!(device_display_name),
+						crate::endpoint::enc(&self.device_display_name),
+					),
+				])
+			}
+		}
+		impl crate::codec::Deserialize for UserDevice {
+			fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				// A struct is a JSON object; anything else is malformed, not "all defaults".
+				if value.as_object().is_none() {
+					return Err(crate::codec::DeError::expected(stringify!(UserDevice)));
+				}
+				let input = crate::endpoint::Input::body_only(value);
+				Ok(Self {
+					device_id: input.body(stringify!(device_id))?,
+					keys: input.body(stringify!(keys))?,
+					device_display_name: input.body(stringify!(device_display_name))?,
+				})
+			}
+		}
 	}
 }
 

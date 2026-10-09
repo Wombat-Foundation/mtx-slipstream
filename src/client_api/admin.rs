@@ -58,9 +58,9 @@ pub mod get_suspended {
 				)])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					suspended: _input.body("suspended")?,
+					suspended: input.body("suspended")?,
 				})
 			}
 		}
@@ -136,9 +136,9 @@ pub mod set_suspended {
 				)])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					suspended: _input.body("suspended")?,
+					suspended: input.body("suspended")?,
 				})
 			}
 		}

@@ -135,100 +135,285 @@ impl Deserialize for EventEncryptionAlgorithm {
 	}
 }
 
-macro_rules! summary {
-	(
-		$(#[$doc:meta])* $summary:ident, $init:ident,
-		$($extra:ident : $extra_ty:ty),*
-	) => {
-		$(#[$doc])*
-		#[derive(Clone, Debug)]
-		pub struct $summary {
-			pub canonical_alias: Option<OwnedRoomAliasId>,
-			pub name: Option<String>,
-			pub num_joined_members: UInt,
-			pub room_id: OwnedRoomId,
-			pub topic: Option<String>,
-			pub world_readable: bool,
-			pub guest_can_join: bool,
-			pub avatar_url: Option<OwnedMxcUri>,
-			pub join_rule: SpaceRoomJoinRule,
-			pub room_type: Option<RoomType>,
-			pub allowed_room_ids: Vec<OwnedRoomId>,
-			pub encryption: Option<EventEncryptionAlgorithm>,
-			pub room_version: Option<RoomVersionId>,
-			$(pub $extra: $extra_ty,)*
+/// A room in the hierarchy, with its child events.
+#[derive(Clone, Debug)]
+pub struct SpaceHierarchyParentSummary {
+	pub canonical_alias: Option<OwnedRoomAliasId>,
+	pub name: Option<String>,
+	pub num_joined_members: UInt,
+	pub room_id: OwnedRoomId,
+	pub topic: Option<String>,
+	pub world_readable: bool,
+	pub guest_can_join: bool,
+	pub avatar_url: Option<OwnedMxcUri>,
+	pub join_rule: SpaceRoomJoinRule,
+	pub room_type: Option<RoomType>,
+	pub allowed_room_ids: Vec<OwnedRoomId>,
+	pub encryption: Option<EventEncryptionAlgorithm>,
+	pub room_version: Option<RoomVersionId>,
+	pub children_state: Vec<Raw<HierarchySpaceChildEvent>>,
+}
+/// The required fields of the summary.
+#[derive(Debug)]
+pub struct SpaceHierarchyParentSummaryInit {
+	pub num_joined_members: UInt,
+	pub room_id: OwnedRoomId,
+	pub world_readable: bool,
+	pub guest_can_join: bool,
+	pub join_rule: SpaceRoomJoinRule,
+	pub allowed_room_ids: Vec<OwnedRoomId>,
+	pub children_state: Vec<Raw<HierarchySpaceChildEvent>>,
+}
+impl From<SpaceHierarchyParentSummaryInit> for SpaceHierarchyParentSummary {
+	fn from(init: SpaceHierarchyParentSummaryInit) -> Self {
+		Self {
+			canonical_alias: None,
+			name: None,
+			num_joined_members: init.num_joined_members,
+			room_id: init.room_id,
+			topic: None,
+			world_readable: init.world_readable,
+			guest_can_join: init.guest_can_join,
+			avatar_url: None,
+			join_rule: init.join_rule,
+			room_type: None,
+			allowed_room_ids: init.allowed_room_ids,
+			encryption: None,
+			room_version: None,
+			children_state: init.children_state,
 		}
-
-		/// The required fields of the summary.
-		#[derive(Debug)]
-		pub struct $init {
-			pub num_joined_members: UInt,
-			pub room_id: OwnedRoomId,
-			pub world_readable: bool,
-			pub guest_can_join: bool,
-			pub join_rule: SpaceRoomJoinRule,
-			pub allowed_room_ids: Vec<OwnedRoomId>,
-			$(pub $extra: $extra_ty,)*
+	}
+}
+impl crate::codec::Serialize for SpaceHierarchyParentSummary {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			(stringify!(canonical_alias), crate::endpoint::enc(&self.canonical_alias)),
+			(stringify!(name), crate::endpoint::enc(&self.name)),
+			(stringify!(num_joined_members), crate::endpoint::enc(&self.num_joined_members)),
+			(stringify!(room_id), crate::endpoint::enc(&self.room_id)),
+			(stringify!(topic), crate::endpoint::enc(&self.topic)),
+			(stringify!(world_readable), crate::endpoint::enc(&self.world_readable)),
+			(stringify!(guest_can_join), crate::endpoint::enc(&self.guest_can_join)),
+			(stringify!(avatar_url), crate::endpoint::enc(&self.avatar_url)),
+			(stringify!(join_rule), crate::endpoint::enc(&self.join_rule)),
+			(stringify!(room_type), crate::endpoint::enc(&self.room_type)),
+			(stringify!(encryption), crate::endpoint::enc(&self.encryption)),
+			(stringify!(room_version), crate::endpoint::enc(&self.room_version)),
+			(stringify!(allowed_room_ids), crate::endpoint::enc(&self.allowed_room_ids)),
+			(stringify!(children_state), crate::endpoint::enc(&self.children_state)),
+		])
+	}
+}
+impl crate::codec::Deserialize for SpaceHierarchyParentSummary {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(SpaceHierarchyParentSummary)));
 		}
-
-		impl From<$init> for $summary {
-			fn from(init: $init) -> Self {
-				Self {
-					canonical_alias: None,
-					name: None,
-					num_joined_members: init.num_joined_members,
-					room_id: init.room_id,
-					topic: None,
-					world_readable: init.world_readable,
-					guest_can_join: init.guest_can_join,
-					avatar_url: None,
-					join_rule: init.join_rule,
-					room_type: None,
-					allowed_room_ids: init.allowed_room_ids,
-					encryption: None,
-					room_version: None,
-					$($extra: init.$extra,)*
-				}
-			}
-		}
-
-		crate::impl_codec_struct!($summary {
-			canonical_alias: Option<OwnedRoomAliasId>,
-			name: Option<String>,
-			num_joined_members: UInt,
-			room_id: OwnedRoomId,
-			topic: Option<String>,
-			world_readable: bool,
-			guest_can_join: bool,
-			avatar_url: Option<OwnedMxcUri>,
-			join_rule: SpaceRoomJoinRule,
-			room_type: Option<RoomType>,
-			encryption: Option<EventEncryptionAlgorithm>,
-			room_version: Option<RoomVersionId>,
-		}
-		default {
-			allowed_room_ids: Vec<OwnedRoomId>
-			$(, $extra: $extra_ty)*
-		});
-	};
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			canonical_alias: input.body(stringify!(canonical_alias))?,
+			name: input.body(stringify!(name))?,
+			num_joined_members: input.body(stringify!(num_joined_members))?,
+			room_id: input.body(stringify!(room_id))?,
+			topic: input.body(stringify!(topic))?,
+			world_readable: input.body(stringify!(world_readable))?,
+			guest_can_join: input.body(stringify!(guest_can_join))?,
+			avatar_url: input.body(stringify!(avatar_url))?,
+			join_rule: input.body(stringify!(join_rule))?,
+			room_type: input.body(stringify!(room_type))?,
+			encryption: input.body(stringify!(encryption))?,
+			room_version: input.body(stringify!(room_version))?,
+			allowed_room_ids: input.body_or_default(stringify!(allowed_room_ids))?,
+			children_state: input.body_or_default(stringify!(children_state))?,
+		})
+	}
 }
 
-summary!(
-	/// A room in the hierarchy, with its child events.
-	SpaceHierarchyParentSummary, SpaceHierarchyParentSummaryInit,
-	children_state: Vec<Raw<HierarchySpaceChildEvent>>
-);
-summary!(
-	/// A child room in the hierarchy.
-	SpaceHierarchyChildSummary,
-	SpaceHierarchyChildSummaryInit,
-);
+/// A child room in the hierarchy.
+#[derive(Clone, Debug)]
+pub struct SpaceHierarchyChildSummary {
+	pub canonical_alias: Option<OwnedRoomAliasId>,
+	pub name: Option<String>,
+	pub num_joined_members: UInt,
+	pub room_id: OwnedRoomId,
+	pub topic: Option<String>,
+	pub world_readable: bool,
+	pub guest_can_join: bool,
+	pub avatar_url: Option<OwnedMxcUri>,
+	pub join_rule: SpaceRoomJoinRule,
+	pub room_type: Option<RoomType>,
+	pub allowed_room_ids: Vec<OwnedRoomId>,
+	pub encryption: Option<EventEncryptionAlgorithm>,
+	pub room_version: Option<RoomVersionId>,
+}
+/// The required fields of the summary.
+#[derive(Debug)]
+pub struct SpaceHierarchyChildSummaryInit {
+	pub num_joined_members: UInt,
+	pub room_id: OwnedRoomId,
+	pub world_readable: bool,
+	pub guest_can_join: bool,
+	pub join_rule: SpaceRoomJoinRule,
+	pub allowed_room_ids: Vec<OwnedRoomId>,
+}
+impl From<SpaceHierarchyChildSummaryInit> for SpaceHierarchyChildSummary {
+	fn from(init: SpaceHierarchyChildSummaryInit) -> Self {
+		Self {
+			canonical_alias: None,
+			name: None,
+			num_joined_members: init.num_joined_members,
+			room_id: init.room_id,
+			topic: None,
+			world_readable: init.world_readable,
+			guest_can_join: init.guest_can_join,
+			avatar_url: None,
+			join_rule: init.join_rule,
+			room_type: None,
+			allowed_room_ids: init.allowed_room_ids,
+			encryption: None,
+			room_version: None,
+		}
+	}
+}
+impl crate::codec::Serialize for SpaceHierarchyChildSummary {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			(stringify!(canonical_alias), crate::endpoint::enc(&self.canonical_alias)),
+			(stringify!(name), crate::endpoint::enc(&self.name)),
+			(stringify!(num_joined_members), crate::endpoint::enc(&self.num_joined_members)),
+			(stringify!(room_id), crate::endpoint::enc(&self.room_id)),
+			(stringify!(topic), crate::endpoint::enc(&self.topic)),
+			(stringify!(world_readable), crate::endpoint::enc(&self.world_readable)),
+			(stringify!(guest_can_join), crate::endpoint::enc(&self.guest_can_join)),
+			(stringify!(avatar_url), crate::endpoint::enc(&self.avatar_url)),
+			(stringify!(join_rule), crate::endpoint::enc(&self.join_rule)),
+			(stringify!(room_type), crate::endpoint::enc(&self.room_type)),
+			(stringify!(encryption), crate::endpoint::enc(&self.encryption)),
+			(stringify!(room_version), crate::endpoint::enc(&self.room_version)),
+			(stringify!(allowed_room_ids), crate::endpoint::enc(&self.allowed_room_ids)),
+		])
+	}
+}
+impl crate::codec::Deserialize for SpaceHierarchyChildSummary {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(SpaceHierarchyChildSummary)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			canonical_alias: input.body(stringify!(canonical_alias))?,
+			name: input.body(stringify!(name))?,
+			num_joined_members: input.body(stringify!(num_joined_members))?,
+			room_id: input.body(stringify!(room_id))?,
+			topic: input.body(stringify!(topic))?,
+			world_readable: input.body(stringify!(world_readable))?,
+			guest_can_join: input.body(stringify!(guest_can_join))?,
+			avatar_url: input.body(stringify!(avatar_url))?,
+			join_rule: input.body(stringify!(join_rule))?,
+			room_type: input.body(stringify!(room_type))?,
+			encryption: input.body(stringify!(encryption))?,
+			room_version: input.body(stringify!(room_version))?,
+			allowed_room_ids: input.body_or_default(stringify!(allowed_room_ids))?,
+		})
+	}
+}
 
-summary!(
-	/// A room in a client-facing hierarchy listing.
-	SpaceHierarchyRoomsChunk, SpaceHierarchyRoomsChunkInit,
-	children_state: Vec<Raw<HierarchySpaceChildEvent>>
-);
+/// A room in a client-facing hierarchy listing.
+#[derive(Clone, Debug)]
+pub struct SpaceHierarchyRoomsChunk {
+	pub canonical_alias: Option<OwnedRoomAliasId>,
+	pub name: Option<String>,
+	pub num_joined_members: UInt,
+	pub room_id: OwnedRoomId,
+	pub topic: Option<String>,
+	pub world_readable: bool,
+	pub guest_can_join: bool,
+	pub avatar_url: Option<OwnedMxcUri>,
+	pub join_rule: SpaceRoomJoinRule,
+	pub room_type: Option<RoomType>,
+	pub allowed_room_ids: Vec<OwnedRoomId>,
+	pub encryption: Option<EventEncryptionAlgorithm>,
+	pub room_version: Option<RoomVersionId>,
+	pub children_state: Vec<Raw<HierarchySpaceChildEvent>>,
+}
+/// The required fields of the summary.
+#[derive(Debug)]
+pub struct SpaceHierarchyRoomsChunkInit {
+	pub num_joined_members: UInt,
+	pub room_id: OwnedRoomId,
+	pub world_readable: bool,
+	pub guest_can_join: bool,
+	pub join_rule: SpaceRoomJoinRule,
+	pub allowed_room_ids: Vec<OwnedRoomId>,
+	pub children_state: Vec<Raw<HierarchySpaceChildEvent>>,
+}
+impl From<SpaceHierarchyRoomsChunkInit> for SpaceHierarchyRoomsChunk {
+	fn from(init: SpaceHierarchyRoomsChunkInit) -> Self {
+		Self {
+			canonical_alias: None,
+			name: None,
+			num_joined_members: init.num_joined_members,
+			room_id: init.room_id,
+			topic: None,
+			world_readable: init.world_readable,
+			guest_can_join: init.guest_can_join,
+			avatar_url: None,
+			join_rule: init.join_rule,
+			room_type: None,
+			allowed_room_ids: init.allowed_room_ids,
+			encryption: None,
+			room_version: None,
+			children_state: init.children_state,
+		}
+	}
+}
+impl crate::codec::Serialize for SpaceHierarchyRoomsChunk {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			(stringify!(canonical_alias), crate::endpoint::enc(&self.canonical_alias)),
+			(stringify!(name), crate::endpoint::enc(&self.name)),
+			(stringify!(num_joined_members), crate::endpoint::enc(&self.num_joined_members)),
+			(stringify!(room_id), crate::endpoint::enc(&self.room_id)),
+			(stringify!(topic), crate::endpoint::enc(&self.topic)),
+			(stringify!(world_readable), crate::endpoint::enc(&self.world_readable)),
+			(stringify!(guest_can_join), crate::endpoint::enc(&self.guest_can_join)),
+			(stringify!(avatar_url), crate::endpoint::enc(&self.avatar_url)),
+			(stringify!(join_rule), crate::endpoint::enc(&self.join_rule)),
+			(stringify!(room_type), crate::endpoint::enc(&self.room_type)),
+			(stringify!(encryption), crate::endpoint::enc(&self.encryption)),
+			(stringify!(room_version), crate::endpoint::enc(&self.room_version)),
+			(stringify!(allowed_room_ids), crate::endpoint::enc(&self.allowed_room_ids)),
+			(stringify!(children_state), crate::endpoint::enc(&self.children_state)),
+		])
+	}
+}
+impl crate::codec::Deserialize for SpaceHierarchyRoomsChunk {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(SpaceHierarchyRoomsChunk)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			canonical_alias: input.body(stringify!(canonical_alias))?,
+			name: input.body(stringify!(name))?,
+			num_joined_members: input.body(stringify!(num_joined_members))?,
+			room_id: input.body(stringify!(room_id))?,
+			topic: input.body(stringify!(topic))?,
+			world_readable: input.body(stringify!(world_readable))?,
+			guest_can_join: input.body(stringify!(guest_can_join))?,
+			avatar_url: input.body(stringify!(avatar_url))?,
+			join_rule: input.body(stringify!(join_rule))?,
+			room_type: input.body(stringify!(room_type))?,
+			encryption: input.body(stringify!(encryption))?,
+			room_version: input.body(stringify!(room_version))?,
+			allowed_room_ids: input.body_or_default(stringify!(allowed_room_ids))?,
+			children_state: input.body_or_default(stringify!(children_state))?,
+		})
+	}
+}
 
 impl From<SpaceHierarchyParentSummary> for SpaceHierarchyRoomsChunk {
 	fn from(summary: SpaceHierarchyParentSummary) -> Self {
@@ -353,10 +538,10 @@ pub mod client {
 					])
 				}
 				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let _input = crate::endpoint::Input::body_only(body);
+					let input = crate::endpoint::Input::body_only(body);
 					Ok(Self {
-						next_batch: _input.body("next_batch")?,
-						rooms: _input.body("rooms")?,
+						next_batch: input.body("next_batch")?,
+						rooms: input.body("rooms")?,
 					})
 				}
 			}
@@ -436,11 +621,11 @@ pub mod get_hierarchy {
 				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					room: _input.body("room")?,
-					children: _input.body("children")?,
-					inaccessible_children: _input.body("inaccessible_children")?,
+					room: input.body("room")?,
+					children: input.body("children")?,
+					inaccessible_children: input.body("inaccessible_children")?,
 				})
 			}
 		}

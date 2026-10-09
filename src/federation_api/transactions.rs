@@ -30,13 +30,33 @@ pub mod edu {
 		pub last_active_ago: UInt,
 	}
 
-	crate::impl_codec_struct!(PresenceUpdate {
-		user_id: OwnedUserId,
-		presence: PresenceState,
-		status_msg: Option<String>,
-		currently_active: bool,
-		last_active_ago: UInt,
-	});
+	impl crate::codec::Serialize for PresenceUpdate {
+		fn to_json(&self) -> crate::json::Value {
+			crate::endpoint::body_object(&mut [
+				(stringify!(user_id), crate::endpoint::enc(&self.user_id)),
+				(stringify!(presence), crate::endpoint::enc(&self.presence)),
+				(stringify!(status_msg), crate::endpoint::enc(&self.status_msg)),
+				(stringify!(currently_active), crate::endpoint::enc(&self.currently_active)),
+				(stringify!(last_active_ago), crate::endpoint::enc(&self.last_active_ago)),
+			])
+		}
+	}
+	impl crate::codec::Deserialize for PresenceUpdate {
+		fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+			// A struct is a JSON object; anything else is malformed, not "all defaults".
+			if value.as_object().is_none() {
+				return Err(crate::codec::DeError::expected(stringify!(PresenceUpdate)));
+			}
+			let input = crate::endpoint::Input::body_only(value);
+			Ok(Self {
+				user_id: input.body(stringify!(user_id))?,
+				presence: input.body(stringify!(presence))?,
+				status_msg: input.body(stringify!(status_msg))?,
+				currently_active: input.body(stringify!(currently_active))?,
+				last_active_ago: input.body(stringify!(last_active_ago))?,
+			})
+		}
+	}
 
 	/// Presence updates from one server.
 	#[derive(Debug, Default)]
@@ -44,7 +64,26 @@ pub mod edu {
 		pub push: Vec<PresenceUpdate>,
 	}
 
-	crate::impl_codec_struct!(PresenceContent { push: Vec<PresenceUpdate> });
+	impl crate::codec::Serialize for PresenceContent {
+		fn to_json(&self) -> crate::json::Value {
+			crate::endpoint::body_object(&mut [(
+				stringify!(push),
+				crate::endpoint::enc(&self.push),
+			)])
+		}
+	}
+	impl crate::codec::Deserialize for PresenceContent {
+		fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+			// A struct is a JSON object; anything else is malformed, not "all defaults".
+			if value.as_object().is_none() {
+				return Err(crate::codec::DeError::expected(stringify!(PresenceContent)));
+			}
+			let input = crate::endpoint::Input::body_only(value);
+			Ok(Self {
+				push: input.body(stringify!(push))?,
+			})
+		}
+	}
 
 	/// Read-receipt data for one user.
 	#[derive(Debug)]
@@ -53,7 +92,27 @@ pub mod edu {
 		pub event_ids: Vec<OwnedEventId>,
 	}
 
-	crate::impl_codec_struct!(ReceiptData { data: Receipt, event_ids: Vec<OwnedEventId> });
+	impl crate::codec::Serialize for ReceiptData {
+		fn to_json(&self) -> crate::json::Value {
+			crate::endpoint::body_object(&mut [
+				(stringify!(data), crate::endpoint::enc(&self.data)),
+				(stringify!(event_ids), crate::endpoint::enc(&self.event_ids)),
+			])
+		}
+	}
+	impl crate::codec::Deserialize for ReceiptData {
+		fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+			// A struct is a JSON object; anything else is malformed, not "all defaults".
+			if value.as_object().is_none() {
+				return Err(crate::codec::DeError::expected(stringify!(ReceiptData)));
+			}
+			let input = crate::endpoint::Input::body_only(value);
+			Ok(Self {
+				data: input.body(stringify!(data))?,
+				event_ids: input.body(stringify!(event_ids))?,
+			})
+		}
+	}
 
 	/// Receipts in one room.
 	#[derive(Debug, Default)]
@@ -118,11 +177,29 @@ pub mod edu {
 		}
 	}
 
-	crate::impl_codec_struct!(TypingContent {
-		room_id: OwnedRoomId,
-		user_id: OwnedUserId,
-		typing: bool,
-	});
+	impl crate::codec::Serialize for TypingContent {
+		fn to_json(&self) -> crate::json::Value {
+			crate::endpoint::body_object(&mut [
+				(stringify!(room_id), crate::endpoint::enc(&self.room_id)),
+				(stringify!(user_id), crate::endpoint::enc(&self.user_id)),
+				(stringify!(typing), crate::endpoint::enc(&self.typing)),
+			])
+		}
+	}
+	impl crate::codec::Deserialize for TypingContent {
+		fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+			// A struct is a JSON object; anything else is malformed, not "all defaults".
+			if value.as_object().is_none() {
+				return Err(crate::codec::DeError::expected(stringify!(TypingContent)));
+			}
+			let input = crate::endpoint::Input::body_only(value);
+			Ok(Self {
+				room_id: input.body(stringify!(room_id))?,
+				user_id: input.body(stringify!(user_id))?,
+				typing: input.body(stringify!(typing))?,
+			})
+		}
+	}
 
 	/// A device list change.
 	#[derive(Debug)]
@@ -136,15 +213,40 @@ pub mod edu {
 		pub keys: Option<Raw<Value>>,
 	}
 
-	crate::impl_codec_struct!(DeviceListUpdateContent {
-		user_id: OwnedUserId,
-		device_id: OwnedDeviceId,
-		device_display_name: Option<String>,
-		stream_id: UInt,
-		prev_id: Vec<UInt>,
-		deleted: Option<bool>,
-		keys: Option<Raw<Value>>,
-	});
+	impl crate::codec::Serialize for DeviceListUpdateContent {
+		fn to_json(&self) -> crate::json::Value {
+			crate::endpoint::body_object(&mut [
+				(stringify!(user_id), crate::endpoint::enc(&self.user_id)),
+				(stringify!(device_id), crate::endpoint::enc(&self.device_id)),
+				(
+					stringify!(device_display_name),
+					crate::endpoint::enc(&self.device_display_name),
+				),
+				(stringify!(stream_id), crate::endpoint::enc(&self.stream_id)),
+				(stringify!(prev_id), crate::endpoint::enc(&self.prev_id)),
+				(stringify!(deleted), crate::endpoint::enc(&self.deleted)),
+				(stringify!(keys), crate::endpoint::enc(&self.keys)),
+			])
+		}
+	}
+	impl crate::codec::Deserialize for DeviceListUpdateContent {
+		fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+			// A struct is a JSON object; anything else is malformed, not "all defaults".
+			if value.as_object().is_none() {
+				return Err(crate::codec::DeError::expected(stringify!(DeviceListUpdateContent)));
+			}
+			let input = crate::endpoint::Input::body_only(value);
+			Ok(Self {
+				user_id: input.body(stringify!(user_id))?,
+				device_id: input.body(stringify!(device_id))?,
+				device_display_name: input.body(stringify!(device_display_name))?,
+				stream_id: input.body(stringify!(stream_id))?,
+				prev_id: input.body(stringify!(prev_id))?,
+				deleted: input.body(stringify!(deleted))?,
+				keys: input.body(stringify!(keys))?,
+			})
+		}
+	}
 
 	/// A device targeted by a to-device message, or all of a user's devices.
 	#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -187,12 +289,31 @@ pub mod edu {
 		pub messages: DirectDeviceMessages,
 	}
 
-	crate::impl_codec_struct!(DirectDeviceContent {
-		sender: OwnedUserId,
-		ev_type: String,
-		message_id: OwnedTransactionId,
-		messages: DirectDeviceMessages,
-	});
+	impl crate::codec::Serialize for DirectDeviceContent {
+		fn to_json(&self) -> crate::json::Value {
+			crate::endpoint::body_object(&mut [
+				(stringify!(sender), crate::endpoint::enc(&self.sender)),
+				(stringify!(ev_type), crate::endpoint::enc(&self.ev_type)),
+				(stringify!(message_id), crate::endpoint::enc(&self.message_id)),
+				(stringify!(messages), crate::endpoint::enc(&self.messages)),
+			])
+		}
+	}
+	impl crate::codec::Deserialize for DirectDeviceContent {
+		fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+			// A struct is a JSON object; anything else is malformed, not "all defaults".
+			if value.as_object().is_none() {
+				return Err(crate::codec::DeError::expected(stringify!(DirectDeviceContent)));
+			}
+			let input = crate::endpoint::Input::body_only(value);
+			Ok(Self {
+				sender: input.body(stringify!(sender))?,
+				ev_type: input.body(stringify!(ev_type))?,
+				message_id: input.body(stringify!(message_id))?,
+				messages: input.body(stringify!(messages))?,
+			})
+		}
+	}
 
 	/// Cross-signing key changes.
 	#[derive(Debug)]
@@ -202,11 +323,29 @@ pub mod edu {
 		pub self_signing_key: Option<Raw<Value>>,
 	}
 
-	crate::impl_codec_struct!(SigningKeyUpdateContent {
-		user_id: OwnedUserId,
-		master_key: Option<Raw<Value>>,
-		self_signing_key: Option<Raw<Value>>,
-	});
+	impl crate::codec::Serialize for SigningKeyUpdateContent {
+		fn to_json(&self) -> crate::json::Value {
+			crate::endpoint::body_object(&mut [
+				(stringify!(user_id), crate::endpoint::enc(&self.user_id)),
+				(stringify!(master_key), crate::endpoint::enc(&self.master_key)),
+				(stringify!(self_signing_key), crate::endpoint::enc(&self.self_signing_key)),
+			])
+		}
+	}
+	impl crate::codec::Deserialize for SigningKeyUpdateContent {
+		fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+			// A struct is a JSON object; anything else is malformed, not "all defaults".
+			if value.as_object().is_none() {
+				return Err(crate::codec::DeError::expected(stringify!(SigningKeyUpdateContent)));
+			}
+			let input = crate::endpoint::Input::body_only(value);
+			Ok(Self {
+				user_id: input.body(stringify!(user_id))?,
+				master_key: input.body(stringify!(master_key))?,
+				self_signing_key: input.body(stringify!(self_signing_key))?,
+			})
+		}
+	}
 
 	/// An ephemeral data unit sent in a transaction.
 	#[derive(Debug)]
@@ -361,9 +500,9 @@ pub mod send_transaction_message {
 				crate::endpoint::body_object(&mut [("pdus", crate::endpoint::enc(&self.pdus))])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					pdus: _input.body("pdus")?,
+					pdus: input.body("pdus")?,
 				})
 			}
 		}

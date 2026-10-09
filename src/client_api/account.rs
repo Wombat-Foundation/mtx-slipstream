@@ -3,20 +3,66 @@ pub enum ThirdPartyIdRemovalStatus {
 	Success,
 	NoSupport,
 }
-crate::impl_codec_enum!(ThirdPartyIdRemovalStatus { Success => "success", NoSupport => "no-support" });
+impl crate::codec::Serialize for ThirdPartyIdRemovalStatus {
+	fn to_json(&self) -> crate::json::Value {
+		crate::json::Value::String(::alloc::string::String::from(match self {
+			Self::Success => "success",
+			Self::NoSupport => "no-support",
+		}))
+	}
+}
+impl crate::codec::Deserialize for ThirdPartyIdRemovalStatus {
+	fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+		match value.as_str() {
+			Some("success") => Ok(Self::Success),
+			Some("no-support") => Ok(Self::NoSupport),
+			_ => Err(crate::codec::DeError::expected(stringify!(ThirdPartyIdRemovalStatus))),
+		}
+	}
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum RegistrationKind {
 	Guest,
 	User,
 }
-crate::impl_codec_enum!(RegistrationKind { Guest => "guest", User => "user" });
+impl crate::codec::Serialize for RegistrationKind {
+	fn to_json(&self) -> crate::json::Value {
+		crate::json::Value::String(::alloc::string::String::from(match self {
+			Self::Guest => "guest",
+			Self::User => "user",
+		}))
+	}
+}
+impl crate::codec::Deserialize for RegistrationKind {
+	fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+		match value.as_str() {
+			Some("guest") => Ok(Self::Guest),
+			Some("user") => Ok(Self::User),
+			_ => Err(crate::codec::DeError::expected(stringify!(RegistrationKind))),
+		}
+	}
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum LoginType {
 	ApplicationService,
 }
-crate::impl_codec_enum!(LoginType { ApplicationService => "m.login.application_service" });
+impl crate::codec::Serialize for LoginType {
+	fn to_json(&self) -> crate::json::Value {
+		crate::json::Value::String(::alloc::string::String::from(match self {
+			Self::ApplicationService => "m.login.application_service",
+		}))
+	}
+}
+impl crate::codec::Deserialize for LoginType {
+	fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+		match value.as_str() {
+			Some("m.login.application_service") => Ok(Self::ApplicationService),
+			_ => Err(crate::codec::DeError::expected(stringify!(LoginType))),
+		}
+	}
+}
 
 pub mod request_openid_token {
 	pub mod v3 {
@@ -84,12 +130,12 @@ pub mod request_openid_token {
 				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					access_token: _input.body("access_token")?,
-					token_type: _input.body("token_type")?,
-					matrix_server_name: _input.body("matrix_server_name")?,
-					expires_in: _input.body("expires_in")?,
+					access_token: input.body("access_token")?,
+					token_type: input.body("token_type")?,
+					matrix_server_name: input.body("matrix_server_name")?,
+					expires_in: input.body("expires_in")?,
 				})
 			}
 		}
@@ -155,8 +201,7 @@ pub mod change_password {
 			fn to_body(&self) -> crate::json::Value {
 				crate::endpoint::body_object(&mut [])
 			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
 				Ok(Self {})
 			}
 		}
@@ -248,9 +293,9 @@ pub mod deactivate {
 				)])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					id_server_unbind_result: _input.body("id_server_unbind_result")?,
+					id_server_unbind_result: input.body("id_server_unbind_result")?,
 				})
 			}
 		}
@@ -317,9 +362,9 @@ pub mod get_username_availability {
 				)])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					available: _input.body("available")?,
+					available: input.body("available")?,
 				})
 			}
 		}
@@ -382,11 +427,11 @@ pub mod whoami {
 				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					user_id: _input.body("user_id")?,
-					device_id: _input.body("device_id")?,
-					is_guest: _input.body("is_guest")?,
+					user_id: input.body("user_id")?,
+					device_id: input.body("device_id")?,
+					is_guest: input.body("is_guest")?,
 				})
 			}
 		}
@@ -457,9 +502,9 @@ pub mod request_password_change_token_via_email {
 				crate::endpoint::body_object(&mut [("sid", crate::endpoint::enc(&self.sid))])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					sid: _input.body("sid")?,
+					sid: input.body("sid")?,
 				})
 			}
 		}
@@ -530,9 +575,9 @@ pub mod request_3pid_management_token_via_email {
 				crate::endpoint::body_object(&mut [("sid", crate::endpoint::enc(&self.sid))])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					sid: _input.body("sid")?,
+					sid: input.body("sid")?,
 				})
 			}
 		}
@@ -606,9 +651,9 @@ pub mod request_3pid_management_token_via_msisdn {
 				crate::endpoint::body_object(&mut [("sid", crate::endpoint::enc(&self.sid))])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					sid: _input.body("sid")?,
+					sid: input.body("sid")?,
 				})
 			}
 		}
@@ -668,9 +713,9 @@ pub mod get_3pids {
 				)])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					threepids: _input.body("threepids")?,
+					threepids: input.body("threepids")?,
 				})
 			}
 		}
@@ -745,8 +790,7 @@ pub mod add_3pid {
 			fn to_body(&self) -> crate::json::Value {
 				crate::endpoint::body_object(&mut [])
 			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
 				Ok(Self {})
 			}
 		}
@@ -824,9 +868,9 @@ pub mod delete_3pid {
 				)])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					id_server_unbind_result: _input.body("id_server_unbind_result")?,
+					id_server_unbind_result: input.body("id_server_unbind_result")?,
 				})
 			}
 		}
@@ -892,9 +936,9 @@ pub mod check_registration_token_validity {
 				crate::endpoint::body_object(&mut [("valid", crate::endpoint::enc(&self.valid))])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					valid: _input.body("valid")?,
+					valid: input.body("valid")?,
 				})
 			}
 		}
@@ -965,9 +1009,9 @@ pub mod request_registration_token_via_email {
 				crate::endpoint::body_object(&mut [("sid", crate::endpoint::enc(&self.sid))])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					sid: _input.body("sid")?,
+					sid: input.body("sid")?,
 				})
 			}
 		}

@@ -76,11 +76,11 @@ pub mod get_backfill {
 				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					origin: _input.body("origin")?,
-					origin_server_ts: _input.body("origin_server_ts")?,
-					pdus: _input.body("pdus")?,
+					origin: input.body("origin")?,
+					origin_server_ts: input.body("origin_server_ts")?,
+					pdus: input.body("pdus")?,
 				})
 			}
 		}

@@ -68,9 +68,9 @@ pub mod get_event_authorization {
 				)])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					auth_chain: _input.body("auth_chain")?,
+					auth_chain: input.body("auth_chain")?,
 				})
 			}
 		}

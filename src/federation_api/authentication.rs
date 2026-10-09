@@ -15,12 +15,31 @@ pub struct XMatrix {
 	pub sig: String,
 }
 
-crate::impl_codec_struct!(XMatrix {
-	origin: OwnedServerName,
-	destination: Option<OwnedServerName>,
-	key: OwnedServerSigningKeyId,
-	sig: String,
-});
+impl crate::codec::Serialize for XMatrix {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			(stringify!(origin), crate::endpoint::enc(&self.origin)),
+			(stringify!(destination), crate::endpoint::enc(&self.destination)),
+			(stringify!(key), crate::endpoint::enc(&self.key)),
+			(stringify!(sig), crate::endpoint::enc(&self.sig)),
+		])
+	}
+}
+impl crate::codec::Deserialize for XMatrix {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(XMatrix)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			origin: input.body(stringify!(origin))?,
+			destination: input.body(stringify!(destination))?,
+			key: input.body(stringify!(key))?,
+			sig: input.body(stringify!(sig))?,
+		})
+	}
+}
 
 impl XMatrix {
 	/// Decodes an `X-Matrix` authorization header.

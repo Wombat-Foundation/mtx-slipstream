@@ -99,7 +99,23 @@ pub struct TagEventContent {
 	pub tags: BTreeMap<TagName, TagInfo>,
 }
 
-crate::impl_codec_struct!(TagEventContent { tags: BTreeMap<TagName, TagInfo> });
+impl crate::codec::Serialize for TagEventContent {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [(stringify!(tags), crate::endpoint::enc(&self.tags))])
+	}
+}
+impl crate::codec::Deserialize for TagEventContent {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(TagEventContent)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			tags: input.body(stringify!(tags))?,
+		})
+	}
+}
 
 pub type TagEvent = RoomAccountDataEvent<TagEventContent>;
 

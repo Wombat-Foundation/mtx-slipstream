@@ -19,11 +19,29 @@ pub struct UserSuspension {
 	pub suspended_by: String,
 }
 
-crate::impl_codec_struct!(UserSuspension {
-	suspended: bool,
-	suspended_at: u64,
-	suspended_by: String,
-});
+impl crate::codec::Serialize for UserSuspension {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			(stringify!(suspended), crate::endpoint::enc(&self.suspended)),
+			(stringify!(suspended_at), crate::endpoint::enc(&self.suspended_at)),
+			(stringify!(suspended_by), crate::endpoint::enc(&self.suspended_by)),
+		])
+	}
+}
+impl crate::codec::Deserialize for UserSuspension {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(UserSuspension)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			suspended: input.body(stringify!(suspended))?,
+			suspended_at: input.body(stringify!(suspended_at))?,
+			suspended_by: input.body(stringify!(suspended_by))?,
+		})
+	}
+}
 
 /// A profile change retained for MSC4429 incremental sync.
 #[derive(Debug, Eq, PartialEq)]

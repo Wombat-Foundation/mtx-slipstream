@@ -84,12 +84,12 @@ pub mod get_relating_events {
 				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					chunk: _input.body("chunk")?,
-					next_batch: _input.body("next_batch")?,
-					prev_batch: _input.body("prev_batch")?,
-					recursion_depth: _input.body("recursion_depth")?,
+					chunk: input.body("chunk")?,
+					next_batch: input.body("next_batch")?,
+					prev_batch: input.body("prev_batch")?,
+					recursion_depth: input.body("recursion_depth")?,
 				})
 			}
 		}
@@ -187,12 +187,12 @@ pub mod get_relating_events_with_rel_type {
 				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					chunk: _input.body("chunk")?,
-					next_batch: _input.body("next_batch")?,
-					prev_batch: _input.body("prev_batch")?,
-					recursion_depth: _input.body("recursion_depth")?,
+					chunk: input.body("chunk")?,
+					next_batch: input.body("next_batch")?,
+					prev_batch: input.body("prev_batch")?,
+					recursion_depth: input.body("recursion_depth")?,
 				})
 			}
 		}
@@ -295,12 +295,12 @@ pub mod get_relating_events_with_rel_type_and_event_type {
 				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					chunk: _input.body("chunk")?,
-					next_batch: _input.body("next_batch")?,
-					prev_batch: _input.body("prev_batch")?,
-					recursion_depth: _input.body("recursion_depth")?,
+					chunk: input.body("chunk")?,
+					next_batch: input.body("next_batch")?,
+					prev_batch: input.body("prev_batch")?,
+					recursion_depth: input.body("recursion_depth")?,
 				})
 			}
 		}
@@ -403,11 +403,11 @@ pub mod event_relationships {
 				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					events: _input.body("events")?,
-					next_batch: _input.body("next_batch")?,
-					limited: _input.body("limited")?,
+					events: input.body("events")?,
+					next_batch: input.body("next_batch")?,
+					limited: input.body("limited")?,
 				})
 			}
 		}

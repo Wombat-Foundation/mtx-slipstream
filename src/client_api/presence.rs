@@ -63,12 +63,12 @@ pub mod get_presence {
 				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					presence: _input.body("presence")?,
-					last_active_ago: _input.body("last_active_ago")?,
-					status_msg: _input.body("status_msg")?,
-					currently_active: _input.body("currently_active")?,
+					presence: input.body("presence")?,
+					last_active_ago: input.body("last_active_ago")?,
+					status_msg: input.body("status_msg")?,
+					currently_active: input.body("currently_active")?,
 				})
 			}
 		}
@@ -136,8 +136,7 @@ pub mod set_presence {
 			fn to_body(&self) -> crate::json::Value {
 				crate::endpoint::body_object(&mut [])
 			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
 				Ok(Self {})
 			}
 		}

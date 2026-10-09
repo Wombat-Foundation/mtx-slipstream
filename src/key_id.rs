@@ -241,38 +241,43 @@ impl From<&str> for SigningKeyAlgorithm {
 	}
 }
 
-macro_rules! key_name {
-	($(#[$doc:meta])* $name:ident) => {
-		$(#[$doc])*
-		#[derive(Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
-		pub struct $name(pub String);
-
-		impl AsRef<str> for $name {
-			fn as_ref(&self) -> &str {
-				&self.0
-			}
-		}
-		impl fmt::Display for $name {
-			fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-				f.write_str(&self.0)
-			}
-		}
-		impl From<&str> for $name {
-			fn from(value: &str) -> Self {
-				Self(value.to_string())
-			}
-		}
-	};
+/// The name part of a key ID that is a base64 public key.
+#[derive(Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct Base64PublicKey(pub String);
+impl AsRef<str> for Base64PublicKey {
+	fn as_ref(&self) -> &str {
+		&self.0
+	}
+}
+impl fmt::Display for Base64PublicKey {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.write_str(&self.0)
+	}
+}
+impl From<&str> for Base64PublicKey {
+	fn from(value: &str) -> Self {
+		Self(value.to_string())
+	}
 }
 
-key_name!(
-	/// The name part of a key ID that is a base64 public key.
-	Base64PublicKey
-);
-key_name!(
-	/// The version part of a server signing key ID.
-	ServerSigningKeyVersion
-);
+/// The version part of a server signing key ID.
+#[derive(Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct ServerSigningKeyVersion(pub String);
+impl AsRef<str> for ServerSigningKeyVersion {
+	fn as_ref(&self) -> &str {
+		&self.0
+	}
+}
+impl fmt::Display for ServerSigningKeyVersion {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.write_str(&self.0)
+	}
+}
+impl From<&str> for ServerSigningKeyVersion {
+	fn from(value: &str) -> Self {
+		Self(value.to_string())
+	}
+}
 
 impl crate::codec::Serialize for OneTimeKeyAlgorithm {
 	fn to_json(&self) -> crate::json::Value {

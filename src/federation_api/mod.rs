@@ -68,9 +68,9 @@ pub mod openid {
 					crate::endpoint::body_object(&mut [("sub", crate::endpoint::enc(&self.sub))])
 				}
 				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let _input = crate::endpoint::Input::body_only(body);
+					let input = crate::endpoint::Input::body_only(body);
 					Ok(Self {
-						sub: _input.body("sub")?,
+						sub: input.body("sub")?,
 					})
 				}
 			}
@@ -144,11 +144,11 @@ pub mod edutypes {
 					])
 				}
 				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let _input = crate::endpoint::Input::body_only(body);
+					let input = crate::endpoint::Input::body_only(body);
 					Ok(Self {
-						typing: _input.body("typing")?,
-						presence: _input.body("presence")?,
-						receipt: _input.body("receipt")?,
+						typing: input.body("typing")?,
+						presence: input.body("presence")?,
+						receipt: input.body("receipt")?,
 					})
 				}
 			}
@@ -232,12 +232,12 @@ pub mod keys {
 					])
 				}
 				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let _input = crate::endpoint::Input::body_only(body);
+					let input = crate::endpoint::Input::body_only(body);
 					Ok(Self {
-						device_keys: _input.body("device_keys")?,
-						master_keys: _input.body("master_keys")?,
-						self_signing_keys: _input.body("self_signing_keys")?,
-						failures: _input.body("failures")?,
+						device_keys: input.body("device_keys")?,
+						master_keys: input.body("master_keys")?,
+						self_signing_keys: input.body("self_signing_keys")?,
+						failures: input.body("failures")?,
 					})
 				}
 			}
@@ -316,10 +316,10 @@ pub mod keys {
 					])
 				}
 				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let _input = crate::endpoint::Input::body_only(body);
+					let input = crate::endpoint::Input::body_only(body);
 					Ok(Self {
-						one_time_keys: _input.body("one_time_keys")?,
-						failures: _input.body("failures")?,
+						one_time_keys: input.body("one_time_keys")?,
+						failures: input.body("failures")?,
 					})
 				}
 			}
@@ -396,9 +396,9 @@ pub mod room {
 					)])
 				}
 				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let _input = crate::endpoint::Input::body_only(body);
+					let input = crate::endpoint::Input::body_only(body);
 					Ok(Self {
-						recommendation: _input.body("recommendation")?,
+						recommendation: input.body("recommendation")?,
 					})
 				}
 			}
@@ -466,9 +466,9 @@ pub mod room {
 					)])
 				}
 				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let _input = crate::endpoint::Input::body_only(body);
+					let input = crate::endpoint::Input::body_only(body);
 					Ok(Self {
-						signatures: _input.body("signatures")?,
+						signatures: input.body("signatures")?,
 					})
 				}
 			}
@@ -549,11 +549,11 @@ pub mod event {
 					])
 				}
 				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let _input = crate::endpoint::Input::body_only(body);
+					let input = crate::endpoint::Input::body_only(body);
 					Ok(Self {
-						origin: _input.body("origin")?,
-						origin_server_ts: _input.body("origin_server_ts")?,
-						pdus: _input.body("pdus")?,
+						origin: input.body("origin")?,
+						origin_server_ts: input.body("origin_server_ts")?,
+						pdus: input.body("pdus")?,
 					})
 				}
 			}
@@ -674,12 +674,12 @@ pub mod event {
 					])
 				}
 				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let _input = crate::endpoint::Input::body_only(body);
+					let input = crate::endpoint::Input::body_only(body);
 					Ok(Self {
-						events: _input.body("events")?,
-						next_batch: _input.body("next_batch")?,
-						limited: _input.body("limited")?,
-						auth_chain: _input.body("auth_chain")?,
+						events: input.body("events")?,
+						next_batch: input.body("next_batch")?,
+						limited: input.body("limited")?,
+						auth_chain: input.body("auth_chain")?,
 					})
 				}
 			}
@@ -757,10 +757,10 @@ pub mod event {
 					])
 				}
 				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let _input = crate::endpoint::Input::body_only(body);
+					let input = crate::endpoint::Input::body_only(body);
 					Ok(Self {
-						event_id: _input.body("event_id")?,
-						origin_server_ts: _input.body("origin_server_ts")?,
+						event_id: input.body("event_id")?,
+						origin_server_ts: input.body("origin_server_ts")?,
 					})
 				}
 			}
@@ -871,9 +871,9 @@ pub mod event {
 					)])
 				}
 				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let _input = crate::endpoint::Input::body_only(body);
+					let input = crate::endpoint::Input::body_only(body);
 					Ok(Self {
-						events: _input.body("events")?,
+						events: input.body("events")?,
 					})
 				}
 			}
@@ -949,10 +949,10 @@ pub mod event {
 					])
 				}
 				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let _input = crate::endpoint::Input::body_only(body);
+					let input = crate::endpoint::Input::body_only(body);
 					Ok(Self {
-						auth_chain_ids: _input.body("auth_chain_ids")?,
-						pdu_ids: _input.body("pdu_ids")?,
+						auth_chain_ids: input.body("auth_chain_ids")?,
+						pdu_ids: input.body("pdu_ids")?,
 					})
 				}
 			}

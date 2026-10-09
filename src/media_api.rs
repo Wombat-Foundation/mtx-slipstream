@@ -16,7 +16,23 @@ use crate::{
 /// How long a download request waits for media that is not yet uploaded.
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(20);
 
-crate::impl_codec_enum!(Method { Crop => "crop", Scale => "scale" });
+impl crate::codec::Serialize for Method {
+	fn to_json(&self) -> crate::json::Value {
+		crate::json::Value::String(::alloc::string::String::from(match self {
+			Self::Crop => "crop",
+			Self::Scale => "scale",
+		}))
+	}
+}
+impl crate::codec::Deserialize for Method {
+	fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+		match value.as_str() {
+			Some("crop") => Ok(Self::Crop),
+			Some("scale") => Ok(Self::Scale),
+			_ => Err(crate::codec::DeError::expected(stringify!(Method))),
+		}
+	}
+}
 
 type FileParts =
 	(Vec<u8>, Option<String>, Option<ContentDisposition>, Option<String>, Option<String>);
@@ -83,9 +99,6 @@ pub fn file_to_response<B: Default + BufMut>(
 	body.put_slice(file);
 	builder.body(body).map_err(|e| IntoHttpError(alloc::string::ToString::to_string(&e)))
 }
-
-/// Settings and limits of the media repository.
-pub mod config {}
 
 /// Authenticated client media (`/_matrix/client/v1/media/*`).
 pub mod authenticated_client {
@@ -177,7 +190,7 @@ pub mod authenticated_client {
 					crate::endpoint::query_pairs(::alloc::vec![
 						(
 							stringify!(ts),
-							if self.ts == None {
+							if self.ts.is_none() {
 								crate::json::Value::Null
 							} else {
 								crate::codec::Serialize::to_json(&self.ts)
@@ -214,13 +227,9 @@ pub mod authenticated_client {
 			}
 			impl Response {
 				/// Wraps preview JSON text.
-
 				///
-
 				/// # Errors
-
 				///
-
 				/// Returns an error if `json` is not valid JSON.
 				pub fn from_json_text(json: &str) -> Result<Self, crate::codec::DeError> {
 					Ok(Self {
@@ -590,7 +599,7 @@ pub mod authenticated_client {
 					crate::endpoint::query_pairs(::alloc::vec![
 						(
 							stringify!(method),
-							if self.method == None {
+							if self.method.is_none() {
 								crate::json::Value::Null
 							} else {
 								crate::codec::Serialize::to_json(&self.method)
@@ -606,7 +615,7 @@ pub mod authenticated_client {
 						),
 						(
 							stringify!(animated),
-							if self.animated == None {
+							if self.animated.is_none() {
 								crate::json::Value::Null
 							} else {
 								crate::codec::Serialize::to_json(&self.animated)
@@ -742,7 +751,7 @@ pub mod legacy {
 					crate::endpoint::query_pairs(::alloc::vec![
 						(
 							stringify!(ts),
-							if self.ts == None {
+							if self.ts.is_none() {
 								crate::json::Value::Null
 							} else {
 								crate::codec::Serialize::to_json(&self.ts)
@@ -779,13 +788,9 @@ pub mod legacy {
 			}
 			impl Response {
 				/// Wraps preview JSON text.
-
 				///
-
 				/// # Errors
-
 				///
-
 				/// Returns an error if `json` is not valid JSON.
 				pub fn from_json_text(json: &str) -> Result<Self, crate::codec::DeError> {
 					Ok(Self {
@@ -898,7 +903,7 @@ pub mod legacy {
 					crate::endpoint::query_pairs(::alloc::vec![
 						(
 							stringify!(allow_remote),
-							if self.allow_remote == true {
+							if self.allow_remote {
 								crate::json::Value::Null
 							} else {
 								crate::codec::Serialize::to_json(&self.allow_remote)
@@ -914,10 +919,10 @@ pub mod legacy {
 						),
 						(
 							stringify!(allow_redirect),
-							if self.allow_redirect == false {
-								crate::json::Value::Null
-							} else {
+							if self.allow_redirect {
 								crate::codec::Serialize::to_json(&self.allow_redirect)
+							} else {
+								crate::json::Value::Null
 							}
 						),
 					])
@@ -1061,7 +1066,7 @@ pub mod legacy {
 					crate::endpoint::query_pairs(::alloc::vec![
 						(
 							stringify!(allow_remote),
-							if self.allow_remote == true {
+							if self.allow_remote {
 								crate::json::Value::Null
 							} else {
 								crate::codec::Serialize::to_json(&self.allow_remote)
@@ -1077,10 +1082,10 @@ pub mod legacy {
 						),
 						(
 							stringify!(allow_redirect),
-							if self.allow_redirect == false {
-								crate::json::Value::Null
-							} else {
+							if self.allow_redirect {
 								crate::codec::Serialize::to_json(&self.allow_redirect)
+							} else {
+								crate::json::Value::Null
 							}
 						),
 					])
@@ -1211,7 +1216,7 @@ pub mod legacy {
 					crate::endpoint::query_pairs(::alloc::vec![
 						(
 							stringify!(method),
-							if self.method == None {
+							if self.method.is_none() {
 								crate::json::Value::Null
 							} else {
 								crate::codec::Serialize::to_json(&self.method)
@@ -1219,7 +1224,7 @@ pub mod legacy {
 						),
 						(
 							stringify!(allow_remote),
-							if self.allow_remote == true {
+							if self.allow_remote {
 								crate::json::Value::Null
 							} else {
 								crate::codec::Serialize::to_json(&self.allow_remote)
@@ -1235,15 +1240,15 @@ pub mod legacy {
 						),
 						(
 							stringify!(allow_redirect),
-							if self.allow_redirect == false {
-								crate::json::Value::Null
-							} else {
+							if self.allow_redirect {
 								crate::codec::Serialize::to_json(&self.allow_redirect)
+							} else {
+								crate::json::Value::Null
 							}
 						),
 						(
 							stringify!(animated),
-							if self.animated == None {
+							if self.animated.is_none() {
 								crate::json::Value::Null
 							} else {
 								crate::codec::Serialize::to_json(&self.animated)
@@ -1346,10 +1351,10 @@ pub mod legacy {
 					])
 				}
 				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let _input = crate::endpoint::Input::body_only(body);
+					let input = crate::endpoint::Input::body_only(body);
 					Ok(Self {
-						content_uri: _input.body("content_uri")?,
-						unused_expires_at: _input.body("unused_expires_at")?,
+						content_uri: input.body("content_uri")?,
+						unused_expires_at: input.body("unused_expires_at")?,
 					})
 				}
 			}
@@ -2036,7 +2041,7 @@ pub mod federation {
 					crate::endpoint::query_pairs(::alloc::vec![
 						(
 							stringify!(method),
-							if self.method == None {
+							if self.method.is_none() {
 								crate::json::Value::Null
 							} else {
 								crate::codec::Serialize::to_json(&self.method)
@@ -2052,7 +2057,7 @@ pub mod federation {
 						),
 						(
 							stringify!(animated),
-							if self.animated == None {
+							if self.animated.is_none() {
 								crate::json::Value::Null
 							} else {
 								crate::codec::Serialize::to_json(&self.animated)

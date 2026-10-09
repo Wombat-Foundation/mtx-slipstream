@@ -5,7 +5,6 @@ use alloc::{collections::BTreeMap, string::String, vec::Vec};
 use crate::{
 	OwnedDeviceId, OwnedUserId,
 	codec::{DeError, Deserialize, Serialize},
-	impl_codec_enum, impl_codec_struct,
 	json::Value,
 };
 
@@ -20,11 +19,25 @@ pub enum KeyUsage {
 	UserSigning,
 }
 
-impl_codec_enum!(KeyUsage {
-	Master => "master",
-	SelfSigning => "self_signing",
-	UserSigning => "user_signing",
-});
+impl crate::codec::Serialize for KeyUsage {
+	fn to_json(&self) -> crate::json::Value {
+		crate::json::Value::String(::alloc::string::String::from(match self {
+			Self::Master => "master",
+			Self::SelfSigning => "self_signing",
+			Self::UserSigning => "user_signing",
+		}))
+	}
+}
+impl crate::codec::Deserialize for KeyUsage {
+	fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+		match value.as_str() {
+			Some("master") => Ok(Self::Master),
+			Some("self_signing") => Ok(Self::SelfSigning),
+			Some("user_signing") => Ok(Self::UserSigning),
+			_ => Err(crate::codec::DeError::expected(stringify!(KeyUsage))),
+		}
+	}
+}
 
 /// Extra information about a device that is not covered by its signatures.
 #[derive(Debug, Default, Eq, PartialEq)]
@@ -32,7 +45,26 @@ pub struct UnsignedDeviceInfo {
 	pub device_display_name: Option<String>,
 }
 
-impl_codec_struct!(UnsignedDeviceInfo {} default { device_display_name: Option<String> });
+impl crate::codec::Serialize for UnsignedDeviceInfo {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [(
+			stringify!(device_display_name),
+			crate::endpoint::enc(&self.device_display_name),
+		)])
+	}
+}
+impl crate::codec::Deserialize for UnsignedDeviceInfo {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(UnsignedDeviceInfo)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			device_display_name: input.body_or_default(stringify!(device_display_name))?,
+		})
+	}
+}
 
 /// Identity keys of a device.
 #[derive(Debug, Eq, PartialEq)]
@@ -65,15 +97,35 @@ impl DeviceKeys {
 	}
 }
 
-impl_codec_struct!(DeviceKeys {
-	user_id: OwnedUserId,
-	device_id: OwnedDeviceId,
-	algorithms: Vec<String>,
-	keys: BTreeMap<String, String>,
-} default {
-	signatures: KeySignatures,
-	unsigned: UnsignedDeviceInfo,
-});
+impl crate::codec::Serialize for DeviceKeys {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			(stringify!(user_id), crate::endpoint::enc(&self.user_id)),
+			(stringify!(device_id), crate::endpoint::enc(&self.device_id)),
+			(stringify!(algorithms), crate::endpoint::enc(&self.algorithms)),
+			(stringify!(keys), crate::endpoint::enc(&self.keys)),
+			(stringify!(signatures), crate::endpoint::enc(&self.signatures)),
+			(stringify!(unsigned), crate::endpoint::enc(&self.unsigned)),
+		])
+	}
+}
+impl crate::codec::Deserialize for DeviceKeys {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(DeviceKeys)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			user_id: input.body(stringify!(user_id))?,
+			device_id: input.body(stringify!(device_id))?,
+			algorithms: input.body(stringify!(algorithms))?,
+			keys: input.body(stringify!(keys))?,
+			signatures: input.body_or_default(stringify!(signatures))?,
+			unsigned: input.body_or_default(stringify!(unsigned))?,
+		})
+	}
+}
 
 /// A cross-signing key.
 #[derive(Debug, Eq, PartialEq)]
@@ -101,13 +153,31 @@ impl CrossSigningKey {
 	}
 }
 
-impl_codec_struct!(CrossSigningKey {
-	user_id: OwnedUserId,
-	usage: Vec<KeyUsage>,
-	keys: BTreeMap<String, String>,
-} default {
-	signatures: KeySignatures,
-});
+impl crate::codec::Serialize for CrossSigningKey {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			(stringify!(user_id), crate::endpoint::enc(&self.user_id)),
+			(stringify!(usage), crate::endpoint::enc(&self.usage)),
+			(stringify!(keys), crate::endpoint::enc(&self.keys)),
+			(stringify!(signatures), crate::endpoint::enc(&self.signatures)),
+		])
+	}
+}
+impl crate::codec::Deserialize for CrossSigningKey {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(CrossSigningKey)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			user_id: input.body(stringify!(user_id))?,
+			usage: input.body(stringify!(usage))?,
+			keys: input.body(stringify!(keys))?,
+			signatures: input.body_or_default(stringify!(signatures))?,
+		})
+	}
+}
 
 /// A one-time or fallback key, kept as the JSON the client uploaded.
 #[derive(Debug, Eq, PartialEq)]

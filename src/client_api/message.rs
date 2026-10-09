@@ -77,9 +77,9 @@ pub mod send_message_event {
 				)])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					event_id: _input.body("event_id")?,
+					event_id: input.body("event_id")?,
 				})
 			}
 		}

@@ -10,7 +10,6 @@ use crate::{
 	api::client::error::ErrorKind,
 	codec::{DeError, Deserialize, Serialize},
 	endpoint::{Input, object_from},
-	impl_codec_struct,
 	json::Value,
 };
 
@@ -94,7 +93,18 @@ impl fmt::Display for AuthType {
 	}
 }
 
-crate::impl_codec_string!(AuthType, |s| Ok(Self::from(s)), |v| v.as_str());
+impl crate::codec::Serialize for AuthType {
+	fn to_json(&self) -> crate::json::Value {
+		let v = self;
+		crate::json::Value::String(::alloc::string::String::from(v.as_str()))
+	}
+}
+impl crate::codec::Deserialize for AuthType {
+	fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+		let s = value.as_str().ok_or_else(|| crate::codec::DeError::expected("string"))?;
+		Ok(Self::from(s))
+	}
+}
 
 /// A sequence of stages that together complete authentication.
 #[derive(Clone, Debug, Default)]
@@ -111,7 +121,26 @@ impl AuthFlow {
 	}
 }
 
-impl_codec_struct!(AuthFlow { stages: Vec<AuthType> });
+impl crate::codec::Serialize for AuthFlow {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [(
+			stringify!(stages),
+			crate::endpoint::enc(&self.stages),
+		)])
+	}
+}
+impl crate::codec::Deserialize for AuthFlow {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(AuthFlow)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			stages: input.body(stringify!(stages))?,
+		})
+	}
+}
 
 /// The state of a UIAA session, sent to the client with a 401.
 #[derive(Clone, Debug, Default)]
@@ -239,41 +268,67 @@ pub struct ThirdpartyIdCredentials {
 	pub id_access_token: Option<String>,
 }
 
-impl_codec_struct!(ThirdpartyIdCredentials {
-	sid: String,
-	client_secret: String,
-} default {
-	id_server: Option<String>,
-	id_access_token: Option<String>,
-});
-
-macro_rules! auth_stage {
-	($(#[$meta:meta])* $name:ident { $($field:ident : $ty:ty),* }) => {
-		$(#[$meta])*
-		#[derive(Debug)]
-		pub struct $name {
-			$(pub $field: $ty,)*
-			pub session: Option<String>,
+impl crate::codec::Serialize for ThirdpartyIdCredentials {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			(stringify!(sid), crate::endpoint::enc(&self.sid)),
+			(stringify!(client_secret), crate::endpoint::enc(&self.client_secret)),
+			(stringify!(id_server), crate::endpoint::enc(&self.id_server)),
+			(stringify!(id_access_token), crate::endpoint::enc(&self.id_access_token)),
+		])
+	}
+}
+impl crate::codec::Deserialize for ThirdpartyIdCredentials {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(ThirdpartyIdCredentials)));
 		}
-	};
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			sid: input.body(stringify!(sid))?,
+			client_secret: input.body(stringify!(client_secret))?,
+			id_server: input.body_or_default(stringify!(id_server))?,
+			id_access_token: input.body_or_default(stringify!(id_access_token))?,
+		})
+	}
 }
 
-auth_stage!(Password { identifier: Option<UserIdentifier>, password: String });
-auth_stage!(ReCaptcha {
-	response: String
-});
-auth_stage!(RegistrationToken {
-	token: String
-});
-auth_stage!(EmailIdentity {
-	thirdparty_id_creds: ThirdpartyIdCredentials
-});
-auth_stage!(Dummy {});
-auth_stage!(Terms {});
-auth_stage!(
-	/// A client checking whether fallback authentication has completed.
-	FallbackAcknowledgement {}
-);
+#[derive(Debug)]
+pub struct Password {
+	pub identifier: Option<UserIdentifier>,
+	pub password: String,
+	pub session: Option<String>,
+}
+#[derive(Debug)]
+pub struct ReCaptcha {
+	pub response: String,
+	pub session: Option<String>,
+}
+#[derive(Debug)]
+pub struct RegistrationToken {
+	pub token: String,
+	pub session: Option<String>,
+}
+#[derive(Debug)]
+pub struct EmailIdentity {
+	pub thirdparty_id_creds: ThirdpartyIdCredentials,
+	pub session: Option<String>,
+}
+#[derive(Debug)]
+pub struct Dummy {
+	pub session: Option<String>,
+}
+#[derive(Debug)]
+pub struct Terms {
+	pub session: Option<String>,
+}
+
+/// A client checking whether fallback authentication has completed.
+#[derive(Debug)]
+pub struct FallbackAcknowledgement {
+	pub session: Option<String>,
+}
 
 /// Authentication data a client sends to continue a UIAA session.
 #[derive(Debug)]

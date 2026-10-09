@@ -79,14 +79,14 @@ pub mod get_context {
 				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					start: _input.body("start")?,
-					end: _input.body("end")?,
-					events_before: _input.body("events_before")?,
-					event: _input.body("event")?,
-					events_after: _input.body("events_after")?,
-					state: _input.body("state")?,
+					start: input.body("start")?,
+					end: input.body("end")?,
+					events_before: input.body("events_before")?,
+					event: input.body("event")?,
+					events_after: input.body("events_after")?,
+					state: input.body("state")?,
 				})
 			}
 		}

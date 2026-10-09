@@ -79,12 +79,12 @@ pub mod get_message_events {
 				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					start: _input.body("start")?,
-					end: _input.body("end")?,
-					chunk: _input.body("chunk")?,
-					state: _input.body("state")?,
+					start: input.body("start")?,
+					end: input.body("end")?,
+					chunk: input.body("chunk")?,
+					state: input.body("state")?,
 				})
 			}
 		}

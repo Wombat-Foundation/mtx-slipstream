@@ -5,7 +5,6 @@ use alloc::{string::String, vec::Vec};
 use crate::{
 	OwnedMxcUri, OwnedRoomAliasId, OwnedRoomId, UInt,
 	codec::{DeError, Deserialize, Serialize},
-	impl_codec_struct,
 	json::Value,
 	room::RoomType,
 };
@@ -15,7 +14,23 @@ pub enum Visibility {
 	Public,
 	Private,
 }
-crate::impl_codec_enum!(Visibility { Public => "public", Private => "private" });
+impl crate::codec::Serialize for Visibility {
+	fn to_json(&self) -> crate::json::Value {
+		crate::json::Value::String(::alloc::string::String::from(match self {
+			Self::Public => "public",
+			Self::Private => "private",
+		}))
+	}
+}
+impl crate::codec::Deserialize for Visibility {
+	fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+		match value.as_str() {
+			Some("public") => Ok(Self::Public),
+			Some("private") => Ok(Self::Private),
+			_ => Err(crate::codec::DeError::expected(stringify!(Visibility))),
+		}
+	}
+}
 
 /// Which network a directory query targets.
 #[derive(Debug, Default, Eq, PartialEq)]
@@ -102,7 +117,27 @@ pub struct Filter {
 	pub room_types: Vec<RoomTypeFilter>,
 }
 
-impl_codec_struct!(Filter {} default { generic_search_term: Option<String>, room_types: Vec<RoomTypeFilter> });
+impl crate::codec::Serialize for Filter {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			(stringify!(generic_search_term), crate::endpoint::enc(&self.generic_search_term)),
+			(stringify!(room_types), crate::endpoint::enc(&self.room_types)),
+		])
+	}
+}
+impl crate::codec::Deserialize for Filter {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(Filter)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			generic_search_term: input.body_or_default(stringify!(generic_search_term))?,
+			room_types: input.body_or_default(stringify!(room_types))?,
+		})
+	}
+}
 
 /// How a public room can be joined.
 #[derive(Debug, Default, Eq, PartialEq)]
@@ -135,7 +170,18 @@ impl From<&str> for PublicRoomJoinRule {
 	}
 }
 
-crate::impl_codec_string!(PublicRoomJoinRule, |s| Ok(Self::from(s)), |v| v.as_str());
+impl crate::codec::Serialize for PublicRoomJoinRule {
+	fn to_json(&self) -> crate::json::Value {
+		let v = self;
+		crate::json::Value::String(::alloc::string::String::from(v.as_str()))
+	}
+}
+impl crate::codec::Deserialize for PublicRoomJoinRule {
+	fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+		let s = value.as_str().ok_or_else(|| crate::codec::DeError::expected("string"))?;
+		Ok(Self::from(s))
+	}
+}
 
 /// One room in the public directory.
 #[derive(Debug)]
@@ -152,19 +198,43 @@ pub struct PublicRoomsChunk {
 	pub world_readable: bool,
 }
 
-impl_codec_struct!(PublicRoomsChunk {
-	num_joined_members: UInt,
-	room_id: OwnedRoomId,
-} default {
-	avatar_url: Option<OwnedMxcUri>,
-	canonical_alias: Option<OwnedRoomAliasId>,
-	guest_can_join: bool,
-	join_rule: PublicRoomJoinRule,
-	name: Option<String>,
-	room_type: Option<RoomType>,
-	topic: Option<String>,
-	world_readable: bool,
-});
+impl crate::codec::Serialize for PublicRoomsChunk {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			(stringify!(num_joined_members), crate::endpoint::enc(&self.num_joined_members)),
+			(stringify!(room_id), crate::endpoint::enc(&self.room_id)),
+			(stringify!(avatar_url), crate::endpoint::enc(&self.avatar_url)),
+			(stringify!(canonical_alias), crate::endpoint::enc(&self.canonical_alias)),
+			(stringify!(guest_can_join), crate::endpoint::enc(&self.guest_can_join)),
+			(stringify!(join_rule), crate::endpoint::enc(&self.join_rule)),
+			(stringify!(name), crate::endpoint::enc(&self.name)),
+			(stringify!(room_type), crate::endpoint::enc(&self.room_type)),
+			(stringify!(topic), crate::endpoint::enc(&self.topic)),
+			(stringify!(world_readable), crate::endpoint::enc(&self.world_readable)),
+		])
+	}
+}
+impl crate::codec::Deserialize for PublicRoomsChunk {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(PublicRoomsChunk)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			num_joined_members: input.body(stringify!(num_joined_members))?,
+			room_id: input.body(stringify!(room_id))?,
+			avatar_url: input.body_or_default(stringify!(avatar_url))?,
+			canonical_alias: input.body_or_default(stringify!(canonical_alias))?,
+			guest_can_join: input.body_or_default(stringify!(guest_can_join))?,
+			join_rule: input.body_or_default(stringify!(join_rule))?,
+			name: input.body_or_default(stringify!(name))?,
+			room_type: input.body_or_default(stringify!(room_type))?,
+			topic: input.body_or_default(stringify!(topic))?,
+			world_readable: input.body_or_default(stringify!(world_readable))?,
+		})
+	}
+}
 
 pub mod get_public_rooms {
 	pub mod v3 {
@@ -239,12 +309,12 @@ pub mod get_public_rooms {
 				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					chunk: _input.body("chunk")?,
-					next_batch: _input.body("next_batch")?,
-					prev_batch: _input.body("prev_batch")?,
-					total_room_count_estimate: _input.body("total_room_count_estimate")?,
+					chunk: input.body("chunk")?,
+					next_batch: input.body("next_batch")?,
+					prev_batch: input.body("prev_batch")?,
+					total_room_count_estimate: input.body("total_room_count_estimate")?,
 				})
 			}
 		}
@@ -333,12 +403,12 @@ pub mod get_public_rooms_filtered {
 				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					chunk: _input.body("chunk")?,
-					next_batch: _input.body("next_batch")?,
-					prev_batch: _input.body("prev_batch")?,
-					total_room_count_estimate: _input.body("total_room_count_estimate")?,
+					chunk: input.body("chunk")?,
+					next_batch: input.body("next_batch")?,
+					prev_batch: input.body("prev_batch")?,
+					total_room_count_estimate: input.body("total_room_count_estimate")?,
 				})
 			}
 		}
@@ -374,12 +444,12 @@ pub mod federation {
 					])
 				}
 				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let _input = crate::endpoint::Input::body_only(body);
+					let input = crate::endpoint::Input::body_only(body);
 					Ok(Self {
-						chunk: _input.body("chunk")?,
-						next_batch: _input.body("next_batch")?,
-						prev_batch: _input.body("prev_batch")?,
-						total_room_count_estimate: _input.body("total_room_count_estimate")?,
+						chunk: input.body("chunk")?,
+						next_batch: input.body("next_batch")?,
+						prev_batch: input.body("prev_batch")?,
+						total_room_count_estimate: input.body("total_room_count_estimate")?,
 					})
 				}
 			}
@@ -517,12 +587,12 @@ pub mod federation {
 					])
 				}
 				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let _input = crate::endpoint::Input::body_only(body);
+					let input = crate::endpoint::Input::body_only(body);
 					Ok(Self {
-						chunk: _input.body("chunk")?,
-						next_batch: _input.body("next_batch")?,
-						prev_batch: _input.body("prev_batch")?,
-						total_room_count_estimate: _input.body("total_room_count_estimate")?,
+						chunk: input.body("chunk")?,
+						next_batch: input.body("next_batch")?,
+						prev_batch: input.body("prev_batch")?,
+						total_room_count_estimate: input.body("total_room_count_estimate")?,
 					})
 				}
 			}

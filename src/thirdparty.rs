@@ -5,7 +5,23 @@ pub enum Medium {
 	Email,
 	Msisdn,
 }
-crate::impl_codec_enum!(Medium { Email => "email", Msisdn => "msisdn" });
+impl crate::codec::Serialize for Medium {
+	fn to_json(&self) -> crate::json::Value {
+		crate::json::Value::String(::alloc::string::String::from(match self {
+			Self::Email => "email",
+			Self::Msisdn => "msisdn",
+		}))
+	}
+}
+impl crate::codec::Deserialize for Medium {
+	fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+		match value.as_str() {
+			Some("email") => Ok(Self::Email),
+			Some("msisdn") => Ok(Self::Msisdn),
+			_ => Err(crate::codec::DeError::expected(stringify!(Medium))),
+		}
+	}
+}
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct ThirdPartyIdentifier {

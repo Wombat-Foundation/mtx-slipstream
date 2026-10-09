@@ -1,7 +1,5 @@
 //! Room-level client endpoints.
 
-use crate::impl_codec_enum;
-
 /// Whether a room is listed in the public directory.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum Visibility {
@@ -10,13 +8,45 @@ pub enum Visibility {
 	Private,
 }
 
-impl_codec_enum!(Visibility { Public => "public", Private => "private" });
+impl crate::codec::Serialize for Visibility {
+	fn to_json(&self) -> crate::json::Value {
+		crate::json::Value::String(::alloc::string::String::from(match self {
+			Self::Public => "public",
+			Self::Private => "private",
+		}))
+	}
+}
+impl crate::codec::Deserialize for Visibility {
+	fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+		match value.as_str() {
+			Some("public") => Ok(Self::Public),
+			Some("private") => Ok(Self::Private),
+			_ => Err(crate::codec::DeError::expected(stringify!(Visibility))),
+		}
+	}
+}
 
 use alloc::string::String;
 
 use crate::api::Direction;
 
-impl_codec_enum!(Direction { Forward => "f", Backward => "b" });
+impl crate::codec::Serialize for Direction {
+	fn to_json(&self) -> crate::json::Value {
+		crate::json::Value::String(::alloc::string::String::from(match self {
+			Self::Forward => "f",
+			Self::Backward => "b",
+		}))
+	}
+}
+impl crate::codec::Deserialize for Direction {
+	fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+		match value.as_str() {
+			Some("f") => Ok(Self::Forward),
+			Some("b") => Ok(Self::Backward),
+			_ => Err(crate::codec::DeError::expected(stringify!(Direction))),
+		}
+	}
+}
 
 /// An initial state event of a new room; kept raw because only `type`,
 /// `state_key` and `content` are read.
@@ -36,12 +66,31 @@ pub struct Invite3pid {
 	pub address: String,
 }
 
-crate::impl_codec_struct!(Invite3pid {
-	id_server: String,
-	id_access_token: String,
-	medium: String,
-	address: String,
-});
+impl crate::codec::Serialize for Invite3pid {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			(stringify!(id_server), crate::endpoint::enc(&self.id_server)),
+			(stringify!(id_access_token), crate::endpoint::enc(&self.id_access_token)),
+			(stringify!(medium), crate::endpoint::enc(&self.medium)),
+			(stringify!(address), crate::endpoint::enc(&self.address)),
+		])
+	}
+}
+impl crate::codec::Deserialize for Invite3pid {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(Invite3pid)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			id_server: input.body(stringify!(id_server))?,
+			id_access_token: input.body(stringify!(id_access_token))?,
+			medium: input.body(stringify!(medium))?,
+			address: input.body(stringify!(address))?,
+		})
+	}
+}
 
 /// The preset a room is created with.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -51,11 +100,25 @@ pub enum RoomPreset {
 	TrustedPrivateChat,
 }
 
-impl_codec_enum!(RoomPreset {
-	PrivateChat => "private_chat",
-	PublicChat => "public_chat",
-	TrustedPrivateChat => "trusted_private_chat",
-});
+impl crate::codec::Serialize for RoomPreset {
+	fn to_json(&self) -> crate::json::Value {
+		crate::json::Value::String(::alloc::string::String::from(match self {
+			Self::PrivateChat => "private_chat",
+			Self::PublicChat => "public_chat",
+			Self::TrustedPrivateChat => "trusted_private_chat",
+		}))
+	}
+}
+impl crate::codec::Deserialize for RoomPreset {
+	fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+		match value.as_str() {
+			Some("private_chat") => Ok(Self::PrivateChat),
+			Some("public_chat") => Ok(Self::PublicChat),
+			Some("trusted_private_chat") => Ok(Self::TrustedPrivateChat),
+			_ => Err(crate::codec::DeError::expected(stringify!(RoomPreset))),
+		}
+	}
+}
 
 /// `POST /_matrix/client/v3/createRoom`.
 pub mod create_room {
@@ -104,22 +167,55 @@ pub mod create_room {
 			}
 		}
 
-		crate::impl_codec_struct!(Request {} default {
-			creation_content: Option<Raw<CreationContent>>,
-			initial_state: Vec<Raw<AnyInitialStateEvent>>,
-			invite: Vec<OwnedUserId>,
-			invite_3pid: Vec<Invite3pid>,
-			is_direct: bool,
-			name: Option<String>,
-			power_level_content_override: Option<Raw<RoomPowerLevelsEventContent>>,
-			preset: Option<RoomPreset>,
-			room_alias_name: Option<String>,
-			room_version: Option<RoomVersionId>,
-			topic: Option<String>,
-			visibility: Visibility,
-			room_id: Option<String>,
-			origin_server_ts: Option<crate::MilliSecondsSinceUnixEpoch>,
-		});
+		impl crate::codec::Serialize for Request {
+			fn to_json(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [
+					(stringify!(creation_content), crate::endpoint::enc(&self.creation_content)),
+					(stringify!(initial_state), crate::endpoint::enc(&self.initial_state)),
+					(stringify!(invite), crate::endpoint::enc(&self.invite)),
+					(stringify!(invite_3pid), crate::endpoint::enc(&self.invite_3pid)),
+					(stringify!(is_direct), crate::endpoint::enc(&self.is_direct)),
+					(stringify!(name), crate::endpoint::enc(&self.name)),
+					(
+						stringify!(power_level_content_override),
+						crate::endpoint::enc(&self.power_level_content_override),
+					),
+					(stringify!(preset), crate::endpoint::enc(&self.preset)),
+					(stringify!(room_alias_name), crate::endpoint::enc(&self.room_alias_name)),
+					(stringify!(room_version), crate::endpoint::enc(&self.room_version)),
+					(stringify!(topic), crate::endpoint::enc(&self.topic)),
+					(stringify!(visibility), crate::endpoint::enc(&self.visibility)),
+					(stringify!(room_id), crate::endpoint::enc(&self.room_id)),
+					(stringify!(origin_server_ts), crate::endpoint::enc(&self.origin_server_ts)),
+				])
+			}
+		}
+		impl crate::codec::Deserialize for Request {
+			fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				// A struct is a JSON object; anything else is malformed, not "all defaults".
+				if value.as_object().is_none() {
+					return Err(crate::codec::DeError::expected(stringify!(Request)));
+				}
+				let input = crate::endpoint::Input::body_only(value);
+				Ok(Self {
+					creation_content: input.body_or_default(stringify!(creation_content))?,
+					initial_state: input.body_or_default(stringify!(initial_state))?,
+					invite: input.body_or_default(stringify!(invite))?,
+					invite_3pid: input.body_or_default(stringify!(invite_3pid))?,
+					is_direct: input.body_or_default(stringify!(is_direct))?,
+					name: input.body_or_default(stringify!(name))?,
+					power_level_content_override: input
+						.body_or_default(stringify!(power_level_content_override))?,
+					preset: input.body_or_default(stringify!(preset))?,
+					room_alias_name: input.body_or_default(stringify!(room_alias_name))?,
+					room_version: input.body_or_default(stringify!(room_version))?,
+					topic: input.body_or_default(stringify!(topic))?,
+					visibility: input.body_or_default(stringify!(visibility))?,
+					room_id: input.body_or_default(stringify!(room_id))?,
+					origin_server_ts: input.body_or_default(stringify!(origin_server_ts))?,
+				})
+			}
+		}
 
 		const _: crate::endpoint::Metadata =
 			crate::endpoint::Metadata::new("POST", "/_matrix/client/v3/createRoom");
@@ -178,9 +274,9 @@ pub mod create_room {
 				)])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					room_id: _input.body("room_id")?,
+					room_id: input.body("room_id")?,
 				})
 			}
 		}
@@ -260,9 +356,9 @@ pub mod upgrade_room {
 				)])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					replacement_room: _input.body("replacement_room")?,
+					replacement_room: input.body("replacement_room")?,
 				})
 			}
 		}
@@ -352,9 +448,9 @@ pub mod aliases {
 				)])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					aliases: _input.body("aliases")?,
+					aliases: input.body("aliases")?,
 				})
 			}
 		}
@@ -523,10 +619,10 @@ pub mod get_event_by_timestamp {
 				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					event_id: _input.body("event_id")?,
-					origin_server_ts: _input.body("origin_server_ts")?,
+					event_id: input.body("event_id")?,
+					origin_server_ts: input.body("origin_server_ts")?,
 				})
 			}
 		}
@@ -774,10 +870,29 @@ pub mod initial_sync {
 			pub chunk: Vec<Raw<AnyMessageLikeEvent>>,
 		}
 
-		crate::impl_codec_struct!(PaginationChunk { end: String } default {
-			start: Option<String>,
-			chunk: Vec<Raw<AnyMessageLikeEvent>>,
-		});
+		impl crate::codec::Serialize for PaginationChunk {
+			fn to_json(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [
+					(stringify!(end), crate::endpoint::enc(&self.end)),
+					(stringify!(start), crate::endpoint::enc(&self.start)),
+					(stringify!(chunk), crate::endpoint::enc(&self.chunk)),
+				])
+			}
+		}
+		impl crate::codec::Deserialize for PaginationChunk {
+			fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				// A struct is a JSON object; anything else is malformed, not "all defaults".
+				if value.as_object().is_none() {
+					return Err(crate::codec::DeError::expected(stringify!(PaginationChunk)));
+				}
+				let input = crate::endpoint::Input::body_only(value);
+				Ok(Self {
+					end: input.body(stringify!(end))?,
+					start: input.body_or_default(stringify!(start))?,
+					chunk: input.body_or_default(stringify!(chunk))?,
+				})
+			}
+		}
 
 		#[derive(Debug)]
 		pub struct Response {

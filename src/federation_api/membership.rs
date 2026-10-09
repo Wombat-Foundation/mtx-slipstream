@@ -2,7 +2,7 @@
 
 use alloc::{string::String, vec::Vec};
 
-use crate::{federation_api::RawPdu, impl_codec_struct};
+use crate::federation_api::RawPdu;
 
 /// Room state returned from a join, in the v1 layout.
 #[derive(Debug)]
@@ -13,12 +13,31 @@ pub struct RoomStateV1 {
 	pub event: Option<RawPdu>,
 }
 
-impl_codec_struct!(RoomStateV1 {
-	origin: String,
-	auth_chain: Vec<RawPdu>,
-	state: Vec<RawPdu>,
-	event: Option<RawPdu>,
-});
+impl crate::codec::Serialize for RoomStateV1 {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			(stringify!(origin), crate::endpoint::enc(&self.origin)),
+			(stringify!(auth_chain), crate::endpoint::enc(&self.auth_chain)),
+			(stringify!(state), crate::endpoint::enc(&self.state)),
+			(stringify!(event), crate::endpoint::enc(&self.event)),
+		])
+	}
+}
+impl crate::codec::Deserialize for RoomStateV1 {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(RoomStateV1)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			origin: input.body(stringify!(origin))?,
+			auth_chain: input.body(stringify!(auth_chain))?,
+			state: input.body(stringify!(state))?,
+			event: input.body(stringify!(event))?,
+		})
+	}
+}
 
 /// Room state returned from a join, in the v2 layout.
 #[derive(Debug)]
@@ -30,13 +49,33 @@ pub struct RoomStateV2 {
 	pub servers_in_room: Option<Vec<String>>,
 }
 
-impl_codec_struct!(RoomStateV2 {
-	auth_chain: Vec<RawPdu>,
-	state: Vec<RawPdu>,
-	event: Option<RawPdu>,
-	members_omitted: bool,
-	servers_in_room: Option<Vec<String>>,
-});
+impl crate::codec::Serialize for RoomStateV2 {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			(stringify!(auth_chain), crate::endpoint::enc(&self.auth_chain)),
+			(stringify!(state), crate::endpoint::enc(&self.state)),
+			(stringify!(event), crate::endpoint::enc(&self.event)),
+			(stringify!(members_omitted), crate::endpoint::enc(&self.members_omitted)),
+			(stringify!(servers_in_room), crate::endpoint::enc(&self.servers_in_room)),
+		])
+	}
+}
+impl crate::codec::Deserialize for RoomStateV2 {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(RoomStateV2)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			auth_chain: input.body(stringify!(auth_chain))?,
+			state: input.body(stringify!(state))?,
+			event: input.body(stringify!(event))?,
+			members_omitted: input.body(stringify!(members_omitted))?,
+			servers_in_room: input.body(stringify!(servers_in_room))?,
+		})
+	}
+}
 
 pub mod prepare_join_event {
 	pub mod v1 {
@@ -109,10 +148,10 @@ pub mod prepare_join_event {
 				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					room_version: _input.body("room_version")?,
-					event: _input.body("event")?,
+					room_version: input.body("room_version")?,
+					event: input.body("event")?,
 				})
 			}
 		}
@@ -186,10 +225,10 @@ pub mod prepare_leave_event {
 				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					room_version: _input.body("room_version")?,
-					event: _input.body("event")?,
+					room_version: input.body("room_version")?,
+					event: input.body("event")?,
 				})
 			}
 		}
@@ -525,8 +564,7 @@ pub mod create_leave_event {
 			fn to_body(&self) -> crate::json::Value {
 				crate::endpoint::body_object(&mut [])
 			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
 				Ok(Self {})
 			}
 		}

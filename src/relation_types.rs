@@ -6,7 +6,6 @@ use crate::{
 	OwnedEventId, UInt,
 	codec::{DeError, Deserialize, Serialize},
 	endpoint::{Input, object_from},
-	impl_codec_struct,
 	json::{Object, Value},
 	sswire::Raw,
 };
@@ -26,9 +25,26 @@ impl InReplyTo {
 	}
 }
 
-impl_codec_struct!(InReplyTo {
-	event_id: OwnedEventId
-});
+impl crate::codec::Serialize for InReplyTo {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [(
+			stringify!(event_id),
+			crate::endpoint::enc(&self.event_id),
+		)])
+	}
+}
+impl crate::codec::Deserialize for InReplyTo {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(InReplyTo)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			event_id: input.body(stringify!(event_id))?,
+		})
+	}
+}
 
 /// A relation placing an event in a thread.
 #[derive(Debug, Eq, PartialEq)]
@@ -51,10 +67,29 @@ impl Thread {
 	}
 }
 
-impl_codec_struct!(Thread { event_id: OwnedEventId } default {
-	in_reply_to: Option<InReplyTo>,
-	is_falling_back: bool,
-});
+impl crate::codec::Serialize for Thread {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			(stringify!(event_id), crate::endpoint::enc(&self.event_id)),
+			(stringify!(in_reply_to), crate::endpoint::enc(&self.in_reply_to)),
+			(stringify!(is_falling_back), crate::endpoint::enc(&self.is_falling_back)),
+		])
+	}
+}
+impl crate::codec::Deserialize for Thread {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(Thread)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			event_id: input.body(stringify!(event_id))?,
+			in_reply_to: input.body_or_default(stringify!(in_reply_to))?,
+			is_falling_back: input.body_or_default(stringify!(is_falling_back))?,
+		})
+	}
+}
 
 /// Replaces (edits) another event.
 #[derive(Debug, Eq, PartialEq)]
@@ -62,9 +97,26 @@ pub struct Replacement {
 	pub event_id: OwnedEventId,
 }
 
-impl_codec_struct!(Replacement {
-	event_id: OwnedEventId
-});
+impl crate::codec::Serialize for Replacement {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [(
+			stringify!(event_id),
+			crate::endpoint::enc(&self.event_id),
+		)])
+	}
+}
+impl crate::codec::Deserialize for Replacement {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(Replacement)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			event_id: input.body(stringify!(event_id))?,
+		})
+	}
+}
 
 /// References another event without changing how it is shown.
 #[derive(Debug, Eq, PartialEq)]
@@ -72,9 +124,26 @@ pub struct Reference {
 	pub event_id: OwnedEventId,
 }
 
-impl_codec_struct!(Reference {
-	event_id: OwnedEventId
-});
+impl crate::codec::Serialize for Reference {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [(
+			stringify!(event_id),
+			crate::endpoint::enc(&self.event_id),
+		)])
+	}
+}
+impl crate::codec::Deserialize for Reference {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(Reference)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			event_id: input.body(stringify!(event_id))?,
+		})
+	}
+}
 
 /// An annotation, such as a reaction, on another event.
 #[derive(Debug, Eq, PartialEq)]
@@ -83,10 +152,27 @@ pub struct Annotation {
 	pub key: String,
 }
 
-impl_codec_struct!(Annotation {
-	event_id: OwnedEventId,
-	key: String
-});
+impl crate::codec::Serialize for Annotation {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			(stringify!(event_id), crate::endpoint::enc(&self.event_id)),
+			(stringify!(key), crate::endpoint::enc(&self.key)),
+		])
+	}
+}
+impl crate::codec::Deserialize for Annotation {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(Annotation)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			event_id: input.body(stringify!(event_id))?,
+			key: input.body(stringify!(key))?,
+		})
+	}
+}
 
 /// A relation of a kind this server does not know.
 #[derive(Debug, Eq, PartialEq)]
@@ -174,10 +260,33 @@ pub struct BundledThread {
 	pub current_user_participated: bool,
 }
 
-impl_codec_struct!(BundledThread {
-	latest_event: Raw<Value>,
-	count: UInt,
-} default { current_user_participated: bool });
+impl crate::codec::Serialize for BundledThread {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			(stringify!(latest_event), crate::endpoint::enc(&self.latest_event)),
+			(stringify!(count), crate::endpoint::enc(&self.count)),
+			(
+				stringify!(current_user_participated),
+				crate::endpoint::enc(&self.current_user_participated),
+			),
+		])
+	}
+}
+impl crate::codec::Deserialize for BundledThread {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(BundledThread)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			latest_event: input.body(stringify!(latest_event))?,
+			count: input.body(stringify!(count))?,
+			current_user_participated: input
+				.body_or_default(stringify!(current_user_participated))?,
+		})
+	}
+}
 
 /// An event that references the bundling event.
 #[derive(Debug, Eq, PartialEq)]
@@ -194,9 +303,26 @@ impl BundledReference {
 	}
 }
 
-impl_codec_struct!(BundledReference {
-	event_id: OwnedEventId
-});
+impl crate::codec::Serialize for BundledReference {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [(
+			stringify!(event_id),
+			crate::endpoint::enc(&self.event_id),
+		)])
+	}
+}
+impl crate::codec::Deserialize for BundledReference {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(BundledReference)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			event_id: input.body(stringify!(event_id))?,
+		})
+	}
+}
 
 /// All references to the bundling event.
 #[derive(Debug, Eq, PartialEq)]
@@ -213,7 +339,26 @@ impl ReferenceChunk {
 	}
 }
 
-impl_codec_struct!(ReferenceChunk { chunk: Vec<BundledReference> });
+impl crate::codec::Serialize for ReferenceChunk {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [(
+			stringify!(chunk),
+			crate::endpoint::enc(&self.chunk),
+		)])
+	}
+}
+impl crate::codec::Deserialize for ReferenceChunk {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(ReferenceChunk)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			chunk: input.body(stringify!(chunk))?,
+		})
+	}
+}
 
 /// The aggregations bundled into an event's `unsigned.m.relations`.
 ///

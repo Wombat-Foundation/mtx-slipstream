@@ -313,9 +313,26 @@ pub mod login {
 			}
 		}
 
-		crate::impl_codec_struct!(HomeserverInfo {
-			base_url: String
-		});
+		impl crate::codec::Serialize for HomeserverInfo {
+			fn to_json(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [(
+					stringify!(base_url),
+					crate::endpoint::enc(&self.base_url),
+				)])
+			}
+		}
+		impl crate::codec::Deserialize for HomeserverInfo {
+			fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				// A struct is a JSON object; anything else is malformed, not "all defaults".
+				if value.as_object().is_none() {
+					return Err(crate::codec::DeError::expected(stringify!(HomeserverInfo)));
+				}
+				let input = crate::endpoint::Input::body_only(value);
+				Ok(Self {
+					base_url: input.body(stringify!(base_url))?,
+				})
+			}
+		}
 
 		/// The identity server base URL.
 		#[derive(Debug)]
@@ -323,9 +340,26 @@ pub mod login {
 			pub base_url: String,
 		}
 
-		crate::impl_codec_struct!(IdentityServerInfo {
-			base_url: String
-		});
+		impl crate::codec::Serialize for IdentityServerInfo {
+			fn to_json(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [(
+					stringify!(base_url),
+					crate::endpoint::enc(&self.base_url),
+				)])
+			}
+		}
+		impl crate::codec::Deserialize for IdentityServerInfo {
+			fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				// A struct is a JSON object; anything else is malformed, not "all defaults".
+				if value.as_object().is_none() {
+					return Err(crate::codec::DeError::expected(stringify!(IdentityServerInfo)));
+				}
+				let input = crate::endpoint::Input::body_only(value);
+				Ok(Self {
+					base_url: input.body(stringify!(base_url))?,
+				})
+			}
+		}
 
 		/// Client discovery information (`m.homeserver`, `m.identity_server`).
 		#[derive(Debug)]
@@ -539,8 +573,7 @@ pub mod logout {
 			fn to_body(&self) -> crate::json::Value {
 				crate::endpoint::body_object(&mut [])
 			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
 				Ok(Self {})
 			}
 		}
@@ -604,8 +637,7 @@ pub mod logout_all {
 			fn to_body(&self) -> crate::json::Value {
 				crate::endpoint::body_object(&mut [])
 			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
 				Ok(Self {})
 			}
 		}

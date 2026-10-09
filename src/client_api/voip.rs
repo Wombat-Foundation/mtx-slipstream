@@ -57,12 +57,12 @@ pub mod get_turn_server_info {
 				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					username: _input.body("username")?,
-					password: _input.body("password")?,
-					uris: _input.body("uris")?,
-					ttl: _input.body("ttl")?,
+					username: input.body("username")?,
+					password: input.body("password")?,
+					uris: input.body("uris")?,
+					ttl: input.body("ttl")?,
 				})
 			}
 		}

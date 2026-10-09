@@ -13,7 +13,25 @@ pub enum ReceiptType {
 	ReadPrivate,
 	FullyRead,
 }
-crate::impl_codec_enum!(ReceiptType { Read => "m.read", ReadPrivate => "m.read.private", FullyRead => "m.fully_read" });
+impl crate::codec::Serialize for ReceiptType {
+	fn to_json(&self) -> crate::json::Value {
+		crate::json::Value::String(::alloc::string::String::from(match self {
+			Self::Read => "m.read",
+			Self::ReadPrivate => "m.read.private",
+			Self::FullyRead => "m.fully_read",
+		}))
+	}
+}
+impl crate::codec::Deserialize for ReceiptType {
+	fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+		match value.as_str() {
+			Some("m.read") => Ok(Self::Read),
+			Some("m.read.private") => Ok(Self::ReadPrivate),
+			Some("m.fully_read") => Ok(Self::FullyRead),
+			_ => Err(crate::codec::DeError::expected(stringify!(ReceiptType))),
+		}
+	}
+}
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
 pub enum ReceiptThread {

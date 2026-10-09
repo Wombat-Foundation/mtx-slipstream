@@ -2,7 +2,7 @@
 
 use alloc::{collections::BTreeMap, string::String};
 
-use crate::{UInt, impl_codec_struct, json::Value, sswire::Raw};
+use crate::{UInt, json::Value, sswire::Raw};
 
 /// A backup algorithm and its public parameters.
 #[derive(Debug)]
@@ -11,10 +11,27 @@ pub struct BackupAlgorithm {
 	pub auth_data: Value,
 }
 
-impl_codec_struct!(BackupAlgorithm {
-	algorithm: String,
-	auth_data: Value
-});
+impl crate::codec::Serialize for BackupAlgorithm {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			(stringify!(algorithm), crate::endpoint::enc(&self.algorithm)),
+			(stringify!(auth_data), crate::endpoint::enc(&self.auth_data)),
+		])
+	}
+}
+impl crate::codec::Deserialize for BackupAlgorithm {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(BackupAlgorithm)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			algorithm: input.body(stringify!(algorithm))?,
+			auth_data: input.body(stringify!(auth_data))?,
+		})
+	}
+}
 
 /// One backed-up room key.
 #[derive(Debug)]
@@ -26,12 +43,31 @@ pub struct KeyBackupData {
 	pub session_data: Value,
 }
 
-impl_codec_struct!(KeyBackupData {
-	first_message_index: UInt,
-	forwarded_count: UInt,
-	is_verified: bool,
-	session_data: Value,
-});
+impl crate::codec::Serialize for KeyBackupData {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			(stringify!(first_message_index), crate::endpoint::enc(&self.first_message_index)),
+			(stringify!(forwarded_count), crate::endpoint::enc(&self.forwarded_count)),
+			(stringify!(is_verified), crate::endpoint::enc(&self.is_verified)),
+			(stringify!(session_data), crate::endpoint::enc(&self.session_data)),
+		])
+	}
+}
+impl crate::codec::Deserialize for KeyBackupData {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(KeyBackupData)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			first_message_index: input.body(stringify!(first_message_index))?,
+			forwarded_count: input.body(stringify!(forwarded_count))?,
+			is_verified: input.body(stringify!(is_verified))?,
+			session_data: input.body(stringify!(session_data))?,
+		})
+	}
+}
 
 /// The backed-up sessions of one room.
 #[derive(Debug, Default)]
@@ -39,7 +75,26 @@ pub struct RoomKeyBackup {
 	pub sessions: BTreeMap<String, Raw<KeyBackupData>>,
 }
 
-impl_codec_struct!(RoomKeyBackup { sessions: BTreeMap<String, Raw<KeyBackupData>> });
+impl crate::codec::Serialize for RoomKeyBackup {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [(
+			stringify!(sessions),
+			crate::endpoint::enc(&self.sessions),
+		)])
+	}
+}
+impl crate::codec::Deserialize for RoomKeyBackup {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(RoomKeyBackup)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			sessions: input.body(stringify!(sessions))?,
+		})
+	}
+}
 
 pub mod create_backup_version {
 	pub mod v3 {
@@ -98,9 +153,9 @@ pub mod create_backup_version {
 				)])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					version: _input.body("version")?,
+					version: input.body("version")?,
 				})
 			}
 		}
@@ -161,8 +216,7 @@ pub mod update_backup_version {
 			fn to_body(&self) -> crate::json::Value {
 				crate::endpoint::body_object(&mut [])
 			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
 				Ok(Self {})
 			}
 		}
@@ -368,8 +422,7 @@ pub mod delete_backup_version {
 			fn to_body(&self) -> crate::json::Value {
 				crate::endpoint::body_object(&mut [])
 			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
 				Ok(Self {})
 			}
 		}
@@ -440,10 +493,10 @@ pub mod add_backup_keys {
 				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					count: _input.body("count")?,
-					etag: _input.body("etag")?,
+					count: input.body("count")?,
+					etag: input.body("etag")?,
 				})
 			}
 		}
@@ -520,10 +573,10 @@ pub mod add_backup_keys_for_room {
 				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					count: _input.body("count")?,
-					etag: _input.body("etag")?,
+					count: input.body("count")?,
+					etag: input.body("etag")?,
 				})
 			}
 		}
@@ -601,10 +654,10 @@ pub mod add_backup_keys_for_session {
 				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					count: _input.body("count")?,
-					etag: _input.body("etag")?,
+					count: input.body("count")?,
+					etag: input.body("etag")?,
 				})
 			}
 		}
@@ -669,9 +722,9 @@ pub mod get_backup_keys {
 				crate::endpoint::body_object(&mut [("rooms", crate::endpoint::enc(&self.rooms))])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					rooms: _input.body("rooms")?,
+					rooms: input.body("rooms")?,
 				})
 			}
 		}
@@ -745,9 +798,9 @@ pub mod get_backup_keys_for_room {
 				)])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					sessions: _input.body("sessions")?,
+					sessions: input.body("sessions")?,
 				})
 			}
 		}
@@ -889,10 +942,10 @@ pub mod delete_backup_keys {
 				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					count: _input.body("count")?,
-					etag: _input.body("etag")?,
+					count: input.body("count")?,
+					etag: input.body("etag")?,
 				})
 			}
 		}
@@ -964,10 +1017,10 @@ pub mod delete_backup_keys_for_room {
 				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					count: _input.body("count")?,
-					etag: _input.body("etag")?,
+					count: input.body("count")?,
+					etag: input.body("etag")?,
 				})
 			}
 		}
@@ -1044,10 +1097,10 @@ pub mod delete_backup_keys_for_session {
 				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					count: _input.body("count")?,
-					etag: _input.body("etag")?,
+					count: input.body("count")?,
+					etag: input.body("etag")?,
 				})
 			}
 		}

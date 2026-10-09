@@ -90,6 +90,20 @@ pub enum PushFormat {
 	EventIdOnly,
 }
 
-crate::impl_codec_enum!(PushFormat { EventIdOnly => "event_id_only" });
+impl crate::codec::Serialize for PushFormat {
+	fn to_json(&self) -> crate::json::Value {
+		crate::json::Value::String(::alloc::string::String::from(match self {
+			Self::EventIdOnly => "event_id_only",
+		}))
+	}
+}
+impl crate::codec::Deserialize for PushFormat {
+	fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+		match value.as_str() {
+			Some("event_id_only") => Ok(Self::EventIdOnly),
+			_ => Err(crate::codec::DeError::expected(stringify!(PushFormat))),
+		}
+	}
+}
 
 pub use crate::push_rules::*;

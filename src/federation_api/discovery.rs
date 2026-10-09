@@ -56,9 +56,9 @@ pub mod discover_homeserver {
 			crate::endpoint::body_object(&mut [("server", crate::endpoint::enc(&self.server))])
 		}
 		fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-			let _input = crate::endpoint::Input::body_only(body);
+			let input = crate::endpoint::Input::body_only(body);
 			Ok(Self {
-				server: _input.body("server")?,
+				server: input.body("server")?,
 			})
 		}
 	}
@@ -79,9 +79,23 @@ impl VerifyKey {
 	}
 }
 
-crate::impl_codec_struct!(VerifyKey {
-	key: Base64
-});
+impl crate::codec::Serialize for VerifyKey {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [(stringify!(key), crate::endpoint::enc(&self.key))])
+	}
+}
+impl crate::codec::Deserialize for VerifyKey {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(VerifyKey)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			key: input.body(stringify!(key))?,
+		})
+	}
+}
 
 /// A server's expired public signing key.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -100,10 +114,27 @@ impl OldVerifyKey {
 	}
 }
 
-crate::impl_codec_struct!(OldVerifyKey {
-	expired_ts: MilliSecondsSinceUnixEpoch,
-	key: Base64
-});
+impl crate::codec::Serialize for OldVerifyKey {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			(stringify!(expired_ts), crate::endpoint::enc(&self.expired_ts)),
+			(stringify!(key), crate::endpoint::enc(&self.key)),
+		])
+	}
+}
+impl crate::codec::Deserialize for OldVerifyKey {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(OldVerifyKey)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			expired_ts: input.body(stringify!(expired_ts))?,
+			key: input.body(stringify!(key))?,
+		})
+	}
+}
 
 /// A server's published signing keys.
 #[derive(Debug, Eq, PartialEq)]
@@ -128,14 +159,33 @@ impl ServerSigningKeys {
 	}
 }
 
-crate::impl_codec_struct!(ServerSigningKeys {
-	server_name: OwnedServerName,
-	verify_keys: BTreeMap<OwnedServerSigningKeyId, VerifyKey>,
-	signatures: Signatures,
-	valid_until_ts: MilliSecondsSinceUnixEpoch,
-} default {
-	old_verify_keys: BTreeMap<OwnedServerSigningKeyId, OldVerifyKey>,
-});
+impl crate::codec::Serialize for ServerSigningKeys {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			(stringify!(server_name), crate::endpoint::enc(&self.server_name)),
+			(stringify!(verify_keys), crate::endpoint::enc(&self.verify_keys)),
+			(stringify!(signatures), crate::endpoint::enc(&self.signatures)),
+			(stringify!(valid_until_ts), crate::endpoint::enc(&self.valid_until_ts)),
+			(stringify!(old_verify_keys), crate::endpoint::enc(&self.old_verify_keys)),
+		])
+	}
+}
+impl crate::codec::Deserialize for ServerSigningKeys {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(ServerSigningKeys)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			server_name: input.body(stringify!(server_name))?,
+			verify_keys: input.body(stringify!(verify_keys))?,
+			signatures: input.body(stringify!(signatures))?,
+			valid_until_ts: input.body(stringify!(valid_until_ts))?,
+			old_verify_keys: input.body_or_default(stringify!(old_verify_keys))?,
+		})
+	}
+}
 
 pub mod get_server_version {
 	pub mod v1 {
@@ -148,7 +198,27 @@ pub mod get_server_version {
 			pub version: Option<String>,
 		}
 
-		crate::impl_codec_struct!(Server { name: Option<String>, version: Option<String> });
+		impl crate::codec::Serialize for Server {
+			fn to_json(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [
+					(stringify!(name), crate::endpoint::enc(&self.name)),
+					(stringify!(version), crate::endpoint::enc(&self.version)),
+				])
+			}
+		}
+		impl crate::codec::Deserialize for Server {
+			fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				// A struct is a JSON object; anything else is malformed, not "all defaults".
+				if value.as_object().is_none() {
+					return Err(crate::codec::DeError::expected(stringify!(Server)));
+				}
+				let input = crate::endpoint::Input::body_only(value);
+				Ok(Self {
+					name: input.body(stringify!(name))?,
+					version: input.body(stringify!(version))?,
+				})
+			}
+		}
 
 		pub struct Request {}
 		impl ::core::fmt::Debug for Request {
@@ -201,9 +271,9 @@ pub mod get_server_version {
 				)])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					server: _input.body("server")?,
+					server: input.body("server")?,
 				})
 			}
 		}
@@ -354,9 +424,9 @@ pub mod get_remote_server_keys {
 				)])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					server_keys: _input.body("server_keys")?,
+					server_keys: input.body("server_keys")?,
 				})
 			}
 		}
@@ -378,9 +448,26 @@ pub mod get_remote_server_keys_batch {
 			pub minimum_valid_until_ts: Option<MilliSecondsSinceUnixEpoch>,
 		}
 
-		crate::impl_codec_struct!(QueryCriteria {
-			minimum_valid_until_ts: Option<MilliSecondsSinceUnixEpoch>,
-		});
+		impl crate::codec::Serialize for QueryCriteria {
+			fn to_json(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [(
+					stringify!(minimum_valid_until_ts),
+					crate::endpoint::enc(&self.minimum_valid_until_ts),
+				)])
+			}
+		}
+		impl crate::codec::Deserialize for QueryCriteria {
+			fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				// A struct is a JSON object; anything else is malformed, not "all defaults".
+				if value.as_object().is_none() {
+					return Err(crate::codec::DeError::expected(stringify!(QueryCriteria)));
+				}
+				let input = crate::endpoint::Input::body_only(value);
+				Ok(Self {
+					minimum_valid_until_ts: input.body(stringify!(minimum_valid_until_ts))?,
+				})
+			}
+		}
 
 		pub struct Request {
 			pub server_keys:
@@ -438,9 +525,9 @@ pub mod get_remote_server_keys_batch {
 				)])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					server_keys: _input.body("server_keys")?,
+					server_keys: input.body("server_keys")?,
 				})
 			}
 		}

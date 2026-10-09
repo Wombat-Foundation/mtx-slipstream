@@ -6,7 +6,6 @@ use crate::{
 	OwnedRoomId, OwnedUserId, UInt,
 	codec::{DeError, Deserialize, Serialize},
 	endpoint::{Input, object_from},
-	impl_codec_enum, impl_codec_struct,
 	json::Value,
 };
 
@@ -165,13 +164,33 @@ pub struct Filter {
 	pub not_senders: Vec<OwnedUserId>,
 }
 
-impl_codec_struct!(Filter {} default {
-	limit: Option<UInt>,
-	types: Option<Vec<String>>,
-	not_types: Vec<String>,
-	senders: Option<Vec<OwnedUserId>>,
-	not_senders: Vec<OwnedUserId>,
-});
+impl crate::codec::Serialize for Filter {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			(stringify!(limit), crate::endpoint::enc(&self.limit)),
+			(stringify!(types), crate::endpoint::enc(&self.types)),
+			(stringify!(not_types), crate::endpoint::enc(&self.not_types)),
+			(stringify!(senders), crate::endpoint::enc(&self.senders)),
+			(stringify!(not_senders), crate::endpoint::enc(&self.not_senders)),
+		])
+	}
+}
+impl crate::codec::Deserialize for Filter {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(Filter)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			limit: input.body_or_default(stringify!(limit))?,
+			types: input.body_or_default(stringify!(types))?,
+			not_types: input.body_or_default(stringify!(not_types))?,
+			senders: input.body_or_default(stringify!(senders))?,
+			not_senders: input.body_or_default(stringify!(not_senders))?,
+		})
+	}
+}
 
 /// Filters applying to events in rooms.
 #[derive(Clone, Debug, Default)]
@@ -185,15 +204,37 @@ pub struct RoomFilter {
 	pub account_data: RoomEventFilter,
 }
 
-impl_codec_struct!(RoomFilter {} default {
-	not_rooms: Vec<OwnedRoomId>,
-	rooms: Option<Vec<OwnedRoomId>>,
-	ephemeral: RoomEventFilter,
-	include_leave: bool,
-	state: RoomEventFilter,
-	timeline: RoomEventFilter,
-	account_data: RoomEventFilter,
-});
+impl crate::codec::Serialize for RoomFilter {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			(stringify!(not_rooms), crate::endpoint::enc(&self.not_rooms)),
+			(stringify!(rooms), crate::endpoint::enc(&self.rooms)),
+			(stringify!(ephemeral), crate::endpoint::enc(&self.ephemeral)),
+			(stringify!(include_leave), crate::endpoint::enc(&self.include_leave)),
+			(stringify!(state), crate::endpoint::enc(&self.state)),
+			(stringify!(timeline), crate::endpoint::enc(&self.timeline)),
+			(stringify!(account_data), crate::endpoint::enc(&self.account_data)),
+		])
+	}
+}
+impl crate::codec::Deserialize for RoomFilter {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(RoomFilter)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			not_rooms: input.body_or_default(stringify!(not_rooms))?,
+			rooms: input.body_or_default(stringify!(rooms))?,
+			ephemeral: input.body_or_default(stringify!(ephemeral))?,
+			include_leave: input.body_or_default(stringify!(include_leave))?,
+			state: input.body_or_default(stringify!(state))?,
+			timeline: input.body_or_default(stringify!(timeline))?,
+			account_data: input.body_or_default(stringify!(account_data))?,
+		})
+	}
+}
 
 /// The format events are returned in.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -203,7 +244,23 @@ pub enum EventFormat {
 	Federation,
 }
 
-impl_codec_enum!(EventFormat { Client => "client", Federation => "federation" });
+impl crate::codec::Serialize for EventFormat {
+	fn to_json(&self) -> crate::json::Value {
+		crate::json::Value::String(::alloc::string::String::from(match self {
+			Self::Client => "client",
+			Self::Federation => "federation",
+		}))
+	}
+}
+impl crate::codec::Deserialize for EventFormat {
+	fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+		match value.as_str() {
+			Some("client") => Ok(Self::Client),
+			Some("federation") => Ok(Self::Federation),
+			_ => Err(crate::codec::DeError::expected(stringify!(EventFormat))),
+		}
+	}
+}
 
 /// A full sync filter.
 #[derive(Clone, Debug, Default)]
@@ -398,9 +455,9 @@ pub mod create_filter {
 				)])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					filter_id: _input.body("filter_id")?,
+					filter_id: input.body("filter_id")?,
 				})
 			}
 		}

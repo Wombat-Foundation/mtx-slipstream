@@ -126,11 +126,11 @@ pub mod continuwuity_admin_api {
 						])
 					}
 					fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-						let _input = crate::endpoint::Input::body_only(body);
+						let input = crate::endpoint::Input::body_only(body);
 						Ok(Self {
-							evicted: _input.body("evicted")?,
-							failed_evicted: _input.body("failed_evicted")?,
-							aliases: _input.body("aliases")?,
+							evicted: input.body("evicted")?,
+							failed_evicted: input.body("failed_evicted")?,
+							aliases: input.body("aliases")?,
 						})
 					}
 				}
@@ -196,9 +196,9 @@ pub mod continuwuity_admin_api {
 						)])
 					}
 					fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-						let _input = crate::endpoint::Input::body_only(body);
+						let input = crate::endpoint::Input::body_only(body);
 						Ok(Self {
-							rooms: _input.body("rooms")?,
+							rooms: input.body("rooms")?,
 						})
 					}
 				}
@@ -257,151 +257,6 @@ impl fmt::Display for MatrixIdParseError {
 
 impl core::error::Error for MatrixIdParseError {}
 
-macro_rules! matrix_id {
-	($borrowed:ident, $owned:ident) => {
-		matrix_id!($borrowed, $owned, $crate::id_validation::any);
-	};
-	($borrowed:ident, $owned:ident, $validate:path) => {
-		matrix_id!($borrowed, $owned, $validate, true);
-	};
-	($borrowed:ident, $owned:ident, $validate:path, $validate_deserialize:literal) => {
-		#[derive(Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
-		pub struct $owned(alloc::string::String);
-
-		pub type $borrowed = $owned;
-
-		impl $owned {
-			/// Parses a Matrix identifier, checking its grammar.
-			///
-			/// # Errors
-			///
-			/// Returns [`MatrixIdParseError`] if `value` does not match the
-			/// identifier's grammar.
-			pub fn parse(value: impl AsRef<str>) -> Result<Self, MatrixIdParseError> {
-				let value = value.as_ref();
-				if $validate(value) {
-					Ok(Self(value.to_owned()))
-				} else {
-					Err(MatrixIdParseError)
-				}
-			}
-			/// Constructs an identifier from a value already validated by the
-			/// caller, such as a trusted database row or a value generated here.
-			///
-			/// This bypasses grammar validation and must not be used for wire or
-			/// request data.
-			#[allow(dead_code)]
-			pub(crate) fn from_trusted(value: impl Into<alloc::string::String>) -> Self {
-				Self(value.into())
-			}
-			pub fn as_str(&self) -> &str {
-				&self.0
-			}
-			#[must_use]
-			pub fn as_bytes(&self) -> &[u8] {
-				self.0.as_bytes()
-			}
-		}
-
-		impl TryFrom<alloc::string::String> for $owned {
-			type Error = MatrixIdParseError;
-			fn try_from(value: alloc::string::String) -> Result<Self, Self::Error> {
-				Self::parse(value)
-			}
-		}
-		impl TryFrom<&str> for $owned {
-			type Error = MatrixIdParseError;
-			fn try_from(value: &str) -> Result<Self, Self::Error> {
-				Self::parse(value)
-			}
-		}
-		impl core::str::FromStr for $owned {
-			type Err = MatrixIdParseError;
-
-			fn from_str(value: &str) -> Result<Self, Self::Err> {
-				Self::parse(value)
-			}
-		}
-		impl From<&$owned> for alloc::string::String {
-			fn from(value: &$owned) -> Self {
-				value.0.clone()
-			}
-		}
-		impl From<$owned> for alloc::string::String {
-			fn from(value: $owned) -> Self {
-				value.0
-			}
-		}
-		impl From<&$owned> for $owned {
-			fn from(value: &$owned) -> Self {
-				value.clone()
-			}
-		}
-		impl AsRef<[u8]> for $owned {
-			fn as_ref(&self) -> &[u8] {
-				self.0.as_bytes()
-			}
-		}
-		impl AsRef<str> for $owned {
-			fn as_ref(&self) -> &str {
-				self.as_str()
-			}
-		}
-		impl AsRef<$owned> for $owned {
-			fn as_ref(&self) -> &$owned {
-				self
-			}
-		}
-		impl PartialEq<&$owned> for $owned {
-			fn eq(&self, other: &&$owned) -> bool {
-				self == *other
-			}
-		}
-		impl Borrow<str> for $owned {
-			fn borrow(&self) -> &str {
-				self.as_str()
-			}
-		}
-		impl Deref for $owned {
-			type Target = str;
-			fn deref(&self) -> &str {
-				self.as_str()
-			}
-		}
-		impl fmt::Debug for $owned {
-			fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-				f.debug_tuple(stringify!($owned)).field(&self.0).finish()
-			}
-		}
-		impl codec::Serialize for $owned {
-			fn to_json(&self) -> json::Value {
-				json::Value::String(self.0.clone())
-			}
-		}
-		impl codec::Deserialize for $owned {
-			fn from_json(value: &json::Value) -> Result<Self, codec::DeError> {
-				value
-					.as_str()
-					.and_then(|text| {
-						if $validate_deserialize {
-							Self::parse(text).ok()
-						} else {
-							// ruma-compatible: MXC URIs are accepted verbatim on the wire;
-							// validation happens in `parse`/`is_valid` for callers that need it.
-							Some(Self::from_trusted(text))
-						}
-					})
-					.ok_or_else(|| codec::DeError::expected(stringify!($owned)))
-			}
-		}
-		impl fmt::Display for $owned {
-			fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-				f.write_str(self.as_str())
-			}
-		}
-	};
-}
-
 /// The server part of an identifier of the form `<sigil><local>:<server>`.
 pub(crate) fn server_part(id: &str) -> Option<OwnedServerName> {
 	id.split_once(':').map(|(_, server)| OwnedServerName::from_trusted(server))
@@ -417,11 +272,666 @@ mod server_part_tests {
 	}
 }
 
-matrix_id!(EventId, OwnedEventId, crate::id_validation::event_id);
-matrix_id!(RoomId, OwnedRoomId, crate::id_validation::room_id);
-matrix_id!(RoomAliasId, OwnedRoomAliasId, crate::id_validation::room_alias_id);
-matrix_id!(ServerName, OwnedServerName, crate::id_validation::server_name);
-matrix_id!(UserId, OwnedUserId, crate::id_validation::user_id);
+#[derive(Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct OwnedEventId(alloc::string::String);
+pub type EventId = OwnedEventId;
+impl OwnedEventId {
+	/// Parses a Matrix identifier, checking its grammar.
+	///
+	/// # Errors
+	///
+	/// Returns [`MatrixIdParseError`] if `value` does not match the
+	/// identifier's grammar.
+	pub fn parse(value: impl AsRef<str>) -> Result<Self, MatrixIdParseError> {
+		let value = value.as_ref();
+		if crate::id_validation::event_id(value) {
+			Ok(Self(value.to_owned()))
+		} else {
+			Err(MatrixIdParseError)
+		}
+	}
+	/// Constructs an identifier from a value already validated by the
+	/// caller, such as a trusted database row or a value generated here.
+	///
+	/// This bypasses grammar validation and must not be used for wire or
+	/// request data.
+	#[allow(dead_code)]
+	pub(crate) fn from_trusted(value: impl Into<alloc::string::String>) -> Self {
+		Self(value.into())
+	}
+	#[must_use]
+	pub fn as_str(&self) -> &str {
+		&self.0
+	}
+	#[must_use]
+	pub fn as_bytes(&self) -> &[u8] {
+		self.0.as_bytes()
+	}
+}
+impl TryFrom<alloc::string::String> for OwnedEventId {
+	type Error = MatrixIdParseError;
+	fn try_from(value: alloc::string::String) -> Result<Self, Self::Error> {
+		Self::parse(value)
+	}
+}
+impl TryFrom<&str> for OwnedEventId {
+	type Error = MatrixIdParseError;
+	fn try_from(value: &str) -> Result<Self, Self::Error> {
+		Self::parse(value)
+	}
+}
+impl core::str::FromStr for OwnedEventId {
+	type Err = MatrixIdParseError;
+	fn from_str(value: &str) -> Result<Self, Self::Err> {
+		Self::parse(value)
+	}
+}
+impl From<&OwnedEventId> for alloc::string::String {
+	fn from(value: &OwnedEventId) -> Self {
+		value.0.clone()
+	}
+}
+impl From<OwnedEventId> for alloc::string::String {
+	fn from(value: OwnedEventId) -> Self {
+		value.0
+	}
+}
+impl From<&OwnedEventId> for OwnedEventId {
+	fn from(value: &OwnedEventId) -> Self {
+		value.clone()
+	}
+}
+impl AsRef<[u8]> for OwnedEventId {
+	fn as_ref(&self) -> &[u8] {
+		self.0.as_bytes()
+	}
+}
+impl AsRef<str> for OwnedEventId {
+	fn as_ref(&self) -> &str {
+		self.as_str()
+	}
+}
+impl AsRef<OwnedEventId> for OwnedEventId {
+	fn as_ref(&self) -> &OwnedEventId {
+		self
+	}
+}
+impl PartialEq<&OwnedEventId> for OwnedEventId {
+	fn eq(&self, other: &&OwnedEventId) -> bool {
+		self == *other
+	}
+}
+impl Borrow<str> for OwnedEventId {
+	fn borrow(&self) -> &str {
+		self.as_str()
+	}
+}
+impl Deref for OwnedEventId {
+	type Target = str;
+	fn deref(&self) -> &str {
+		self.as_str()
+	}
+}
+impl fmt::Debug for OwnedEventId {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.debug_tuple(stringify!(OwnedEventId)).field(&self.0).finish()
+	}
+}
+impl codec::Serialize for OwnedEventId {
+	fn to_json(&self) -> json::Value {
+		json::Value::String(self.0.clone())
+	}
+}
+impl codec::Deserialize for OwnedEventId {
+	fn from_json(value: &json::Value) -> Result<Self, codec::DeError> {
+		value
+			.as_str()
+			.and_then(|text| {
+				if true {
+					Self::parse(text).ok()
+				} else {
+					// ruma-compatible: MXC URIs are accepted verbatim on the wire;
+
+					// validation happens in `parse`/`is_valid` for callers that need it.
+					Some(Self::from_trusted(text))
+				}
+			})
+			.ok_or_else(|| codec::DeError::expected(stringify!(OwnedEventId)))
+	}
+}
+impl fmt::Display for OwnedEventId {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.write_str(self.as_str())
+	}
+}
+#[derive(Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct OwnedRoomId(alloc::string::String);
+pub type RoomId = OwnedRoomId;
+impl OwnedRoomId {
+	/// Parses a Matrix identifier, checking its grammar.
+	///
+	/// # Errors
+	///
+	/// Returns [`MatrixIdParseError`] if `value` does not match the
+	/// identifier's grammar.
+	pub fn parse(value: impl AsRef<str>) -> Result<Self, MatrixIdParseError> {
+		let value = value.as_ref();
+		if crate::id_validation::room_id(value) {
+			Ok(Self(value.to_owned()))
+		} else {
+			Err(MatrixIdParseError)
+		}
+	}
+	/// Constructs an identifier from a value already validated by the
+	/// caller, such as a trusted database row or a value generated here.
+	///
+	/// This bypasses grammar validation and must not be used for wire or
+	/// request data.
+	#[allow(dead_code)]
+	pub(crate) fn from_trusted(value: impl Into<alloc::string::String>) -> Self {
+		Self(value.into())
+	}
+	#[must_use]
+	pub fn as_str(&self) -> &str {
+		&self.0
+	}
+	#[must_use]
+	pub fn as_bytes(&self) -> &[u8] {
+		self.0.as_bytes()
+	}
+}
+impl TryFrom<alloc::string::String> for OwnedRoomId {
+	type Error = MatrixIdParseError;
+	fn try_from(value: alloc::string::String) -> Result<Self, Self::Error> {
+		Self::parse(value)
+	}
+}
+impl TryFrom<&str> for OwnedRoomId {
+	type Error = MatrixIdParseError;
+	fn try_from(value: &str) -> Result<Self, Self::Error> {
+		Self::parse(value)
+	}
+}
+impl core::str::FromStr for OwnedRoomId {
+	type Err = MatrixIdParseError;
+	fn from_str(value: &str) -> Result<Self, Self::Err> {
+		Self::parse(value)
+	}
+}
+impl From<&OwnedRoomId> for alloc::string::String {
+	fn from(value: &OwnedRoomId) -> Self {
+		value.0.clone()
+	}
+}
+impl From<OwnedRoomId> for alloc::string::String {
+	fn from(value: OwnedRoomId) -> Self {
+		value.0
+	}
+}
+impl From<&OwnedRoomId> for OwnedRoomId {
+	fn from(value: &OwnedRoomId) -> Self {
+		value.clone()
+	}
+}
+impl AsRef<[u8]> for OwnedRoomId {
+	fn as_ref(&self) -> &[u8] {
+		self.0.as_bytes()
+	}
+}
+impl AsRef<str> for OwnedRoomId {
+	fn as_ref(&self) -> &str {
+		self.as_str()
+	}
+}
+impl AsRef<OwnedRoomId> for OwnedRoomId {
+	fn as_ref(&self) -> &OwnedRoomId {
+		self
+	}
+}
+impl PartialEq<&OwnedRoomId> for OwnedRoomId {
+	fn eq(&self, other: &&OwnedRoomId) -> bool {
+		self == *other
+	}
+}
+impl Borrow<str> for OwnedRoomId {
+	fn borrow(&self) -> &str {
+		self.as_str()
+	}
+}
+impl Deref for OwnedRoomId {
+	type Target = str;
+	fn deref(&self) -> &str {
+		self.as_str()
+	}
+}
+impl fmt::Debug for OwnedRoomId {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.debug_tuple(stringify!(OwnedRoomId)).field(&self.0).finish()
+	}
+}
+impl codec::Serialize for OwnedRoomId {
+	fn to_json(&self) -> json::Value {
+		json::Value::String(self.0.clone())
+	}
+}
+impl codec::Deserialize for OwnedRoomId {
+	fn from_json(value: &json::Value) -> Result<Self, codec::DeError> {
+		value
+			.as_str()
+			.and_then(|text| {
+				if true {
+					Self::parse(text).ok()
+				} else {
+					// ruma-compatible: MXC URIs are accepted verbatim on the wire;
+
+					// validation happens in `parse`/`is_valid` for callers that need it.
+					Some(Self::from_trusted(text))
+				}
+			})
+			.ok_or_else(|| codec::DeError::expected(stringify!(OwnedRoomId)))
+	}
+}
+impl fmt::Display for OwnedRoomId {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.write_str(self.as_str())
+	}
+}
+#[derive(Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct OwnedRoomAliasId(alloc::string::String);
+pub type RoomAliasId = OwnedRoomAliasId;
+impl OwnedRoomAliasId {
+	/// Parses a Matrix identifier, checking its grammar.
+	///
+	/// # Errors
+	///
+	/// Returns [`MatrixIdParseError`] if `value` does not match the
+	/// identifier's grammar.
+	pub fn parse(value: impl AsRef<str>) -> Result<Self, MatrixIdParseError> {
+		let value = value.as_ref();
+		if crate::id_validation::room_alias_id(value) {
+			Ok(Self(value.to_owned()))
+		} else {
+			Err(MatrixIdParseError)
+		}
+	}
+	/// Constructs an identifier from a value already validated by the
+	/// caller, such as a trusted database row or a value generated here.
+	///
+	/// This bypasses grammar validation and must not be used for wire or
+	/// request data.
+	#[allow(dead_code)]
+	pub(crate) fn from_trusted(value: impl Into<alloc::string::String>) -> Self {
+		Self(value.into())
+	}
+	#[must_use]
+	pub fn as_str(&self) -> &str {
+		&self.0
+	}
+	#[must_use]
+	pub fn as_bytes(&self) -> &[u8] {
+		self.0.as_bytes()
+	}
+}
+impl TryFrom<alloc::string::String> for OwnedRoomAliasId {
+	type Error = MatrixIdParseError;
+	fn try_from(value: alloc::string::String) -> Result<Self, Self::Error> {
+		Self::parse(value)
+	}
+}
+impl TryFrom<&str> for OwnedRoomAliasId {
+	type Error = MatrixIdParseError;
+	fn try_from(value: &str) -> Result<Self, Self::Error> {
+		Self::parse(value)
+	}
+}
+impl core::str::FromStr for OwnedRoomAliasId {
+	type Err = MatrixIdParseError;
+	fn from_str(value: &str) -> Result<Self, Self::Err> {
+		Self::parse(value)
+	}
+}
+impl From<&OwnedRoomAliasId> for alloc::string::String {
+	fn from(value: &OwnedRoomAliasId) -> Self {
+		value.0.clone()
+	}
+}
+impl From<OwnedRoomAliasId> for alloc::string::String {
+	fn from(value: OwnedRoomAliasId) -> Self {
+		value.0
+	}
+}
+impl From<&OwnedRoomAliasId> for OwnedRoomAliasId {
+	fn from(value: &OwnedRoomAliasId) -> Self {
+		value.clone()
+	}
+}
+impl AsRef<[u8]> for OwnedRoomAliasId {
+	fn as_ref(&self) -> &[u8] {
+		self.0.as_bytes()
+	}
+}
+impl AsRef<str> for OwnedRoomAliasId {
+	fn as_ref(&self) -> &str {
+		self.as_str()
+	}
+}
+impl AsRef<OwnedRoomAliasId> for OwnedRoomAliasId {
+	fn as_ref(&self) -> &OwnedRoomAliasId {
+		self
+	}
+}
+impl PartialEq<&OwnedRoomAliasId> for OwnedRoomAliasId {
+	fn eq(&self, other: &&OwnedRoomAliasId) -> bool {
+		self == *other
+	}
+}
+impl Borrow<str> for OwnedRoomAliasId {
+	fn borrow(&self) -> &str {
+		self.as_str()
+	}
+}
+impl Deref for OwnedRoomAliasId {
+	type Target = str;
+	fn deref(&self) -> &str {
+		self.as_str()
+	}
+}
+impl fmt::Debug for OwnedRoomAliasId {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.debug_tuple(stringify!(OwnedRoomAliasId)).field(&self.0).finish()
+	}
+}
+impl codec::Serialize for OwnedRoomAliasId {
+	fn to_json(&self) -> json::Value {
+		json::Value::String(self.0.clone())
+	}
+}
+impl codec::Deserialize for OwnedRoomAliasId {
+	fn from_json(value: &json::Value) -> Result<Self, codec::DeError> {
+		value
+			.as_str()
+			.and_then(|text| {
+				if true {
+					Self::parse(text).ok()
+				} else {
+					// ruma-compatible: MXC URIs are accepted verbatim on the wire;
+
+					// validation happens in `parse`/`is_valid` for callers that need it.
+					Some(Self::from_trusted(text))
+				}
+			})
+			.ok_or_else(|| codec::DeError::expected(stringify!(OwnedRoomAliasId)))
+	}
+}
+impl fmt::Display for OwnedRoomAliasId {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.write_str(self.as_str())
+	}
+}
+#[derive(Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct OwnedServerName(alloc::string::String);
+pub type ServerName = OwnedServerName;
+impl OwnedServerName {
+	/// Parses a Matrix identifier, checking its grammar.
+	///
+	/// # Errors
+	///
+	/// Returns [`MatrixIdParseError`] if `value` does not match the
+	/// identifier's grammar.
+	pub fn parse(value: impl AsRef<str>) -> Result<Self, MatrixIdParseError> {
+		let value = value.as_ref();
+		if crate::id_validation::server_name(value) {
+			Ok(Self(value.to_owned()))
+		} else {
+			Err(MatrixIdParseError)
+		}
+	}
+	/// Constructs an identifier from a value already validated by the
+	/// caller, such as a trusted database row or a value generated here.
+	///
+	/// This bypasses grammar validation and must not be used for wire or
+	/// request data.
+	#[allow(dead_code)]
+	pub(crate) fn from_trusted(value: impl Into<alloc::string::String>) -> Self {
+		Self(value.into())
+	}
+	#[must_use]
+	pub fn as_str(&self) -> &str {
+		&self.0
+	}
+	#[must_use]
+	pub fn as_bytes(&self) -> &[u8] {
+		self.0.as_bytes()
+	}
+}
+impl TryFrom<alloc::string::String> for OwnedServerName {
+	type Error = MatrixIdParseError;
+	fn try_from(value: alloc::string::String) -> Result<Self, Self::Error> {
+		Self::parse(value)
+	}
+}
+impl TryFrom<&str> for OwnedServerName {
+	type Error = MatrixIdParseError;
+	fn try_from(value: &str) -> Result<Self, Self::Error> {
+		Self::parse(value)
+	}
+}
+impl core::str::FromStr for OwnedServerName {
+	type Err = MatrixIdParseError;
+	fn from_str(value: &str) -> Result<Self, Self::Err> {
+		Self::parse(value)
+	}
+}
+impl From<&OwnedServerName> for alloc::string::String {
+	fn from(value: &OwnedServerName) -> Self {
+		value.0.clone()
+	}
+}
+impl From<OwnedServerName> for alloc::string::String {
+	fn from(value: OwnedServerName) -> Self {
+		value.0
+	}
+}
+impl From<&OwnedServerName> for OwnedServerName {
+	fn from(value: &OwnedServerName) -> Self {
+		value.clone()
+	}
+}
+impl AsRef<[u8]> for OwnedServerName {
+	fn as_ref(&self) -> &[u8] {
+		self.0.as_bytes()
+	}
+}
+impl AsRef<str> for OwnedServerName {
+	fn as_ref(&self) -> &str {
+		self.as_str()
+	}
+}
+impl AsRef<OwnedServerName> for OwnedServerName {
+	fn as_ref(&self) -> &OwnedServerName {
+		self
+	}
+}
+impl PartialEq<&OwnedServerName> for OwnedServerName {
+	fn eq(&self, other: &&OwnedServerName) -> bool {
+		self == *other
+	}
+}
+impl Borrow<str> for OwnedServerName {
+	fn borrow(&self) -> &str {
+		self.as_str()
+	}
+}
+impl Deref for OwnedServerName {
+	type Target = str;
+	fn deref(&self) -> &str {
+		self.as_str()
+	}
+}
+impl fmt::Debug for OwnedServerName {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.debug_tuple(stringify!(OwnedServerName)).field(&self.0).finish()
+	}
+}
+impl codec::Serialize for OwnedServerName {
+	fn to_json(&self) -> json::Value {
+		json::Value::String(self.0.clone())
+	}
+}
+impl codec::Deserialize for OwnedServerName {
+	fn from_json(value: &json::Value) -> Result<Self, codec::DeError> {
+		value
+			.as_str()
+			.and_then(|text| {
+				if true {
+					Self::parse(text).ok()
+				} else {
+					// ruma-compatible: MXC URIs are accepted verbatim on the wire;
+
+					// validation happens in `parse`/`is_valid` for callers that need it.
+					Some(Self::from_trusted(text))
+				}
+			})
+			.ok_or_else(|| codec::DeError::expected(stringify!(OwnedServerName)))
+	}
+}
+impl fmt::Display for OwnedServerName {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.write_str(self.as_str())
+	}
+}
+#[derive(Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct OwnedUserId(alloc::string::String);
+pub type UserId = OwnedUserId;
+impl OwnedUserId {
+	/// Parses a Matrix identifier, checking its grammar.
+	///
+	/// # Errors
+	///
+	/// Returns [`MatrixIdParseError`] if `value` does not match the
+	/// identifier's grammar.
+	pub fn parse(value: impl AsRef<str>) -> Result<Self, MatrixIdParseError> {
+		let value = value.as_ref();
+		if crate::id_validation::user_id(value) {
+			Ok(Self(value.to_owned()))
+		} else {
+			Err(MatrixIdParseError)
+		}
+	}
+	/// Constructs an identifier from a value already validated by the
+	/// caller, such as a trusted database row or a value generated here.
+	///
+	/// This bypasses grammar validation and must not be used for wire or
+	/// request data.
+	#[allow(dead_code)]
+	pub(crate) fn from_trusted(value: impl Into<alloc::string::String>) -> Self {
+		Self(value.into())
+	}
+	#[must_use]
+	pub fn as_str(&self) -> &str {
+		&self.0
+	}
+	#[must_use]
+	pub fn as_bytes(&self) -> &[u8] {
+		self.0.as_bytes()
+	}
+}
+impl TryFrom<alloc::string::String> for OwnedUserId {
+	type Error = MatrixIdParseError;
+	fn try_from(value: alloc::string::String) -> Result<Self, Self::Error> {
+		Self::parse(value)
+	}
+}
+impl TryFrom<&str> for OwnedUserId {
+	type Error = MatrixIdParseError;
+	fn try_from(value: &str) -> Result<Self, Self::Error> {
+		Self::parse(value)
+	}
+}
+impl core::str::FromStr for OwnedUserId {
+	type Err = MatrixIdParseError;
+	fn from_str(value: &str) -> Result<Self, Self::Err> {
+		Self::parse(value)
+	}
+}
+impl From<&OwnedUserId> for alloc::string::String {
+	fn from(value: &OwnedUserId) -> Self {
+		value.0.clone()
+	}
+}
+impl From<OwnedUserId> for alloc::string::String {
+	fn from(value: OwnedUserId) -> Self {
+		value.0
+	}
+}
+impl From<&OwnedUserId> for OwnedUserId {
+	fn from(value: &OwnedUserId) -> Self {
+		value.clone()
+	}
+}
+impl AsRef<[u8]> for OwnedUserId {
+	fn as_ref(&self) -> &[u8] {
+		self.0.as_bytes()
+	}
+}
+impl AsRef<str> for OwnedUserId {
+	fn as_ref(&self) -> &str {
+		self.as_str()
+	}
+}
+impl AsRef<OwnedUserId> for OwnedUserId {
+	fn as_ref(&self) -> &OwnedUserId {
+		self
+	}
+}
+impl PartialEq<&OwnedUserId> for OwnedUserId {
+	fn eq(&self, other: &&OwnedUserId) -> bool {
+		self == *other
+	}
+}
+impl Borrow<str> for OwnedUserId {
+	fn borrow(&self) -> &str {
+		self.as_str()
+	}
+}
+impl Deref for OwnedUserId {
+	type Target = str;
+	fn deref(&self) -> &str {
+		self.as_str()
+	}
+}
+impl fmt::Debug for OwnedUserId {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.debug_tuple(stringify!(OwnedUserId)).field(&self.0).finish()
+	}
+}
+impl codec::Serialize for OwnedUserId {
+	fn to_json(&self) -> json::Value {
+		json::Value::String(self.0.clone())
+	}
+}
+impl codec::Deserialize for OwnedUserId {
+	fn from_json(value: &json::Value) -> Result<Self, codec::DeError> {
+		value
+			.as_str()
+			.and_then(|text| {
+				if true {
+					Self::parse(text).ok()
+				} else {
+					// ruma-compatible: MXC URIs are accepted verbatim on the wire;
+
+					// validation happens in `parse`/`is_valid` for callers that need it.
+					Some(Self::from_trusted(text))
+				}
+			})
+			.ok_or_else(|| codec::DeError::expected(stringify!(OwnedUserId)))
+	}
+}
+impl fmt::Display for OwnedUserId {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.write_str(self.as_str())
+	}
+}
 
 impl OwnedUserId {
 	/// Validates an owned user ID that may have been constructed from an
@@ -436,14 +946,1062 @@ impl OwnedUserId {
 		conforming.then_some(()).ok_or(MatrixIdParseError)
 	}
 }
-matrix_id!(RoomOrAliasId, OwnedRoomOrAliasId, crate::id_validation::room_or_alias_id);
-matrix_id!(ServerSigningKeyId, OwnedServerSigningKeyId);
-matrix_id!(SigningKeyId, OwnedSigningKeyId);
-matrix_id!(DeviceId, OwnedDeviceId);
-matrix_id!(TransactionId, OwnedTransactionId);
-matrix_id!(ClientSecret, OwnedClientSecret);
-matrix_id!(SessionId, OwnedSessionId);
-matrix_id!(MxcUri, OwnedMxcUri, crate::id_validation::mxc_uri, false);
+#[derive(Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct OwnedRoomOrAliasId(alloc::string::String);
+pub type RoomOrAliasId = OwnedRoomOrAliasId;
+impl OwnedRoomOrAliasId {
+	/// Parses a Matrix identifier, checking its grammar.
+	///
+	/// # Errors
+	///
+	/// Returns [`MatrixIdParseError`] if `value` does not match the
+	/// identifier's grammar.
+	pub fn parse(value: impl AsRef<str>) -> Result<Self, MatrixIdParseError> {
+		let value = value.as_ref();
+		if crate::id_validation::room_or_alias_id(value) {
+			Ok(Self(value.to_owned()))
+		} else {
+			Err(MatrixIdParseError)
+		}
+	}
+	/// Constructs an identifier from a value already validated by the
+	/// caller, such as a trusted database row or a value generated here.
+	///
+	/// This bypasses grammar validation and must not be used for wire or
+	/// request data.
+	#[allow(dead_code)]
+	pub(crate) fn from_trusted(value: impl Into<alloc::string::String>) -> Self {
+		Self(value.into())
+	}
+	#[must_use]
+	pub fn as_str(&self) -> &str {
+		&self.0
+	}
+	#[must_use]
+	pub fn as_bytes(&self) -> &[u8] {
+		self.0.as_bytes()
+	}
+}
+impl TryFrom<alloc::string::String> for OwnedRoomOrAliasId {
+	type Error = MatrixIdParseError;
+	fn try_from(value: alloc::string::String) -> Result<Self, Self::Error> {
+		Self::parse(value)
+	}
+}
+impl TryFrom<&str> for OwnedRoomOrAliasId {
+	type Error = MatrixIdParseError;
+	fn try_from(value: &str) -> Result<Self, Self::Error> {
+		Self::parse(value)
+	}
+}
+impl core::str::FromStr for OwnedRoomOrAliasId {
+	type Err = MatrixIdParseError;
+	fn from_str(value: &str) -> Result<Self, Self::Err> {
+		Self::parse(value)
+	}
+}
+impl From<&OwnedRoomOrAliasId> for alloc::string::String {
+	fn from(value: &OwnedRoomOrAliasId) -> Self {
+		value.0.clone()
+	}
+}
+impl From<OwnedRoomOrAliasId> for alloc::string::String {
+	fn from(value: OwnedRoomOrAliasId) -> Self {
+		value.0
+	}
+}
+impl From<&OwnedRoomOrAliasId> for OwnedRoomOrAliasId {
+	fn from(value: &OwnedRoomOrAliasId) -> Self {
+		value.clone()
+	}
+}
+impl AsRef<[u8]> for OwnedRoomOrAliasId {
+	fn as_ref(&self) -> &[u8] {
+		self.0.as_bytes()
+	}
+}
+impl AsRef<str> for OwnedRoomOrAliasId {
+	fn as_ref(&self) -> &str {
+		self.as_str()
+	}
+}
+impl AsRef<OwnedRoomOrAliasId> for OwnedRoomOrAliasId {
+	fn as_ref(&self) -> &OwnedRoomOrAliasId {
+		self
+	}
+}
+impl PartialEq<&OwnedRoomOrAliasId> for OwnedRoomOrAliasId {
+	fn eq(&self, other: &&OwnedRoomOrAliasId) -> bool {
+		self == *other
+	}
+}
+impl Borrow<str> for OwnedRoomOrAliasId {
+	fn borrow(&self) -> &str {
+		self.as_str()
+	}
+}
+impl Deref for OwnedRoomOrAliasId {
+	type Target = str;
+	fn deref(&self) -> &str {
+		self.as_str()
+	}
+}
+impl fmt::Debug for OwnedRoomOrAliasId {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.debug_tuple(stringify!(OwnedRoomOrAliasId)).field(&self.0).finish()
+	}
+}
+impl codec::Serialize for OwnedRoomOrAliasId {
+	fn to_json(&self) -> json::Value {
+		json::Value::String(self.0.clone())
+	}
+}
+impl codec::Deserialize for OwnedRoomOrAliasId {
+	fn from_json(value: &json::Value) -> Result<Self, codec::DeError> {
+		value
+			.as_str()
+			.and_then(|text| {
+				if true {
+					Self::parse(text).ok()
+				} else {
+					// ruma-compatible: MXC URIs are accepted verbatim on the wire;
+
+					// validation happens in `parse`/`is_valid` for callers that need it.
+					Some(Self::from_trusted(text))
+				}
+			})
+			.ok_or_else(|| codec::DeError::expected(stringify!(OwnedRoomOrAliasId)))
+	}
+}
+impl fmt::Display for OwnedRoomOrAliasId {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.write_str(self.as_str())
+	}
+}
+#[derive(Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct OwnedServerSigningKeyId(alloc::string::String);
+pub type ServerSigningKeyId = OwnedServerSigningKeyId;
+impl OwnedServerSigningKeyId {
+	/// Parses a Matrix identifier, checking its grammar.
+	///
+	/// # Errors
+	///
+	/// Returns [`MatrixIdParseError`] if `value` does not match the
+	/// identifier's grammar.
+	pub fn parse(value: impl AsRef<str>) -> Result<Self, MatrixIdParseError> {
+		let value = value.as_ref();
+		if crate::id_validation::any(value) {
+			Ok(Self(value.to_owned()))
+		} else {
+			Err(MatrixIdParseError)
+		}
+	}
+	/// Constructs an identifier from a value already validated by the
+	/// caller, such as a trusted database row or a value generated here.
+	///
+	/// This bypasses grammar validation and must not be used for wire or
+	/// request data.
+	#[allow(dead_code)]
+	pub(crate) fn from_trusted(value: impl Into<alloc::string::String>) -> Self {
+		Self(value.into())
+	}
+	#[must_use]
+	pub fn as_str(&self) -> &str {
+		&self.0
+	}
+	#[must_use]
+	pub fn as_bytes(&self) -> &[u8] {
+		self.0.as_bytes()
+	}
+}
+impl TryFrom<alloc::string::String> for OwnedServerSigningKeyId {
+	type Error = MatrixIdParseError;
+	fn try_from(value: alloc::string::String) -> Result<Self, Self::Error> {
+		Self::parse(value)
+	}
+}
+impl TryFrom<&str> for OwnedServerSigningKeyId {
+	type Error = MatrixIdParseError;
+	fn try_from(value: &str) -> Result<Self, Self::Error> {
+		Self::parse(value)
+	}
+}
+impl core::str::FromStr for OwnedServerSigningKeyId {
+	type Err = MatrixIdParseError;
+	fn from_str(value: &str) -> Result<Self, Self::Err> {
+		Self::parse(value)
+	}
+}
+impl From<&OwnedServerSigningKeyId> for alloc::string::String {
+	fn from(value: &OwnedServerSigningKeyId) -> Self {
+		value.0.clone()
+	}
+}
+impl From<OwnedServerSigningKeyId> for alloc::string::String {
+	fn from(value: OwnedServerSigningKeyId) -> Self {
+		value.0
+	}
+}
+impl From<&OwnedServerSigningKeyId> for OwnedServerSigningKeyId {
+	fn from(value: &OwnedServerSigningKeyId) -> Self {
+		value.clone()
+	}
+}
+impl AsRef<[u8]> for OwnedServerSigningKeyId {
+	fn as_ref(&self) -> &[u8] {
+		self.0.as_bytes()
+	}
+}
+impl AsRef<str> for OwnedServerSigningKeyId {
+	fn as_ref(&self) -> &str {
+		self.as_str()
+	}
+}
+impl AsRef<OwnedServerSigningKeyId> for OwnedServerSigningKeyId {
+	fn as_ref(&self) -> &OwnedServerSigningKeyId {
+		self
+	}
+}
+impl PartialEq<&OwnedServerSigningKeyId> for OwnedServerSigningKeyId {
+	fn eq(&self, other: &&OwnedServerSigningKeyId) -> bool {
+		self == *other
+	}
+}
+impl Borrow<str> for OwnedServerSigningKeyId {
+	fn borrow(&self) -> &str {
+		self.as_str()
+	}
+}
+impl Deref for OwnedServerSigningKeyId {
+	type Target = str;
+	fn deref(&self) -> &str {
+		self.as_str()
+	}
+}
+impl fmt::Debug for OwnedServerSigningKeyId {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.debug_tuple(stringify!(OwnedServerSigningKeyId)).field(&self.0).finish()
+	}
+}
+impl codec::Serialize for OwnedServerSigningKeyId {
+	fn to_json(&self) -> json::Value {
+		json::Value::String(self.0.clone())
+	}
+}
+impl codec::Deserialize for OwnedServerSigningKeyId {
+	fn from_json(value: &json::Value) -> Result<Self, codec::DeError> {
+		value
+			.as_str()
+			.and_then(|text| {
+				if true {
+					Self::parse(text).ok()
+				} else {
+					// ruma-compatible: MXC URIs are accepted verbatim on the wire;
+
+					// validation happens in `parse`/`is_valid` for callers that need it.
+					Some(Self::from_trusted(text))
+				}
+			})
+			.ok_or_else(|| codec::DeError::expected(stringify!(OwnedServerSigningKeyId)))
+	}
+}
+impl fmt::Display for OwnedServerSigningKeyId {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.write_str(self.as_str())
+	}
+}
+#[derive(Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct OwnedSigningKeyId(alloc::string::String);
+pub type SigningKeyId = OwnedSigningKeyId;
+impl OwnedSigningKeyId {
+	/// Parses a Matrix identifier, checking its grammar.
+	///
+	/// # Errors
+	///
+	/// Returns [`MatrixIdParseError`] if `value` does not match the
+	/// identifier's grammar.
+	pub fn parse(value: impl AsRef<str>) -> Result<Self, MatrixIdParseError> {
+		let value = value.as_ref();
+		if crate::id_validation::any(value) {
+			Ok(Self(value.to_owned()))
+		} else {
+			Err(MatrixIdParseError)
+		}
+	}
+	/// Constructs an identifier from a value already validated by the
+	/// caller, such as a trusted database row or a value generated here.
+	///
+	/// This bypasses grammar validation and must not be used for wire or
+	/// request data.
+	#[allow(dead_code)]
+	pub(crate) fn from_trusted(value: impl Into<alloc::string::String>) -> Self {
+		Self(value.into())
+	}
+	#[must_use]
+	pub fn as_str(&self) -> &str {
+		&self.0
+	}
+	#[must_use]
+	pub fn as_bytes(&self) -> &[u8] {
+		self.0.as_bytes()
+	}
+}
+impl TryFrom<alloc::string::String> for OwnedSigningKeyId {
+	type Error = MatrixIdParseError;
+	fn try_from(value: alloc::string::String) -> Result<Self, Self::Error> {
+		Self::parse(value)
+	}
+}
+impl TryFrom<&str> for OwnedSigningKeyId {
+	type Error = MatrixIdParseError;
+	fn try_from(value: &str) -> Result<Self, Self::Error> {
+		Self::parse(value)
+	}
+}
+impl core::str::FromStr for OwnedSigningKeyId {
+	type Err = MatrixIdParseError;
+	fn from_str(value: &str) -> Result<Self, Self::Err> {
+		Self::parse(value)
+	}
+}
+impl From<&OwnedSigningKeyId> for alloc::string::String {
+	fn from(value: &OwnedSigningKeyId) -> Self {
+		value.0.clone()
+	}
+}
+impl From<OwnedSigningKeyId> for alloc::string::String {
+	fn from(value: OwnedSigningKeyId) -> Self {
+		value.0
+	}
+}
+impl From<&OwnedSigningKeyId> for OwnedSigningKeyId {
+	fn from(value: &OwnedSigningKeyId) -> Self {
+		value.clone()
+	}
+}
+impl AsRef<[u8]> for OwnedSigningKeyId {
+	fn as_ref(&self) -> &[u8] {
+		self.0.as_bytes()
+	}
+}
+impl AsRef<str> for OwnedSigningKeyId {
+	fn as_ref(&self) -> &str {
+		self.as_str()
+	}
+}
+impl AsRef<OwnedSigningKeyId> for OwnedSigningKeyId {
+	fn as_ref(&self) -> &OwnedSigningKeyId {
+		self
+	}
+}
+impl PartialEq<&OwnedSigningKeyId> for OwnedSigningKeyId {
+	fn eq(&self, other: &&OwnedSigningKeyId) -> bool {
+		self == *other
+	}
+}
+impl Borrow<str> for OwnedSigningKeyId {
+	fn borrow(&self) -> &str {
+		self.as_str()
+	}
+}
+impl Deref for OwnedSigningKeyId {
+	type Target = str;
+	fn deref(&self) -> &str {
+		self.as_str()
+	}
+}
+impl fmt::Debug for OwnedSigningKeyId {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.debug_tuple(stringify!(OwnedSigningKeyId)).field(&self.0).finish()
+	}
+}
+impl codec::Serialize for OwnedSigningKeyId {
+	fn to_json(&self) -> json::Value {
+		json::Value::String(self.0.clone())
+	}
+}
+impl codec::Deserialize for OwnedSigningKeyId {
+	fn from_json(value: &json::Value) -> Result<Self, codec::DeError> {
+		value
+			.as_str()
+			.and_then(|text| {
+				if true {
+					Self::parse(text).ok()
+				} else {
+					// ruma-compatible: MXC URIs are accepted verbatim on the wire;
+
+					// validation happens in `parse`/`is_valid` for callers that need it.
+					Some(Self::from_trusted(text))
+				}
+			})
+			.ok_or_else(|| codec::DeError::expected(stringify!(OwnedSigningKeyId)))
+	}
+}
+impl fmt::Display for OwnedSigningKeyId {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.write_str(self.as_str())
+	}
+}
+#[derive(Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct OwnedDeviceId(alloc::string::String);
+pub type DeviceId = OwnedDeviceId;
+impl OwnedDeviceId {
+	/// Parses a Matrix identifier, checking its grammar.
+	///
+	/// # Errors
+	///
+	/// Returns [`MatrixIdParseError`] if `value` does not match the
+	/// identifier's grammar.
+	pub fn parse(value: impl AsRef<str>) -> Result<Self, MatrixIdParseError> {
+		let value = value.as_ref();
+		if crate::id_validation::any(value) {
+			Ok(Self(value.to_owned()))
+		} else {
+			Err(MatrixIdParseError)
+		}
+	}
+	/// Constructs an identifier from a value already validated by the
+	/// caller, such as a trusted database row or a value generated here.
+	///
+	/// This bypasses grammar validation and must not be used for wire or
+	/// request data.
+	#[allow(dead_code)]
+	pub(crate) fn from_trusted(value: impl Into<alloc::string::String>) -> Self {
+		Self(value.into())
+	}
+	#[must_use]
+	pub fn as_str(&self) -> &str {
+		&self.0
+	}
+	#[must_use]
+	pub fn as_bytes(&self) -> &[u8] {
+		self.0.as_bytes()
+	}
+}
+impl TryFrom<alloc::string::String> for OwnedDeviceId {
+	type Error = MatrixIdParseError;
+	fn try_from(value: alloc::string::String) -> Result<Self, Self::Error> {
+		Self::parse(value)
+	}
+}
+impl TryFrom<&str> for OwnedDeviceId {
+	type Error = MatrixIdParseError;
+	fn try_from(value: &str) -> Result<Self, Self::Error> {
+		Self::parse(value)
+	}
+}
+impl core::str::FromStr for OwnedDeviceId {
+	type Err = MatrixIdParseError;
+	fn from_str(value: &str) -> Result<Self, Self::Err> {
+		Self::parse(value)
+	}
+}
+impl From<&OwnedDeviceId> for alloc::string::String {
+	fn from(value: &OwnedDeviceId) -> Self {
+		value.0.clone()
+	}
+}
+impl From<OwnedDeviceId> for alloc::string::String {
+	fn from(value: OwnedDeviceId) -> Self {
+		value.0
+	}
+}
+impl From<&OwnedDeviceId> for OwnedDeviceId {
+	fn from(value: &OwnedDeviceId) -> Self {
+		value.clone()
+	}
+}
+impl AsRef<[u8]> for OwnedDeviceId {
+	fn as_ref(&self) -> &[u8] {
+		self.0.as_bytes()
+	}
+}
+impl AsRef<str> for OwnedDeviceId {
+	fn as_ref(&self) -> &str {
+		self.as_str()
+	}
+}
+impl AsRef<OwnedDeviceId> for OwnedDeviceId {
+	fn as_ref(&self) -> &OwnedDeviceId {
+		self
+	}
+}
+impl PartialEq<&OwnedDeviceId> for OwnedDeviceId {
+	fn eq(&self, other: &&OwnedDeviceId) -> bool {
+		self == *other
+	}
+}
+impl Borrow<str> for OwnedDeviceId {
+	fn borrow(&self) -> &str {
+		self.as_str()
+	}
+}
+impl Deref for OwnedDeviceId {
+	type Target = str;
+	fn deref(&self) -> &str {
+		self.as_str()
+	}
+}
+impl fmt::Debug for OwnedDeviceId {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.debug_tuple(stringify!(OwnedDeviceId)).field(&self.0).finish()
+	}
+}
+impl codec::Serialize for OwnedDeviceId {
+	fn to_json(&self) -> json::Value {
+		json::Value::String(self.0.clone())
+	}
+}
+impl codec::Deserialize for OwnedDeviceId {
+	fn from_json(value: &json::Value) -> Result<Self, codec::DeError> {
+		value
+			.as_str()
+			.and_then(|text| {
+				if true {
+					Self::parse(text).ok()
+				} else {
+					// ruma-compatible: MXC URIs are accepted verbatim on the wire;
+
+					// validation happens in `parse`/`is_valid` for callers that need it.
+					Some(Self::from_trusted(text))
+				}
+			})
+			.ok_or_else(|| codec::DeError::expected(stringify!(OwnedDeviceId)))
+	}
+}
+impl fmt::Display for OwnedDeviceId {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.write_str(self.as_str())
+	}
+}
+#[derive(Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct OwnedTransactionId(alloc::string::String);
+pub type TransactionId = OwnedTransactionId;
+impl OwnedTransactionId {
+	/// Parses a Matrix identifier, checking its grammar.
+	///
+	/// # Errors
+	///
+	/// Returns [`MatrixIdParseError`] if `value` does not match the
+	/// identifier's grammar.
+	pub fn parse(value: impl AsRef<str>) -> Result<Self, MatrixIdParseError> {
+		let value = value.as_ref();
+		if crate::id_validation::any(value) {
+			Ok(Self(value.to_owned()))
+		} else {
+			Err(MatrixIdParseError)
+		}
+	}
+	/// Constructs an identifier from a value already validated by the
+	/// caller, such as a trusted database row or a value generated here.
+	///
+	/// This bypasses grammar validation and must not be used for wire or
+	/// request data.
+	#[allow(dead_code)]
+	pub(crate) fn from_trusted(value: impl Into<alloc::string::String>) -> Self {
+		Self(value.into())
+	}
+	#[must_use]
+	pub fn as_str(&self) -> &str {
+		&self.0
+	}
+	#[must_use]
+	pub fn as_bytes(&self) -> &[u8] {
+		self.0.as_bytes()
+	}
+}
+impl TryFrom<alloc::string::String> for OwnedTransactionId {
+	type Error = MatrixIdParseError;
+	fn try_from(value: alloc::string::String) -> Result<Self, Self::Error> {
+		Self::parse(value)
+	}
+}
+impl TryFrom<&str> for OwnedTransactionId {
+	type Error = MatrixIdParseError;
+	fn try_from(value: &str) -> Result<Self, Self::Error> {
+		Self::parse(value)
+	}
+}
+impl core::str::FromStr for OwnedTransactionId {
+	type Err = MatrixIdParseError;
+	fn from_str(value: &str) -> Result<Self, Self::Err> {
+		Self::parse(value)
+	}
+}
+impl From<&OwnedTransactionId> for alloc::string::String {
+	fn from(value: &OwnedTransactionId) -> Self {
+		value.0.clone()
+	}
+}
+impl From<OwnedTransactionId> for alloc::string::String {
+	fn from(value: OwnedTransactionId) -> Self {
+		value.0
+	}
+}
+impl From<&OwnedTransactionId> for OwnedTransactionId {
+	fn from(value: &OwnedTransactionId) -> Self {
+		value.clone()
+	}
+}
+impl AsRef<[u8]> for OwnedTransactionId {
+	fn as_ref(&self) -> &[u8] {
+		self.0.as_bytes()
+	}
+}
+impl AsRef<str> for OwnedTransactionId {
+	fn as_ref(&self) -> &str {
+		self.as_str()
+	}
+}
+impl AsRef<OwnedTransactionId> for OwnedTransactionId {
+	fn as_ref(&self) -> &OwnedTransactionId {
+		self
+	}
+}
+impl PartialEq<&OwnedTransactionId> for OwnedTransactionId {
+	fn eq(&self, other: &&OwnedTransactionId) -> bool {
+		self == *other
+	}
+}
+impl Borrow<str> for OwnedTransactionId {
+	fn borrow(&self) -> &str {
+		self.as_str()
+	}
+}
+impl Deref for OwnedTransactionId {
+	type Target = str;
+	fn deref(&self) -> &str {
+		self.as_str()
+	}
+}
+impl fmt::Debug for OwnedTransactionId {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.debug_tuple(stringify!(OwnedTransactionId)).field(&self.0).finish()
+	}
+}
+impl codec::Serialize for OwnedTransactionId {
+	fn to_json(&self) -> json::Value {
+		json::Value::String(self.0.clone())
+	}
+}
+impl codec::Deserialize for OwnedTransactionId {
+	fn from_json(value: &json::Value) -> Result<Self, codec::DeError> {
+		value
+			.as_str()
+			.and_then(|text| {
+				if true {
+					Self::parse(text).ok()
+				} else {
+					// ruma-compatible: MXC URIs are accepted verbatim on the wire;
+
+					// validation happens in `parse`/`is_valid` for callers that need it.
+					Some(Self::from_trusted(text))
+				}
+			})
+			.ok_or_else(|| codec::DeError::expected(stringify!(OwnedTransactionId)))
+	}
+}
+impl fmt::Display for OwnedTransactionId {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.write_str(self.as_str())
+	}
+}
+#[derive(Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct OwnedClientSecret(alloc::string::String);
+pub type ClientSecret = OwnedClientSecret;
+impl OwnedClientSecret {
+	/// Parses a Matrix identifier, checking its grammar.
+	///
+	/// # Errors
+	///
+	/// Returns [`MatrixIdParseError`] if `value` does not match the
+	/// identifier's grammar.
+	pub fn parse(value: impl AsRef<str>) -> Result<Self, MatrixIdParseError> {
+		let value = value.as_ref();
+		if crate::id_validation::any(value) {
+			Ok(Self(value.to_owned()))
+		} else {
+			Err(MatrixIdParseError)
+		}
+	}
+	/// Constructs an identifier from a value already validated by the
+	/// caller, such as a trusted database row or a value generated here.
+	///
+	/// This bypasses grammar validation and must not be used for wire or
+	/// request data.
+	#[allow(dead_code)]
+	pub(crate) fn from_trusted(value: impl Into<alloc::string::String>) -> Self {
+		Self(value.into())
+	}
+	#[must_use]
+	pub fn as_str(&self) -> &str {
+		&self.0
+	}
+	#[must_use]
+	pub fn as_bytes(&self) -> &[u8] {
+		self.0.as_bytes()
+	}
+}
+impl TryFrom<alloc::string::String> for OwnedClientSecret {
+	type Error = MatrixIdParseError;
+	fn try_from(value: alloc::string::String) -> Result<Self, Self::Error> {
+		Self::parse(value)
+	}
+}
+impl TryFrom<&str> for OwnedClientSecret {
+	type Error = MatrixIdParseError;
+	fn try_from(value: &str) -> Result<Self, Self::Error> {
+		Self::parse(value)
+	}
+}
+impl core::str::FromStr for OwnedClientSecret {
+	type Err = MatrixIdParseError;
+	fn from_str(value: &str) -> Result<Self, Self::Err> {
+		Self::parse(value)
+	}
+}
+impl From<&OwnedClientSecret> for alloc::string::String {
+	fn from(value: &OwnedClientSecret) -> Self {
+		value.0.clone()
+	}
+}
+impl From<OwnedClientSecret> for alloc::string::String {
+	fn from(value: OwnedClientSecret) -> Self {
+		value.0
+	}
+}
+impl From<&OwnedClientSecret> for OwnedClientSecret {
+	fn from(value: &OwnedClientSecret) -> Self {
+		value.clone()
+	}
+}
+impl AsRef<[u8]> for OwnedClientSecret {
+	fn as_ref(&self) -> &[u8] {
+		self.0.as_bytes()
+	}
+}
+impl AsRef<str> for OwnedClientSecret {
+	fn as_ref(&self) -> &str {
+		self.as_str()
+	}
+}
+impl AsRef<OwnedClientSecret> for OwnedClientSecret {
+	fn as_ref(&self) -> &OwnedClientSecret {
+		self
+	}
+}
+impl PartialEq<&OwnedClientSecret> for OwnedClientSecret {
+	fn eq(&self, other: &&OwnedClientSecret) -> bool {
+		self == *other
+	}
+}
+impl Borrow<str> for OwnedClientSecret {
+	fn borrow(&self) -> &str {
+		self.as_str()
+	}
+}
+impl Deref for OwnedClientSecret {
+	type Target = str;
+	fn deref(&self) -> &str {
+		self.as_str()
+	}
+}
+impl fmt::Debug for OwnedClientSecret {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.debug_tuple(stringify!(OwnedClientSecret)).field(&self.0).finish()
+	}
+}
+impl codec::Serialize for OwnedClientSecret {
+	fn to_json(&self) -> json::Value {
+		json::Value::String(self.0.clone())
+	}
+}
+impl codec::Deserialize for OwnedClientSecret {
+	fn from_json(value: &json::Value) -> Result<Self, codec::DeError> {
+		value
+			.as_str()
+			.and_then(|text| {
+				if true {
+					Self::parse(text).ok()
+				} else {
+					// ruma-compatible: MXC URIs are accepted verbatim on the wire;
+
+					// validation happens in `parse`/`is_valid` for callers that need it.
+					Some(Self::from_trusted(text))
+				}
+			})
+			.ok_or_else(|| codec::DeError::expected(stringify!(OwnedClientSecret)))
+	}
+}
+impl fmt::Display for OwnedClientSecret {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.write_str(self.as_str())
+	}
+}
+#[derive(Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct OwnedSessionId(alloc::string::String);
+pub type SessionId = OwnedSessionId;
+impl OwnedSessionId {
+	/// Parses a Matrix identifier, checking its grammar.
+	///
+	/// # Errors
+	///
+	/// Returns [`MatrixIdParseError`] if `value` does not match the
+	/// identifier's grammar.
+	pub fn parse(value: impl AsRef<str>) -> Result<Self, MatrixIdParseError> {
+		let value = value.as_ref();
+		if crate::id_validation::any(value) {
+			Ok(Self(value.to_owned()))
+		} else {
+			Err(MatrixIdParseError)
+		}
+	}
+	/// Constructs an identifier from a value already validated by the
+	/// caller, such as a trusted database row or a value generated here.
+	///
+	/// This bypasses grammar validation and must not be used for wire or
+	/// request data.
+	#[allow(dead_code)]
+	pub(crate) fn from_trusted(value: impl Into<alloc::string::String>) -> Self {
+		Self(value.into())
+	}
+	#[must_use]
+	pub fn as_str(&self) -> &str {
+		&self.0
+	}
+	#[must_use]
+	pub fn as_bytes(&self) -> &[u8] {
+		self.0.as_bytes()
+	}
+}
+impl TryFrom<alloc::string::String> for OwnedSessionId {
+	type Error = MatrixIdParseError;
+	fn try_from(value: alloc::string::String) -> Result<Self, Self::Error> {
+		Self::parse(value)
+	}
+}
+impl TryFrom<&str> for OwnedSessionId {
+	type Error = MatrixIdParseError;
+	fn try_from(value: &str) -> Result<Self, Self::Error> {
+		Self::parse(value)
+	}
+}
+impl core::str::FromStr for OwnedSessionId {
+	type Err = MatrixIdParseError;
+	fn from_str(value: &str) -> Result<Self, Self::Err> {
+		Self::parse(value)
+	}
+}
+impl From<&OwnedSessionId> for alloc::string::String {
+	fn from(value: &OwnedSessionId) -> Self {
+		value.0.clone()
+	}
+}
+impl From<OwnedSessionId> for alloc::string::String {
+	fn from(value: OwnedSessionId) -> Self {
+		value.0
+	}
+}
+impl From<&OwnedSessionId> for OwnedSessionId {
+	fn from(value: &OwnedSessionId) -> Self {
+		value.clone()
+	}
+}
+impl AsRef<[u8]> for OwnedSessionId {
+	fn as_ref(&self) -> &[u8] {
+		self.0.as_bytes()
+	}
+}
+impl AsRef<str> for OwnedSessionId {
+	fn as_ref(&self) -> &str {
+		self.as_str()
+	}
+}
+impl AsRef<OwnedSessionId> for OwnedSessionId {
+	fn as_ref(&self) -> &OwnedSessionId {
+		self
+	}
+}
+impl PartialEq<&OwnedSessionId> for OwnedSessionId {
+	fn eq(&self, other: &&OwnedSessionId) -> bool {
+		self == *other
+	}
+}
+impl Borrow<str> for OwnedSessionId {
+	fn borrow(&self) -> &str {
+		self.as_str()
+	}
+}
+impl Deref for OwnedSessionId {
+	type Target = str;
+	fn deref(&self) -> &str {
+		self.as_str()
+	}
+}
+impl fmt::Debug for OwnedSessionId {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.debug_tuple(stringify!(OwnedSessionId)).field(&self.0).finish()
+	}
+}
+impl codec::Serialize for OwnedSessionId {
+	fn to_json(&self) -> json::Value {
+		json::Value::String(self.0.clone())
+	}
+}
+impl codec::Deserialize for OwnedSessionId {
+	fn from_json(value: &json::Value) -> Result<Self, codec::DeError> {
+		value
+			.as_str()
+			.and_then(|text| {
+				if true {
+					Self::parse(text).ok()
+				} else {
+					// ruma-compatible: MXC URIs are accepted verbatim on the wire;
+
+					// validation happens in `parse`/`is_valid` for callers that need it.
+					Some(Self::from_trusted(text))
+				}
+			})
+			.ok_or_else(|| codec::DeError::expected(stringify!(OwnedSessionId)))
+	}
+}
+impl fmt::Display for OwnedSessionId {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.write_str(self.as_str())
+	}
+}
+#[derive(Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct OwnedMxcUri(alloc::string::String);
+pub type MxcUri = OwnedMxcUri;
+impl OwnedMxcUri {
+	/// Parses a Matrix identifier, checking its grammar.
+	///
+	/// # Errors
+	///
+	/// Returns [`MatrixIdParseError`] if `value` does not match the
+	/// identifier's grammar.
+	pub fn parse(value: impl AsRef<str>) -> Result<Self, MatrixIdParseError> {
+		let value = value.as_ref();
+		if crate::id_validation::mxc_uri(value) {
+			Ok(Self(value.to_owned()))
+		} else {
+			Err(MatrixIdParseError)
+		}
+	}
+	/// Constructs an identifier from a value already validated by the
+	/// caller, such as a trusted database row or a value generated here.
+	///
+	/// This bypasses grammar validation and must not be used for wire or
+	/// request data.
+	#[allow(dead_code)]
+	pub(crate) fn from_trusted(value: impl Into<alloc::string::String>) -> Self {
+		Self(value.into())
+	}
+	#[must_use]
+	pub fn as_str(&self) -> &str {
+		&self.0
+	}
+	#[must_use]
+	pub fn as_bytes(&self) -> &[u8] {
+		self.0.as_bytes()
+	}
+}
+impl TryFrom<alloc::string::String> for OwnedMxcUri {
+	type Error = MatrixIdParseError;
+	fn try_from(value: alloc::string::String) -> Result<Self, Self::Error> {
+		Self::parse(value)
+	}
+}
+impl TryFrom<&str> for OwnedMxcUri {
+	type Error = MatrixIdParseError;
+	fn try_from(value: &str) -> Result<Self, Self::Error> {
+		Self::parse(value)
+	}
+}
+impl core::str::FromStr for OwnedMxcUri {
+	type Err = MatrixIdParseError;
+	fn from_str(value: &str) -> Result<Self, Self::Err> {
+		Self::parse(value)
+	}
+}
+impl From<&OwnedMxcUri> for alloc::string::String {
+	fn from(value: &OwnedMxcUri) -> Self {
+		value.0.clone()
+	}
+}
+impl From<OwnedMxcUri> for alloc::string::String {
+	fn from(value: OwnedMxcUri) -> Self {
+		value.0
+	}
+}
+impl From<&OwnedMxcUri> for OwnedMxcUri {
+	fn from(value: &OwnedMxcUri) -> Self {
+		value.clone()
+	}
+}
+impl AsRef<[u8]> for OwnedMxcUri {
+	fn as_ref(&self) -> &[u8] {
+		self.0.as_bytes()
+	}
+}
+impl AsRef<str> for OwnedMxcUri {
+	fn as_ref(&self) -> &str {
+		self.as_str()
+	}
+}
+impl AsRef<OwnedMxcUri> for OwnedMxcUri {
+	fn as_ref(&self) -> &OwnedMxcUri {
+		self
+	}
+}
+impl PartialEq<&OwnedMxcUri> for OwnedMxcUri {
+	fn eq(&self, other: &&OwnedMxcUri) -> bool {
+		self == *other
+	}
+}
+impl Borrow<str> for OwnedMxcUri {
+	fn borrow(&self) -> &str {
+		self.as_str()
+	}
+}
+impl Deref for OwnedMxcUri {
+	type Target = str;
+	fn deref(&self) -> &str {
+		self.as_str()
+	}
+}
+impl fmt::Debug for OwnedMxcUri {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.debug_tuple(stringify!(OwnedMxcUri)).field(&self.0).finish()
+	}
+}
+impl codec::Serialize for OwnedMxcUri {
+	fn to_json(&self) -> json::Value {
+		json::Value::String(self.0.clone())
+	}
+}
+impl codec::Deserialize for OwnedMxcUri {
+	fn from_json(value: &json::Value) -> Result<Self, codec::DeError> {
+		value
+			.as_str()
+			.and_then(|text| {
+				if false {
+					Self::parse(text).ok()
+				} else {
+					// ruma-compatible: MXC URIs are accepted verbatim on the wire;
+
+					// validation happens in `parse`/`is_valid` for callers that need it.
+					Some(Self::from_trusted(text))
+				}
+			})
+			.ok_or_else(|| codec::DeError::expected(stringify!(OwnedMxcUri)))
+	}
+}
+impl fmt::Display for OwnedMxcUri {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.write_str(self.as_str())
+	}
+}
 
 /// Borrowed MXC URI components used by media services.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -837,7 +2395,21 @@ pub mod api {
 			pub enum TokenType {
 				Bearer,
 			}
-			crate::impl_codec_enum!(TokenType { Bearer => "Bearer" });
+			impl crate::codec::Serialize for TokenType {
+				fn to_json(&self) -> crate::json::Value {
+					crate::json::Value::String(::alloc::string::String::from(match self {
+						Self::Bearer => "Bearer",
+					}))
+				}
+			}
+			impl crate::codec::Deserialize for TokenType {
+				fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+					match value.as_str() {
+						Some("Bearer") => Ok(Self::Bearer),
+						_ => Err(crate::codec::DeError::expected(stringify!(TokenType))),
+					}
+				}
+			}
 		}
 		pub use crate::client_api::account;
 		pub use crate::client_api::admin;
@@ -940,10 +2512,10 @@ pub mod api {
 							])
 						}
 						fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-							let _input = crate::endpoint::Input::body_only(body);
+							let input = crate::endpoint::Input::body_only(body);
 							Ok(Self {
-								joined: _input.body("joined")?,
-								next_batch_token: _input.body("next_batch_token")?,
+								joined: input.body("joined")?,
+								next_batch_token: input.body("next_batch_token")?,
 							})
 						}
 					}
@@ -1058,9 +2630,9 @@ pub mod api {
 							)])
 						}
 						fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-							let _input = crate::endpoint::Input::body_only(body);
+							let input = crate::endpoint::Input::body_only(body);
 							Ok(Self {
-								visibility: _input.body("visibility")?,
+								visibility: input.body("visibility")?,
 							})
 						}
 					}
@@ -1131,8 +2703,9 @@ pub mod api {
 						fn to_body(&self) -> crate::json::Value {
 							crate::endpoint::body_object(&mut [])
 						}
-						fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-							let _input = crate::endpoint::Input::body_only(body);
+						fn from_body(
+							_body: &crate::json::Value,
+						) -> crate::endpoint::Parsed<Self> {
 							Ok(Self {})
 						}
 					}
@@ -1258,13 +2831,13 @@ pub mod api {
 						])
 					}
 					fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-						let _input = crate::endpoint::Input::body_only(body);
+						let input = crate::endpoint::Input::body_only(body);
 						Ok(Self {
-							homeserver: _input.body("homeserver")?,
-							identity_server: _input.body("identity_server")?,
-							sliding_sync_proxy: _input.body("sliding_sync_proxy")?,
-							tile_server: _input.body("tile_server")?,
-							rtc_foci: _input.body("rtc_foci")?,
+							homeserver: input.body("homeserver")?,
+							identity_server: input.body("identity_server")?,
+							sliding_sync_proxy: input.body("sliding_sync_proxy")?,
+							tile_server: input.body("tile_server")?,
+							rtc_foci: input.body("rtc_foci")?,
 						})
 					}
 				}
@@ -1354,10 +2927,10 @@ pub mod api {
 						])
 					}
 					fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-						let _input = crate::endpoint::Input::body_only(body);
+						let input = crate::endpoint::Input::body_only(body);
 						Ok(Self {
-							contacts: _input.body("contacts")?,
-							support_page: _input.body("support_page")?,
+							contacts: input.body("contacts")?,
+							support_page: input.body("support_page")?,
 						})
 					}
 				}
@@ -1403,7 +2976,27 @@ pub mod api {
 					Stable,
 					Unstable,
 				}
-				crate::impl_codec_enum!(RoomVersionStability { Stable => "stable", Unstable => "unstable" });
+				impl crate::codec::Serialize for RoomVersionStability {
+					fn to_json(&self) -> crate::json::Value {
+						crate::json::Value::String(::alloc::string::String::from(match self {
+							Self::Stable => "stable",
+							Self::Unstable => "unstable",
+						}))
+					}
+				}
+				impl crate::codec::Deserialize for RoomVersionStability {
+					fn from_json(
+						value: &crate::json::Value,
+					) -> Result<Self, crate::codec::DeError> {
+						match value.as_str() {
+							Some("stable") => Ok(Self::Stable),
+							Some("unstable") => Ok(Self::Unstable),
+							_ => Err(crate::codec::DeError::expected(stringify!(
+								RoomVersionStability
+							))),
+						}
+					}
+				}
 				#[derive(Clone, Debug, Default)]
 				pub struct Capabilities {
 					pub room_versions: RoomVersionsCapability,
@@ -1421,46 +3014,90 @@ pub mod api {
 					pub default: crate::RoomVersionId,
 				}
 				// Like Ruma, these capabilities are advertised as enabled unless changed.
-				macro_rules! enabled_by_default_capability {
-					($name:ident) => {
-						#[derive(Clone, Debug)]
-						pub struct $name {
-							pub enabled: bool,
-						}
-						impl Default for $name {
-							fn default() -> Self {
-								Self {
-									enabled: true,
-								}
-							}
-						}
-						impl crate::codec::Serialize for $name {
-							fn to_json(&self) -> crate::json::Value {
-								crate::endpoint::object_from(vec![(
-									"enabled",
-									self.enabled.to_json(),
-								)])
-								.into()
-							}
-						}
-						impl crate::codec::Deserialize for $name {
-							fn from_json(
-								v: &crate::json::Value,
-							) -> Result<Self, crate::codec::DeError> {
-								Ok(Self {
-									enabled: crate::codec::Deserialize::from_json(
-										v.as_object().and_then(|o| o.get("enabled")).ok_or_else(
-											|| crate::codec::DeError::expected("enabled"),
-										)?,
-									)?,
-								})
-							}
-						}
-					};
+				#[derive(Clone, Debug)]
+				pub struct ChangePasswordCapability {
+					pub enabled: bool,
 				}
-				enabled_by_default_capability!(ChangePasswordCapability);
-				enabled_by_default_capability!(SetDisplayNameCapability);
-				enabled_by_default_capability!(SetAvatarUrlCapability);
+				impl Default for ChangePasswordCapability {
+					fn default() -> Self {
+						Self {
+							enabled: true,
+						}
+					}
+				}
+				impl crate::codec::Serialize for ChangePasswordCapability {
+					fn to_json(&self) -> crate::json::Value {
+						crate::endpoint::object_from(vec![("enabled", self.enabled.to_json())])
+							.into()
+					}
+				}
+				impl crate::codec::Deserialize for ChangePasswordCapability {
+					fn from_json(v: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+						Ok(Self {
+							enabled: crate::codec::Deserialize::from_json(
+								v.as_object()
+									.and_then(|o| o.get("enabled"))
+									.ok_or_else(|| crate::codec::DeError::expected("enabled"))?,
+							)?,
+						})
+					}
+				}
+				#[derive(Clone, Debug)]
+				pub struct SetDisplayNameCapability {
+					pub enabled: bool,
+				}
+				impl Default for SetDisplayNameCapability {
+					fn default() -> Self {
+						Self {
+							enabled: true,
+						}
+					}
+				}
+				impl crate::codec::Serialize for SetDisplayNameCapability {
+					fn to_json(&self) -> crate::json::Value {
+						crate::endpoint::object_from(vec![("enabled", self.enabled.to_json())])
+							.into()
+					}
+				}
+				impl crate::codec::Deserialize for SetDisplayNameCapability {
+					fn from_json(v: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+						Ok(Self {
+							enabled: crate::codec::Deserialize::from_json(
+								v.as_object()
+									.and_then(|o| o.get("enabled"))
+									.ok_or_else(|| crate::codec::DeError::expected("enabled"))?,
+							)?,
+						})
+					}
+				}
+				#[derive(Clone, Debug)]
+				pub struct SetAvatarUrlCapability {
+					pub enabled: bool,
+				}
+				impl Default for SetAvatarUrlCapability {
+					fn default() -> Self {
+						Self {
+							enabled: true,
+						}
+					}
+				}
+				impl crate::codec::Serialize for SetAvatarUrlCapability {
+					fn to_json(&self) -> crate::json::Value {
+						crate::endpoint::object_from(vec![("enabled", self.enabled.to_json())])
+							.into()
+					}
+				}
+				impl crate::codec::Deserialize for SetAvatarUrlCapability {
+					fn from_json(v: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+						Ok(Self {
+							enabled: crate::codec::Deserialize::from_json(
+								v.as_object()
+									.and_then(|o| o.get("enabled"))
+									.ok_or_else(|| crate::codec::DeError::expected("enabled"))?,
+							)?,
+						})
+					}
+				}
 				#[derive(Clone, Debug, Default)]
 				pub struct ThirdPartyIdChangesCapability {
 					pub enabled: bool,
@@ -1666,9 +3303,9 @@ pub mod api {
 						)])
 					}
 					fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-						let _input = crate::endpoint::Input::body_only(body);
+						let input = crate::endpoint::Input::body_only(body);
 						Ok(Self {
-							capabilities: _input.body("capabilities")?,
+							capabilities: input.body("capabilities")?,
 						})
 					}
 				}
@@ -1732,10 +3369,10 @@ pub mod api {
 						])
 					}
 					fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-						let _input = crate::endpoint::Input::body_only(body);
+						let input = crate::endpoint::Input::body_only(body);
 						Ok(Self {
-							versions: _input.body("versions")?,
-							unstable_features: _input.body("unstable_features")?,
+							versions: input.body("versions")?,
+							unstable_features: input.body("unstable_features")?,
 						})
 					}
 				}
@@ -1800,9 +3437,9 @@ pub mod api {
 						)])
 					}
 					fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-						let _input = crate::endpoint::Input::body_only(body);
+						let input = crate::endpoint::Input::body_only(body);
 						Ok(Self {
-							transports: _input.body("transports")?,
+							transports: input.body("transports")?,
 						})
 					}
 				}
@@ -1975,24 +3612,47 @@ pub mod events {
 			StateEventType::from("m.room.preview_urls")
 		}
 	}
-	macro_rules! event_content {
-		($($t:ty => $kind:ident :: $variant:ident),* $(,)?) => {$(
-			impl EventContent for $t {
-				type EventType = $kind;
-				fn event_type(&self) -> Self::EventType {
-					$kind::$variant
-				}
-			}
-		)*};
+	impl EventContent for room::member::RoomMemberEventContent {
+		type EventType = StateEventType;
+		fn event_type(&self) -> Self::EventType {
+			StateEventType::RoomMember
+		}
 	}
-	event_content! {
-		room::member::RoomMemberEventContent => StateEventType::RoomMember,
-		room::join_rules::RoomJoinRulesEventContent => StateEventType::RoomJoinRules,
-		room::avatar::RoomAvatarEventContent => StateEventType::RoomAvatar,
-		room::third_party_invite::RoomThirdPartyInviteEventContent => StateEventType::RoomThirdPartyInvite,
-		room::server_acl::RoomServerAclEventContent => StateEventType::RoomServerAcl,
-		room::encryption::RoomEncryptionEventContent => StateEventType::RoomEncryption,
-		room::redaction::RoomRedactionEventContent => MessageLikeEventType::RoomRedaction,
+	impl EventContent for room::join_rules::RoomJoinRulesEventContent {
+		type EventType = StateEventType;
+		fn event_type(&self) -> Self::EventType {
+			StateEventType::RoomJoinRules
+		}
+	}
+	impl EventContent for room::avatar::RoomAvatarEventContent {
+		type EventType = StateEventType;
+		fn event_type(&self) -> Self::EventType {
+			StateEventType::RoomAvatar
+		}
+	}
+	impl EventContent for room::third_party_invite::RoomThirdPartyInviteEventContent {
+		type EventType = StateEventType;
+		fn event_type(&self) -> Self::EventType {
+			StateEventType::RoomThirdPartyInvite
+		}
+	}
+	impl EventContent for room::server_acl::RoomServerAclEventContent {
+		type EventType = StateEventType;
+		fn event_type(&self) -> Self::EventType {
+			StateEventType::RoomServerAcl
+		}
+	}
+	impl EventContent for room::encryption::RoomEncryptionEventContent {
+		type EventType = StateEventType;
+		fn event_type(&self) -> Self::EventType {
+			StateEventType::RoomEncryption
+		}
+	}
+	impl EventContent for room::redaction::RoomRedactionEventContent {
+		type EventType = MessageLikeEventType;
+		fn event_type(&self) -> Self::EventType {
+			MessageLikeEventType::RoomRedaction
+		}
 	}
 	pub mod relation {
 		pub use crate::relation_types::{
@@ -2007,13 +3667,29 @@ pub mod events {
 			Reference,
 			Thread,
 		}
-		crate::impl_codec_enum!(RelationType {
-			Reply => "m.in_reply_to",
-			Replacement => "m.replace",
-			Annotation => "m.annotation",
-			Reference => "m.reference",
-			Thread => "m.thread",
-		});
+		impl crate::codec::Serialize for RelationType {
+			fn to_json(&self) -> crate::json::Value {
+				crate::json::Value::String(::alloc::string::String::from(match self {
+					Self::Reply => "m.in_reply_to",
+					Self::Replacement => "m.replace",
+					Self::Annotation => "m.annotation",
+					Self::Reference => "m.reference",
+					Self::Thread => "m.thread",
+				}))
+			}
+		}
+		impl crate::codec::Deserialize for RelationType {
+			fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+				match value.as_str() {
+					Some("m.in_reply_to") => Ok(Self::Reply),
+					Some("m.replace") => Ok(Self::Replacement),
+					Some("m.annotation") => Ok(Self::Annotation),
+					Some("m.reference") => Ok(Self::Reference),
+					Some("m.thread") => Ok(Self::Thread),
+					_ => Err(crate::codec::DeError::expected(stringify!(RelationType))),
+				}
+			}
+		}
 	}
 	pub mod push_rules {
 		pub use crate::push::{
@@ -2223,13 +3899,29 @@ pub mod events {
 				Ban,
 				Knock,
 			}
-			crate::impl_codec_enum!(MembershipState {
-				Join => "join",
-				Invite => "invite",
-				Leave => "leave",
-				Ban => "ban",
-				Knock => "knock",
-			});
+			impl crate::codec::Serialize for MembershipState {
+				fn to_json(&self) -> crate::json::Value {
+					crate::json::Value::String(::alloc::string::String::from(match self {
+						Self::Join => "join",
+						Self::Invite => "invite",
+						Self::Leave => "leave",
+						Self::Ban => "ban",
+						Self::Knock => "knock",
+					}))
+				}
+			}
+			impl crate::codec::Deserialize for MembershipState {
+				fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+					match value.as_str() {
+						Some("join") => Ok(Self::Join),
+						Some("invite") => Ok(Self::Invite),
+						Some("leave") => Ok(Self::Leave),
+						Some("ban") => Ok(Self::Ban),
+						Some("knock") => Ok(Self::Knock),
+						_ => Err(crate::codec::DeError::expected(stringify!(MembershipState))),
+					}
+				}
+			}
 			impl MembershipState {
 				#[must_use]
 				pub const fn as_str(&self) -> &'static str {

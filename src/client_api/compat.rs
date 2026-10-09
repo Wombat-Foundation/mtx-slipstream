@@ -66,8 +66,7 @@ pub mod read_marker {
 				fn to_body(&self) -> crate::json::Value {
 					crate::endpoint::body_object(&mut [])
 				}
-				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let _input = crate::endpoint::Input::body_only(body);
+				fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
 					Ok(Self {})
 				}
 			}
@@ -140,8 +139,7 @@ pub mod receipt {
 				fn to_body(&self) -> crate::json::Value {
 					crate::endpoint::body_object(&mut [])
 				}
-				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let _input = crate::endpoint::Input::body_only(body);
+				fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
 					Ok(Self {})
 				}
 			}
@@ -205,9 +203,9 @@ pub mod thirdparty {
 					)])
 				}
 				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let _input = crate::endpoint::Input::body_only(body);
+					let input = crate::endpoint::Input::body_only(body);
 					Ok(Self {
-						protocols: _input.body("protocols")?,
+						protocols: input.body("protocols")?,
 					})
 				}
 			}

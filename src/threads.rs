@@ -1,7 +1,5 @@
 //! Thread listing.
 
-use crate::impl_codec_enum;
-
 /// Which threads to list.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum IncludeThreads {
@@ -12,7 +10,23 @@ pub enum IncludeThreads {
 	Participated,
 }
 
-impl_codec_enum!(IncludeThreads { All => "all", Participated => "participated" });
+impl crate::codec::Serialize for IncludeThreads {
+	fn to_json(&self) -> crate::json::Value {
+		crate::json::Value::String(::alloc::string::String::from(match self {
+			Self::All => "all",
+			Self::Participated => "participated",
+		}))
+	}
+}
+impl crate::codec::Deserialize for IncludeThreads {
+	fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+		match value.as_str() {
+			Some("all") => Ok(Self::All),
+			Some("participated") => Ok(Self::Participated),
+			_ => Err(crate::codec::DeError::expected(stringify!(IncludeThreads))),
+		}
+	}
+}
 
 impl IncludeThreads {
 	#[must_use]
@@ -100,10 +114,10 @@ pub mod get_threads {
 				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					chunk: _input.body("chunk")?,
-					next_batch: _input.body("next_batch")?,
+					chunk: input.body("chunk")?,
+					next_batch: input.body("next_batch")?,
 				})
 			}
 		}

@@ -67,10 +67,10 @@ pub mod v1 {
 			])
 		}
 		fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-			let _input = crate::endpoint::Input::body_only(body);
+			let input = crate::endpoint::Input::body_only(body);
 			Ok(Self {
-				pdus: _input.body("pdus")?,
-				auth_chain: _input.body("auth_chain")?,
+				pdus: input.body("pdus")?,
+				auth_chain: input.body("auth_chain")?,
 			})
 		}
 	}

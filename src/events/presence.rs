@@ -24,9 +24,27 @@ impl core::fmt::Display for PresenceState {
 		f.write_str(self.as_str())
 	}
 }
-crate::impl_codec_enum!(PresenceState {
-	Online => "online", Unavailable => "unavailable", Offline => "offline", Busy => "org.matrix.msc3026.busy",
-});
+impl crate::codec::Serialize for PresenceState {
+	fn to_json(&self) -> crate::json::Value {
+		crate::json::Value::String(::alloc::string::String::from(match self {
+			Self::Online => "online",
+			Self::Unavailable => "unavailable",
+			Self::Offline => "offline",
+			Self::Busy => "org.matrix.msc3026.busy",
+		}))
+	}
+}
+impl crate::codec::Deserialize for PresenceState {
+	fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+		match value.as_str() {
+			Some("online") => Ok(Self::Online),
+			Some("unavailable") => Ok(Self::Unavailable),
+			Some("offline") => Ok(Self::Offline),
+			Some("org.matrix.msc3026.busy") => Ok(Self::Busy),
+			_ => Err(crate::codec::DeError::expected(stringify!(PresenceState))),
+		}
+	}
+}
 
 #[derive(Debug, Default)]
 pub struct PresenceEventContent {

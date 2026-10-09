@@ -21,11 +21,25 @@ pub enum UpdateAction {
 	Send,
 	Cancel,
 }
-crate::impl_codec_enum!(UpdateAction {
-	Restart => "restart",
-	Send => "send",
-	Cancel => "cancel",
-});
+impl crate::codec::Serialize for UpdateAction {
+	fn to_json(&self) -> crate::json::Value {
+		crate::json::Value::String(::alloc::string::String::from(match self {
+			Self::Restart => "restart",
+			Self::Send => "send",
+			Self::Cancel => "cancel",
+		}))
+	}
+}
+impl crate::codec::Deserialize for UpdateAction {
+	fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+		match value.as_str() {
+			Some("restart") => Ok(Self::Restart),
+			Some("send") => Ok(Self::Send),
+			Some("cancel") => Ok(Self::Cancel),
+			_ => Err(crate::codec::DeError::expected(stringify!(UpdateAction))),
+		}
+	}
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DelayedEventStatus {
@@ -34,12 +48,27 @@ pub enum DelayedEventStatus {
 	Cancel,
 	Error,
 }
-crate::impl_codec_enum!(DelayedEventStatus {
-	Scheduled => "scheduled",
-	Send => "send",
-	Cancel => "cancel",
-	Error => "error",
-});
+impl crate::codec::Serialize for DelayedEventStatus {
+	fn to_json(&self) -> crate::json::Value {
+		crate::json::Value::String(::alloc::string::String::from(match self {
+			Self::Scheduled => "scheduled",
+			Self::Send => "send",
+			Self::Cancel => "cancel",
+			Self::Error => "error",
+		}))
+	}
+}
+impl crate::codec::Deserialize for DelayedEventStatus {
+	fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+		match value.as_str() {
+			Some("scheduled") => Ok(Self::Scheduled),
+			Some("send") => Ok(Self::Send),
+			Some("cancel") => Ok(Self::Cancel),
+			Some("error") => Ok(Self::Error),
+			_ => Err(crate::codec::DeError::expected(stringify!(DelayedEventStatus))),
+		}
+	}
+}
 
 /// The content of an event waiting to be sent, kept as raw JSON.
 #[derive(Debug, Default, Eq, PartialEq)]

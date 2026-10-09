@@ -5,7 +5,6 @@ use alloc::string::String;
 use crate::{
 	MilliSecondsSinceUnixEpoch, OwnedDeviceId,
 	codec::{DeError, Deserialize, Serialize},
-	impl_codec_struct,
 	json::Value,
 };
 
@@ -30,11 +29,31 @@ impl Device {
 	}
 }
 
-impl_codec_struct!(Device { device_id: OwnedDeviceId } default {
-	display_name: Option<String>,
-	last_seen_ip: Option<String>,
-	last_seen_ts: Option<MilliSecondsSinceUnixEpoch>,
-});
+impl crate::codec::Serialize for Device {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			(stringify!(device_id), crate::endpoint::enc(&self.device_id)),
+			(stringify!(display_name), crate::endpoint::enc(&self.display_name)),
+			(stringify!(last_seen_ip), crate::endpoint::enc(&self.last_seen_ip)),
+			(stringify!(last_seen_ts), crate::endpoint::enc(&self.last_seen_ts)),
+		])
+	}
+}
+impl crate::codec::Deserialize for Device {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(Device)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			device_id: input.body(stringify!(device_id))?,
+			display_name: input.body_or_default(stringify!(display_name))?,
+			last_seen_ip: input.body_or_default(stringify!(last_seen_ip))?,
+			last_seen_ts: input.body_or_default(stringify!(last_seen_ts))?,
+		})
+	}
+}
 
 pub mod get_devices {
 	pub mod v3 {
@@ -89,9 +108,9 @@ pub mod get_devices {
 				)])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
-					devices: _input.body("devices")?,
+					devices: input.body("devices")?,
 				})
 			}
 		}
@@ -217,8 +236,7 @@ pub mod update_device {
 			fn to_body(&self) -> crate::json::Value {
 				crate::endpoint::body_object(&mut [])
 			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
 				Ok(Self {})
 			}
 		}
@@ -282,8 +300,7 @@ pub mod delete_device {
 			fn to_body(&self) -> crate::json::Value {
 				crate::endpoint::body_object(&mut [])
 			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
 				Ok(Self {})
 			}
 		}
@@ -346,8 +363,7 @@ pub mod delete_devices {
 			fn to_body(&self) -> crate::json::Value {
 				crate::endpoint::body_object(&mut [])
 			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let _input = crate::endpoint::Input::body_only(body);
+			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
 				Ok(Self {})
 			}
 		}
@@ -461,9 +477,9 @@ pub mod dehydrated_device {
 					)])
 				}
 				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let _input = crate::endpoint::Input::body_only(body);
+					let input = crate::endpoint::Input::body_only(body);
 					Ok(Self {
-						device_id: _input.body("device_id")?,
+						device_id: input.body("device_id")?,
 					})
 				}
 			}
@@ -528,10 +544,10 @@ pub mod dehydrated_device {
 					])
 				}
 				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let _input = crate::endpoint::Input::body_only(body);
+					let input = crate::endpoint::Input::body_only(body);
 					Ok(Self {
-						device_id: _input.body("device_id")?,
-						device_data: _input.body("device_data")?,
+						device_id: input.body("device_id")?,
+						device_data: input.body("device_data")?,
 					})
 				}
 			}
@@ -593,9 +609,9 @@ pub mod dehydrated_device {
 					)])
 				}
 				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let _input = crate::endpoint::Input::body_only(body);
+					let input = crate::endpoint::Input::body_only(body);
 					Ok(Self {
-						device_id: _input.body("device_id")?,
+						device_id: input.body("device_id")?,
 					})
 				}
 			}
@@ -670,10 +686,10 @@ pub mod dehydrated_device {
 					])
 				}
 				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let _input = crate::endpoint::Input::body_only(body);
+					let input = crate::endpoint::Input::body_only(body);
 					Ok(Self {
-						events: _input.body("events")?,
-						next_batch: _input.body("next_batch")?,
+						events: input.body("events")?,
+						next_batch: input.body("next_batch")?,
 					})
 				}
 			}
@@ -690,7 +706,24 @@ pub struct DehydratedDevice {
 	pub device_data: crate::sswire::Raw<DehydratedDeviceData>,
 }
 
-impl_codec_struct!(DehydratedDevice {
-	device_id: OwnedDeviceId,
-	device_data: crate::sswire::Raw<DehydratedDeviceData>,
-});
+impl crate::codec::Serialize for DehydratedDevice {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			(stringify!(device_id), crate::endpoint::enc(&self.device_id)),
+			(stringify!(device_data), crate::endpoint::enc(&self.device_data)),
+		])
+	}
+}
+impl crate::codec::Deserialize for DehydratedDevice {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(DehydratedDevice)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			device_id: input.body(stringify!(device_id))?,
+			device_data: input.body(stringify!(device_data))?,
+		})
+	}
+}

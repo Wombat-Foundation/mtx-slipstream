@@ -4,7 +4,6 @@ use alloc::{string::String, vec::Vec};
 
 use crate::{
 	codec::{DeError, Deserialize, Serialize},
-	impl_codec_struct,
 	json::Value,
 };
 
@@ -15,7 +14,27 @@ pub struct Namespace {
 	pub regex: String,
 }
 
-impl_codec_struct!(Namespace { regex: String } default { exclusive: bool });
+impl crate::codec::Serialize for Namespace {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			(stringify!(regex), crate::endpoint::enc(&self.regex)),
+			(stringify!(exclusive), crate::endpoint::enc(&self.exclusive)),
+		])
+	}
+}
+impl crate::codec::Deserialize for Namespace {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(Namespace)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			regex: input.body(stringify!(regex))?,
+			exclusive: input.body_or_default(stringify!(exclusive))?,
+		})
+	}
+}
 
 #[derive(Clone, Debug, Default)]
 pub struct Namespaces {
@@ -24,11 +43,29 @@ pub struct Namespaces {
 	pub rooms: Vec<Namespace>,
 }
 
-impl_codec_struct!(Namespaces {} default {
-	users: Vec<Namespace>,
-	aliases: Vec<Namespace>,
-	rooms: Vec<Namespace>,
-});
+impl crate::codec::Serialize for Namespaces {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			(stringify!(users), crate::endpoint::enc(&self.users)),
+			(stringify!(aliases), crate::endpoint::enc(&self.aliases)),
+			(stringify!(rooms), crate::endpoint::enc(&self.rooms)),
+		])
+	}
+}
+impl crate::codec::Deserialize for Namespaces {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(Namespaces)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			users: input.body_or_default(stringify!(users))?,
+			aliases: input.body_or_default(stringify!(aliases))?,
+			rooms: input.body_or_default(stringify!(rooms))?,
+		})
+	}
+}
 
 /// An appservice registration file.
 #[derive(Clone, Debug, Default)]
@@ -49,19 +86,43 @@ pub struct Registration {
 	pub device_management: bool,
 }
 
-impl_codec_struct!(Registration {
-	id: String,
-	as_token: String,
-	hs_token: String,
-	sender_localpart: String,
-} default {
-	url: Option<String>,
-	namespaces: Namespaces,
-	rate_limited: Option<bool>,
-	protocols: Option<Vec<String>>,
-	receive_ephemeral: bool,
-	device_management: bool,
-});
+impl crate::codec::Serialize for Registration {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			(stringify!(id), crate::endpoint::enc(&self.id)),
+			(stringify!(as_token), crate::endpoint::enc(&self.as_token)),
+			(stringify!(hs_token), crate::endpoint::enc(&self.hs_token)),
+			(stringify!(sender_localpart), crate::endpoint::enc(&self.sender_localpart)),
+			(stringify!(url), crate::endpoint::enc(&self.url)),
+			(stringify!(namespaces), crate::endpoint::enc(&self.namespaces)),
+			(stringify!(rate_limited), crate::endpoint::enc(&self.rate_limited)),
+			(stringify!(protocols), crate::endpoint::enc(&self.protocols)),
+			(stringify!(receive_ephemeral), crate::endpoint::enc(&self.receive_ephemeral)),
+			(stringify!(device_management), crate::endpoint::enc(&self.device_management)),
+		])
+	}
+}
+impl crate::codec::Deserialize for Registration {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(Registration)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			id: input.body(stringify!(id))?,
+			as_token: input.body(stringify!(as_token))?,
+			hs_token: input.body(stringify!(hs_token))?,
+			sender_localpart: input.body(stringify!(sender_localpart))?,
+			url: input.body_or_default(stringify!(url))?,
+			namespaces: input.body_or_default(stringify!(namespaces))?,
+			rate_limited: input.body_or_default(stringify!(rate_limited))?,
+			protocols: input.body_or_default(stringify!(protocols))?,
+			receive_ephemeral: input.body_or_default(stringify!(receive_ephemeral))?,
+			device_management: input.body_or_default(stringify!(device_management))?,
+		})
+	}
+}
 
 /// One ephemeral event (typing, receipt or presence) for an appservice.
 #[derive(Debug)]
@@ -157,8 +218,7 @@ pub mod event {
 				fn to_body(&self) -> crate::json::Value {
 					crate::endpoint::body_object(&mut [])
 				}
-				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let _input = crate::endpoint::Input::body_only(body);
+				fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
 					Ok(Self {})
 				}
 			}
@@ -220,8 +280,7 @@ pub mod query {
 				fn to_body(&self) -> crate::json::Value {
 					crate::endpoint::body_object(&mut [])
 				}
-				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let _input = crate::endpoint::Input::body_only(body);
+				fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
 					Ok(Self {})
 				}
 			}
@@ -281,8 +340,7 @@ pub mod query {
 				fn to_body(&self) -> crate::json::Value {
 					crate::endpoint::body_object(&mut [])
 				}
-				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let _input = crate::endpoint::Input::body_only(body);
+				fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
 					Ok(Self {})
 				}
 			}
@@ -342,8 +400,7 @@ pub mod ping {
 				fn to_body(&self) -> crate::json::Value {
 					crate::endpoint::body_object(&mut [])
 				}
-				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let _input = crate::endpoint::Input::body_only(body);
+				fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
 					Ok(Self {})
 				}
 			}
