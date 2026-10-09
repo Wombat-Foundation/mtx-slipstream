@@ -206,16 +206,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
 
 [[package]]
-name = "keccak"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d8f198d1db720e4940b5a493201d199d9f24f568f8f746bd13706243a2f71598"
-dependencies = [
- "cfg-if",
- "cpufeatures",
-]
-
-[[package]]
 name = "libc"
 version = "0.2.190"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -284,7 +274,7 @@ checksum = "63b8176103e19a2643978565ca18b50549f6101881c443590420e4dc998a3c69"
 [[package]]
 name = "rezzy"
 version = "0.6.0-rc.1"
-source = "git+https://gitlab.com/gamesguru/rezzy.git?branch=alpha#d4eb8a3dcf94eea6d66b63e06a8d388cb10bac4a"
+source = "git+https://gitlab.com/gamesguru/rezzy.git?branch=alpha#ba31d1da08bd444bd911e1339b6b6589109b99ae"
 dependencies = [
  "base64",
  "blake3",
@@ -293,13 +283,12 @@ dependencies = [
  "rezzy-json",
  "roaring",
  "sha2",
- "sha3",
 ]
 
 [[package]]
 name = "rezzy-json"
 version = "0.6.0-rc.1"
-source = "git+https://gitlab.com/gamesguru/rezzy.git?branch=alpha#d4eb8a3dcf94eea6d66b63e06a8d388cb10bac4a"
+source = "git+https://gitlab.com/gamesguru/rezzy.git?branch=alpha#ba31d1da08bd444bd911e1339b6b6589109b99ae"
 dependencies = [
  "ryu",
 ]
@@ -343,17 +332,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sha3"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc9bad02c26382724b2d2692c6f179285e4b54eeecd7968f52a50059c3c11759"
-dependencies = [
- "digest",
- "keccak",
- "sponge-cursor",
-]
-
-[[package]]
 name = "shlex"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -364,12 +342,6 @@ name = "signature"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "28d567dcbaf0049cb8ac2608a76cd95ff9e4412e1899d389ee400918ca7537f5"
-
-[[package]]
-name = "sponge-cursor"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3a0219bd7d979d58245a4f41f695e1ac9f8befdffadd7f61f1bae9e39abc6620"
 
 [[package]]
 name = "subtle"
