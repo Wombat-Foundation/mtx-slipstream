@@ -398,16 +398,14 @@ impl OwnedRoomId {
 	/// Panics if the operating system's secure random source fails.
 	#[must_use]
 	pub fn new_v1(server_name: &OwnedServerName) -> Self {
-		use rand_core::RngCore as _;
-
 		const ALPHANUMERIC: &[u8; 62] =
 			b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 		let mut localpart = [0_u8; 18];
-		let mut rng = rand_core::OsRng;
 		for slot in &mut localpart {
 			loop {
 				let mut random_byte = [0_u8; 1];
-				rng.fill_bytes(&mut random_byte);
+				getrandom::fill(&mut random_byte)
+					.expect("the operating system's random source must be available");
 				let byte = random_byte[0];
 				if byte < 248 {
 					*slot = ALPHANUMERIC[(byte % 62) as usize];

@@ -1,5 +1,9 @@
-//! Event and JSON signing and verification, backed by Rezzy and
-//! consensus-compatible Ed25519 (`ed25519-consensus`).
+//! Event and JSON signing and verification, backed by Rezzy and its
+//! consensus-compatible Ed25519 backend (`ed25519-zebra`, ZIP-215).
+//!
+//! Signing uses the backend rezzy re-exports, and verification goes through
+//! rezzy's [`Ed25519ConsensusVerifier`], so both sides always agree on the
+//! ZIP-215 acceptance criterion.
 
 use alloc::{
 	collections::BTreeMap,
@@ -9,8 +13,10 @@ use alloc::{
 use core::fmt;
 
 use base64::{Engine as _, engine::general_purpose::STANDARD_NO_PAD};
-use ed25519_consensus::{Signature as RawSignature, SigningKey, VerificationKey};
-use rezzy::signing::{SignatureVerifier, verify_event_signatures};
+use rezzy::signing::{
+	Ed25519ConsensusVerifier, SignatureVerifier, ed25519_zebra::SigningKey,
+	verify_event_signatures,
+};
 
 use crate::{
 	CanonicalJsonObject, OwnedServerName, OwnedServerSigningKeyId, RoomVersionId,
@@ -90,10 +96,12 @@ impl Ed25519KeyPair {
 	///
 	/// # Errors
 	///
-	/// Currently infallible; the `Result` mirrors ruma's signature.
+	/// Returns an error if the operating system's random source fails.
 	pub fn generate() -> Result<Vec<u8>, Error> {
-		let key = SigningKey::new(rand_core::OsRng);
-		Ok(encode_pkcs8(&key.to_bytes()))
+		let mut seed = [0_u8; 32];
+		getrandom::fill(&mut seed)
+			.map_err(|e| Error::Key(alloc::format!("random source unavailable: {e}")))?;
+		Ok(encode_pkcs8(&seed))
 	}
 
 	/// Loads a key from PKCS#8 DER (version 1 or 2).
@@ -111,7 +119,7 @@ impl Ed25519KeyPair {
 
 	#[must_use]
 	pub fn public_key(&self) -> [u8; 32] {
-		self.key.verification_key().to_bytes()
+		<[u8; 32]>::from(self.key.verification_key())
 	}
 
 	#[must_use]
@@ -194,59 +202,33 @@ fn signing_bytes(object: &CanonicalJsonObject) -> Result<String, Error> {
 	json::write_string_value(&Value::Object(stripped)).map_err(|e| Error::Json(e.to_string()))
 }
 
-/// Known public keys, by server name and key ID.
-struct KeyRing(BTreeMap<(String, String), VerificationKey>);
-
-impl KeyRing {
-	fn new(keys: &PublicKeyMap) -> Result<Self, Error> {
-		let mut ring = BTreeMap::new();
-		for (server, set) in keys {
-			for (key_id, key) in set {
-				let key = VerificationKey::try_from(key.as_bytes())
-					.map_err(|e| Error::Key(alloc::format!("{e:?}")))?;
-				ring.insert((server.as_str().to_string(), key_id.as_str().to_string()), key);
+/// Builds a ZIP-215 verifier from `keys`.
+///
+/// The backend lower-cases server names, so two map entries that differ only
+/// by case (`Example.org` and `example.org`) with the same key ID would
+/// otherwise silently collapse — the last insert winning regardless of which
+/// key is correct. Reject that instead of guessing. A crafted key response
+/// must not be able to swap which key verifies.
+///
+/// # Errors
+///
+/// Returns an error if a public key is malformed or if two entries collide
+/// after case-folding.
+fn build_verifier(keys: &PublicKeyMap) -> Result<Ed25519ConsensusVerifier, Error> {
+	let mut verifier = Ed25519ConsensusVerifier::new();
+	for (server, set) in keys {
+		for (key_id, key) in set {
+			if verifier.has_key(server.as_str(), key_id.as_str()) {
+				return Err(Error::Key(alloc::format!(
+					"case-colliding signing key for {server}/{key_id}"
+				)));
 			}
+			verifier
+				.insert_public_key(server.as_str(), key_id.as_str(), key.as_bytes())
+				.map_err(Error::Key)?;
 		}
-		Ok(Self(ring))
 	}
-
-	/// Verifies a base64 signature by `(server, key_id)` over `message`.
-	fn verify_base64(
-		&self,
-		server: &str,
-		key_id: &str,
-		message: &[u8],
-		signature: &Value,
-	) -> Result<(), Error> {
-		let signature =
-			signature.as_str().ok_or_else(|| Error::Json("signature is not a string".into()))?;
-		let bytes = STANDARD_NO_PAD
-			.decode(signature.trim_end_matches('='))
-			.map_err(|e| Error::Json(e.to_string()))?;
-		self.verify(server, key_id, message, &bytes).map_err(Error::Verification)
-	}
-}
-
-impl SignatureVerifier for KeyRing {
-	fn has_key(&self, server_name: &str, key_id: &str) -> bool {
-		self.0.contains_key(&(server_name.to_string(), key_id.to_string()))
-	}
-
-	fn verify(
-		&self,
-		server_name: &str,
-		key_id: &str,
-		message: &[u8],
-		signature: &[u8],
-	) -> Result<(), String> {
-		let key = self
-			.0
-			.get(&(server_name.to_string(), key_id.to_string()))
-			.ok_or_else(|| alloc::format!("no key {key_id} for {server_name}"))?;
-		let signature = RawSignature::try_from(signature).map_err(|e| alloc::format!("{e:?}"))?;
-		key.verify(&signature, message)
-			.map_err(|e| alloc::format!("{server_name} {key_id}: {e:?}"))
-	}
+	Ok(verifier)
 }
 
 fn insert_signature(
@@ -328,7 +310,7 @@ pub fn verify_json(
 	object: impl core::borrow::Borrow<CanonicalJsonObject>,
 ) -> Result<(), Error> {
 	let object = object.borrow();
-	let ring = KeyRing::new(keys)?;
+	let verifier = build_verifier(keys)?;
 	let message = signing_bytes(object)?;
 	let signatures = object
 		.get("signatures")
@@ -341,8 +323,19 @@ pub fn verify_json(
 			continue;
 		};
 		for (key_id, signature) in entry {
-			if ring.has_key(server, key_id) {
-				ring.verify_base64(server, key_id, message.as_bytes(), signature)?;
+			if verifier.has_key(server, key_id) {
+				// A malformed signature (wrong JSON type or bad base64) is a
+				// `Json` error, matching the old key ring; only a well-formed
+				// signature that fails verification is `Verification`.
+				let signature = signature
+					.as_str()
+					.ok_or_else(|| Error::Json("signature is not a string".into()))?;
+				let bytes = STANDARD_NO_PAD
+					.decode(signature.trim_end_matches('='))
+					.map_err(|e| Error::Json(e.to_string()))?;
+				verifier
+					.verify(server, key_id, message.as_bytes(), &bytes)
+					.map_err(Error::Verification)?;
 				checked = true;
 			}
 		}
@@ -364,9 +357,9 @@ pub fn verify_event(
 	object: &CanonicalJsonObject,
 	version: &RoomVersionId,
 ) -> Result<Verified, Error> {
-	let ring = KeyRing::new(keys)?;
+	let verifier = build_verifier(keys)?;
 	let value = to_value(object);
-	verify_event_signatures(&value, version.as_str(), &ring).map_err(Error::Verification)?;
+	verify_event_signatures(&value, version.as_str(), &verifier).map_err(Error::Verification)?;
 	Ok(match rezzy::verify_content_hash(&value, version.as_str()) {
 		Ok(()) => Verified::All,
 		Err(_) => Verified::Signatures,
@@ -556,5 +549,125 @@ mod tests {
 		assert_eq!(verify_event(&keys, &event, &version).unwrap(), Verified::All);
 		let required = required_keys(&event, &version).unwrap();
 		assert!(required.contains_key(&OwnedServerName::parse("example.org").unwrap()));
+	}
+
+	/// Non-canonical encodings of small-order points (RFC 8032 rejects these;
+	/// ZIP-215 accepts them). Taken from the ed25519-consensus conformance set.
+	const NON_CANONICAL_SMALL_ORDER: [[u8; 32]; 6] = [
+		[
+			0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x80,
+		],
+		[
+			0xec, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0xff,
+		],
+		[
+			0xed, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0x7f,
+		],
+		[
+			0xed, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0xff,
+		],
+		[
+			0xee, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0x7f,
+		],
+		[
+			0xee, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0xff,
+		],
+	];
+
+	/// Pins ZIP-215 acceptance: non-canonical `A` and `R` with `s = 0` over the
+	/// conformance message. A stricter backend (RFC 8032 `ed25519-dalek`,
+	/// `verify_strict`) rejects every one of these, so a regression here means
+	/// acceptance silently narrowed and federation would disagree.
+	#[test]
+	fn zip215_accepts_non_canonical_small_order_points() {
+		for a in NON_CANONICAL_SMALL_ORDER {
+			let mut verifier = Ed25519ConsensusVerifier::new();
+			verifier.insert_public_key("example.org", "ed25519:0", &a).unwrap();
+			let mut signature = [0_u8; 64];
+			for r in NON_CANONICAL_SMALL_ORDER {
+				signature[..32].copy_from_slice(&r);
+				assert!(
+					verifier.verify("example.org", "ed25519:0", b"Zcash", &signature).is_ok(),
+					"ZIP-215 must accept A={:02x}.. R={:02x}..",
+					a[0],
+					r[0]
+				);
+			}
+		}
+	}
+
+	/// `insert_public_key` lower-cases server names, so two map entries that
+	/// differ only by case collapse to one key. Reject rather than let the
+	/// iteration order decide which key wins.
+	#[test]
+	fn case_colliding_server_keys_are_rejected() {
+		let first = pair();
+		let second = pair();
+		let mut keys = keys_for("Example.org", &first);
+		let mut other = PublicKeySet::new();
+		other.insert(
+			OwnedServerSigningKeyId::from_trusted(alloc::format!("ed25519:{}", first.version())),
+			Base64::new(second.public_key().to_vec()),
+		);
+		keys.insert(OwnedServerName::parse("example.org").unwrap(), other);
+
+		let Value::Object(mut object) = Value::parse(r#"{"a":1}"#).unwrap() else {
+			panic!("object")
+		};
+		sign_json("Example.org", &first, &mut object).unwrap();
+		assert!(
+			matches!(verify_json(&keys, object), Err(Error::Key(_))),
+			"case-folded duplicate keys must not silently overwrite"
+		);
+	}
+
+	/// Replacing the signature value mutates only its bytes, leaving the
+	/// object otherwise valid.
+	fn replace_signature(object: &mut CanonicalJsonObject, value: Value) {
+		let signatures =
+			object.get_mut("signatures").and_then(Value::as_object_mut).expect("signatures");
+		let entry = signatures
+			.get_mut("example.org")
+			.and_then(Value::as_object_mut)
+			.expect("server entry");
+		entry.insert("ed25519:v1".to_string(), value);
+	}
+
+	/// A non-string or undecodable signature is a `Json` error; only a
+	/// well-formed signature that fails to verify is `Verification`.
+	#[test]
+	fn json_signature_error_variants_are_preserved() {
+		let pair = pair();
+		let Value::Object(mut object) = Value::parse(r#"{"a":1}"#).unwrap() else {
+			panic!("object")
+		};
+		sign_json("example.org", &pair, &mut object).unwrap();
+		let keys = keys_for("example.org", &pair);
+
+		let mut wrong_type = object.clone();
+		replace_signature(&mut wrong_type, Value::parse("123").unwrap());
+		assert!(matches!(verify_json(&keys, wrong_type), Err(Error::Json(_))));
+
+		let mut bad_base64 = object.clone();
+		replace_signature(&mut bad_base64, Value::parse(r#""@@@ not base64 @@@""#).unwrap());
+		assert!(matches!(verify_json(&keys, bad_base64), Err(Error::Json(_))));
+
+		let zeros = STANDARD_NO_PAD.encode([0_u8; 64]);
+		let mut wrong_bytes = object;
+		let zeros = Value::parse(&alloc::format!("\"{zeros}\"")).unwrap();
+		replace_signature(&mut wrong_bytes, zeros);
+		assert!(matches!(verify_json(&keys, wrong_bytes), Err(Error::Verification(_))));
 	}
 }
