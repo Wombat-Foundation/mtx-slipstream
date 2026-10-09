@@ -1,7 +1,7 @@
 //! Golden fixtures for the profile endpoints.
 //!
 //! The important wire details here are unstable-prefixed or flattened, so a
-//! naive `endpoint!` row would silently emit the wrong JSON:
+//! naive endpoint definition would silently emit the wrong JSON:
 //!   - `blurhash` is sent as `xyz.amorgan.blurhash` (MSC2448), never `blurhash`.
 //!   - `custom_profile_fields` is flattened into the response object rather than
 //!     nested under its own key (MSC4133).

@@ -1,7 +1,7 @@
 //! Minimal typed-endpoint machinery: requests, responses and HTTP conversion.
 //!
 //! An endpoint is a request type and a response type described once with
-//! [`endpoint!`](macro@crate::endpoint). The macro implements [`EndpointRequest`] and
+//! the generated request and response types. They implement [`EndpointRequest`] and
 //! [`EndpointResponse`]; blanket impls then provide the ruma-style
 //! `OutgoingRequest`, `IncomingResponse`, `IncomingRequest` and
 //! `OutgoingResponse` traits in both directions.
@@ -423,7 +423,7 @@ pub trait OutgoingResponse {
 	) -> Result<http::Response<B>, IntoHttpError>;
 }
 
-/// Request half of an endpoint, implemented by [`endpoint!`](macro@crate::endpoint).
+/// Request half of an endpoint, implemented by each endpoint's `Request` type.
 pub trait EndpointRequest: Sized {
 	type Response: IncomingResponse<EndpointError = Error> + OutgoingResponse;
 	const METADATA: Metadata;
@@ -502,7 +502,7 @@ pub trait EndpointRequest: Sized {
 	}
 }
 
-/// Response half of an endpoint, implemented by [`endpoint!`](macro@crate::endpoint).
+/// Response half of an endpoint, implemented by each endpoint's `Response` type.
 pub trait EndpointResponse: Sized {
 	/// Whether a response body with a repeated object key, at any depth, is
 	/// rejected while it is first parsed. Parsing keeps the last duplicate, so
