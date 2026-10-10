@@ -44,9 +44,9 @@ checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
 
 [[package]]
 name = "cc"
-version = "1.6.0"
+version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f74872d07caf508b30a21f6836e7d7016a2eaf7d9ff4f48deaa58cd8a0407630"
+checksum = "50a649af8a827553c29fb0cb4bd4a6f1a0dd695bd3232b9bc98bd9c8a3ffbb8b"
 dependencies = [
  "find-msvc-tools",
  "shlex",
@@ -173,9 +173,9 @@ dependencies = [
 
 [[package]]
 name = "hashbrown"
-version = "0.17.1"
+version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
+checksum = "841d1cc9bed7f9236f321df977030373f4a4163ae1a7dbfe1a51a2c1a51d9100"
 dependencies = [
  "foldhash",
 ]
@@ -274,30 +274,33 @@ checksum = "63b8176103e19a2643978565ca18b50549f6101881c443590420e4dc998a3c69"
 [[package]]
 name = "rezzy"
 version = "0.6.0-rc.1"
-source = "git+https://gitlab.com/gamesguru/rezzy.git?branch=alpha#ba31d1da08bd444bd911e1339b6b6589109b99ae"
+source = "git+https://gitlab.com/gamesguru/rezzy.git?branch=alpha#72b59188baac2be6d04b15194ae5e225195c4746"
 dependencies = [
  "base64",
  "blake3",
  "ed25519-zebra",
  "hashbrown",
  "rezzy-json",
- "roaring",
+ "rezzy-recon",
  "sha2",
 ]
 
 [[package]]
 name = "rezzy-json"
 version = "0.6.0-rc.1"
-source = "git+https://gitlab.com/gamesguru/rezzy.git?branch=alpha#ba31d1da08bd444bd911e1339b6b6589109b99ae"
+source = "git+https://gitlab.com/gamesguru/rezzy.git?branch=alpha#72b59188baac2be6d04b15194ae5e225195c4746"
 dependencies = [
  "ryu",
 ]
 
 [[package]]
-name = "roaring"
-version = "0.11.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18bd8a37d17a58532776dcdf6041ce64929adca78e8489d5cacbafe99229d3e1"
+name = "rezzy-recon"
+version = "0.6.0-rc.1"
+source = "git+https://gitlab.com/gamesguru/rezzy.git?branch=alpha#72b59188baac2be6d04b15194ae5e225195c4746"
+dependencies = [
+ "base64",
+ "sha2",
+]
 
 [[package]]
 name = "rustc_version"

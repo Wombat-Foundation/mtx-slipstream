@@ -2503,17 +2503,13 @@ mod tests {
 
 	#[test]
 	fn stable_and_unstable_poll_end_notify() {
-		let unstable = actions(
-			r#"{"type":"org.matrix.msc3381.poll.end","sender":"@a:x","content":{}}"#,
-			5,
-		);
+		let unstable =
+			actions(r#"{"type":"org.matrix.msc3381.poll.end","sender":"@a:x","content":{}}"#, 5);
 		assert_eq!(unstable, [Action::Notify]);
 		let stable = actions(r#"{"type":"m.poll.end","sender":"@a:x","content":{}}"#, 5);
 		assert_eq!(stable, [Action::Notify]);
-		let unstable_1to1 = actions(
-			r#"{"type":"org.matrix.msc3381.poll.end","sender":"@a:x","content":{}}"#,
-			2,
-		);
+		let unstable_1to1 =
+			actions(r#"{"type":"org.matrix.msc3381.poll.end","sender":"@a:x","content":{}}"#, 2);
 		assert_eq!(
 			unstable_1to1,
 			[Action::Notify, Action::SetTweak(Tweak::Sound("default".into()))]
