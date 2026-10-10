@@ -1,0 +1,1258 @@
+//! Client membership endpoints: join, leave, invite, kick, ban and member listings.
+//!
+//! Wire details (field names, optionality, legacy `server_name` query) follow the
+//! pinned ruwuma definitions; only the `v3` paths are declared here.
+
+use alloc::string::String;
+
+use crate::{
+	OwnedMxcUri, OwnedRoomId, OwnedRoomOrAliasId, OwnedServerName, OwnedUserId, Signatures,
+	codec::{DeError, Deserialize, Serialize},
+	endpoint::{EndpointRequest, EndpointResponse, Input, Metadata, object_from},
+	json::Value,
+	room_api::Invite3pid,
+};
+
+/// Signed token proving a third-party invite, supplied when joining.
+#[derive(Debug)]
+pub struct ThirdPartySigned {
+	pub sender: OwnedUserId,
+	pub mxid: OwnedUserId,
+	pub token: String,
+	pub signatures: Signatures,
+}
+
+impl crate::codec::Serialize for ThirdPartySigned {
+	fn to_json(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			(stringify!(sender), crate::endpoint::enc(&self.sender)),
+			(stringify!(mxid), crate::endpoint::enc(&self.mxid)),
+			(stringify!(token), crate::endpoint::enc(&self.token)),
+			(stringify!(signatures), crate::endpoint::enc(&self.signatures)),
+		])
+	}
+}
+impl crate::codec::Deserialize for ThirdPartySigned {
+	fn from_json(value: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		// A struct is a JSON object; anything else is malformed, not "all defaults".
+		if value.as_object().is_none() {
+			return Err(crate::codec::DeError::expected(stringify!(ThirdPartySigned)));
+		}
+		let input = crate::endpoint::Input::body_only(value);
+		Ok(Self {
+			sender: input.body(stringify!(sender))?,
+			mxid: input.body(stringify!(mxid))?,
+			token: input.body(stringify!(token))?,
+			signatures: input.body(stringify!(signatures))?,
+		})
+	}
+}
+
+/// Who an invitation is for.
+#[derive(Debug)]
+pub enum InvitationRecipient {
+	UserId {
+		user_id: OwnedUserId,
+	},
+	ThirdPartyId(Invite3pid),
+}
+
+/// Filters member listings by membership state.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MembershipEventFilter {
+	Join,
+	Invite,
+	Leave,
+	Ban,
+	Knock,
+}
+
+impl crate::codec::Serialize for MembershipEventFilter {
+	fn to_json(&self) -> crate::json::Value {
+		crate::json::Value::String(::alloc::string::String::from(match self {
+			Self::Join => "join",
+			Self::Invite => "invite",
+			Self::Leave => "leave",
+			Self::Ban => "ban",
+			Self::Knock => "knock",
+		}))
+	}
+}
+impl crate::codec::Deserialize for MembershipEventFilter {
+	fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+		match value.as_str() {
+			Some("join") => Ok(Self::Join),
+			Some("invite") => Ok(Self::Invite),
+			Some("leave") => Ok(Self::Leave),
+			Some("ban") => Ok(Self::Ban),
+			Some("knock") => Ok(Self::Knock),
+			_ => Err(crate::codec::DeError::expected(stringify!(MembershipEventFilter))),
+		}
+	}
+}
+
+/// A joined member's profile.
+#[derive(Debug, Default)]
+pub struct RoomMember {
+	pub display_name: Option<String>,
+	pub avatar_url: Option<OwnedMxcUri>,
+}
+
+impl Serialize for RoomMember {
+	fn to_json(&self) -> Value {
+		Value::Object(object_from(alloc::vec![
+			("display_name", self.display_name.to_json()),
+			("avatar_url", self.avatar_url.to_json()),
+		]))
+	}
+}
+
+impl Deserialize for RoomMember {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		if value.as_object().is_none() {
+			return Err(DeError::expected("room member object"));
+		}
+		let input = Input::new(&[], &[], Some(value));
+		// Some servers send an empty string for "no avatar".
+		let avatar: Option<String> = input.body_or_default("avatar_url")?;
+		Ok(Self {
+			display_name: input.body_or_default("display_name")?,
+			avatar_url: avatar
+				.filter(|url| !url.is_empty())
+				.map(OwnedMxcUri::parse)
+				.transpose()
+				.map_err(|_| DeError::expected("avatar_url"))?,
+		})
+	}
+}
+
+pub mod ban_user {
+	pub mod v3 {
+		use alloc::string::String;
+
+		use crate::{OwnedRoomId, OwnedUserId};
+
+		pub struct Request {
+			pub room_id: OwnedRoomId,
+			pub user_id: OwnedUserId,
+			pub reason: Option<String>,
+			pub redact_events: Option<bool>,
+		}
+		impl ::core::fmt::Debug for Request {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Request")
+			}
+		}
+		const _: crate::endpoint::Metadata =
+			<Request as crate::endpoint::EndpointRequest>::METADATA;
+		impl crate::endpoint::EndpointRequest for Request {
+			type Response = Response;
+			const METADATA: crate::endpoint::Metadata =
+				crate::endpoint::Metadata::new("POST", "/_matrix/client/v3/rooms/{room_id}/ban");
+			fn path_args(&self) -> crate::endpoint::Strs {
+				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(&self.room_id)])
+			}
+			fn query(&self) -> crate::endpoint::Pairs {
+				crate::endpoint::query_pairs_mut(&mut [])
+			}
+			fn body(&self) -> Option<crate::json::Value> {
+				crate::endpoint::body_value(
+					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
+					&mut [
+						("user_id", crate::endpoint::enc(&self.user_id)),
+						("reason", crate::endpoint::enc(&self.reason)),
+						("redact_events", crate::endpoint::enc(&self.redact_events)),
+					],
+				)
+			}
+			fn from_parts(
+				path: &[crate::endpoint::Str],
+				query: &[crate::endpoint::Pair],
+				body: Option<&crate::json::Value>,
+			) -> crate::endpoint::Parsed<Self> {
+				let input = crate::endpoint::Input::new(path, query, body);
+				let value = Self {
+					room_id: input.path()?,
+					user_id: input.body("user_id")?,
+					reason: input.body("reason")?,
+					redact_events: input.body("redact_events")?,
+				};
+				input.finish()?;
+				Ok(value)
+			}
+		}
+		pub struct Response {}
+		impl ::core::fmt::Debug for Response {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Response")
+			}
+		}
+		impl crate::endpoint::EndpointResponse for Response {
+			fn to_body(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [])
+			}
+			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				Ok(Self {})
+			}
+		}
+		impl Response {
+			#[must_use]
+			pub fn new() -> Self {
+				Self {}
+			}
+		}
+		impl Default for Response {
+			fn default() -> Self {
+				Self::new()
+			}
+		}
+	}
+}
+
+pub mod kick_user {
+	pub mod v3 {
+		use alloc::string::String;
+
+		use crate::{OwnedRoomId, OwnedUserId};
+
+		pub struct Request {
+			pub room_id: OwnedRoomId,
+			pub user_id: OwnedUserId,
+			pub reason: Option<String>,
+		}
+		impl ::core::fmt::Debug for Request {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Request")
+			}
+		}
+		const _: crate::endpoint::Metadata =
+			<Request as crate::endpoint::EndpointRequest>::METADATA;
+		impl crate::endpoint::EndpointRequest for Request {
+			type Response = Response;
+			const METADATA: crate::endpoint::Metadata =
+				crate::endpoint::Metadata::new("POST", "/_matrix/client/v3/rooms/{room_id}/kick");
+			fn path_args(&self) -> crate::endpoint::Strs {
+				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(&self.room_id)])
+			}
+			fn query(&self) -> crate::endpoint::Pairs {
+				crate::endpoint::query_pairs_mut(&mut [])
+			}
+			fn body(&self) -> Option<crate::json::Value> {
+				crate::endpoint::body_value(
+					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
+					&mut [
+						("user_id", crate::endpoint::enc(&self.user_id)),
+						("reason", crate::endpoint::enc(&self.reason)),
+					],
+				)
+			}
+			fn from_parts(
+				path: &[crate::endpoint::Str],
+				query: &[crate::endpoint::Pair],
+				body: Option<&crate::json::Value>,
+			) -> crate::endpoint::Parsed<Self> {
+				let input = crate::endpoint::Input::new(path, query, body);
+				let value = Self {
+					room_id: input.path()?,
+					user_id: input.body("user_id")?,
+					reason: input.body("reason")?,
+				};
+				input.finish()?;
+				Ok(value)
+			}
+		}
+		pub struct Response {}
+		impl ::core::fmt::Debug for Response {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Response")
+			}
+		}
+		impl crate::endpoint::EndpointResponse for Response {
+			fn to_body(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [])
+			}
+			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				Ok(Self {})
+			}
+		}
+		impl Response {
+			#[must_use]
+			pub fn new() -> Self {
+				Self {}
+			}
+		}
+		impl Default for Response {
+			fn default() -> Self {
+				Self::new()
+			}
+		}
+	}
+}
+
+pub mod unban_user {
+	pub mod v3 {
+		use alloc::string::String;
+
+		use crate::{OwnedRoomId, OwnedUserId};
+
+		pub struct Request {
+			pub room_id: OwnedRoomId,
+			pub user_id: OwnedUserId,
+			pub reason: Option<String>,
+		}
+		impl ::core::fmt::Debug for Request {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Request")
+			}
+		}
+		const _: crate::endpoint::Metadata =
+			<Request as crate::endpoint::EndpointRequest>::METADATA;
+		impl crate::endpoint::EndpointRequest for Request {
+			type Response = Response;
+			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
+				"POST",
+				"/_matrix/client/v3/rooms/{room_id}/unban",
+			);
+			fn path_args(&self) -> crate::endpoint::Strs {
+				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(&self.room_id)])
+			}
+			fn query(&self) -> crate::endpoint::Pairs {
+				crate::endpoint::query_pairs_mut(&mut [])
+			}
+			fn body(&self) -> Option<crate::json::Value> {
+				crate::endpoint::body_value(
+					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
+					&mut [
+						("user_id", crate::endpoint::enc(&self.user_id)),
+						("reason", crate::endpoint::enc(&self.reason)),
+					],
+				)
+			}
+			fn from_parts(
+				path: &[crate::endpoint::Str],
+				query: &[crate::endpoint::Pair],
+				body: Option<&crate::json::Value>,
+			) -> crate::endpoint::Parsed<Self> {
+				let input = crate::endpoint::Input::new(path, query, body);
+				let value = Self {
+					room_id: input.path()?,
+					user_id: input.body("user_id")?,
+					reason: input.body("reason")?,
+				};
+				input.finish()?;
+				Ok(value)
+			}
+		}
+		pub struct Response {}
+		impl ::core::fmt::Debug for Response {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Response")
+			}
+		}
+		impl crate::endpoint::EndpointResponse for Response {
+			fn to_body(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [])
+			}
+			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				Ok(Self {})
+			}
+		}
+		impl Response {
+			#[must_use]
+			pub fn new() -> Self {
+				Self {}
+			}
+		}
+		impl Default for Response {
+			fn default() -> Self {
+				Self::new()
+			}
+		}
+	}
+}
+
+pub mod forget_room {
+	pub mod v3 {
+		use crate::OwnedRoomId;
+
+		pub struct Request {
+			pub room_id: OwnedRoomId,
+		}
+		impl ::core::fmt::Debug for Request {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Request")
+			}
+		}
+		const _: crate::endpoint::Metadata =
+			<Request as crate::endpoint::EndpointRequest>::METADATA;
+		impl crate::endpoint::EndpointRequest for Request {
+			type Response = Response;
+			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
+				"POST",
+				"/_matrix/client/v3/rooms/{room_id}/forget",
+			);
+			fn path_args(&self) -> crate::endpoint::Strs {
+				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(&self.room_id)])
+			}
+			fn query(&self) -> crate::endpoint::Pairs {
+				crate::endpoint::query_pairs_mut(&mut [])
+			}
+			fn body(&self) -> Option<crate::json::Value> {
+				crate::endpoint::body_value(
+					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
+					&mut [],
+				)
+			}
+			fn from_parts(
+				path: &[crate::endpoint::Str],
+				query: &[crate::endpoint::Pair],
+				body: Option<&crate::json::Value>,
+			) -> crate::endpoint::Parsed<Self> {
+				let input = crate::endpoint::Input::new(path, query, body);
+				let value = Self {
+					room_id: input.path()?,
+				};
+				input.finish()?;
+				Ok(value)
+			}
+		}
+		pub struct Response {}
+		impl ::core::fmt::Debug for Response {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Response")
+			}
+		}
+		impl crate::endpoint::EndpointResponse for Response {
+			fn to_body(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [])
+			}
+			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				Ok(Self {})
+			}
+		}
+		impl Response {
+			#[must_use]
+			pub fn new() -> Self {
+				Self {}
+			}
+		}
+		impl Default for Response {
+			fn default() -> Self {
+				Self::new()
+			}
+		}
+	}
+}
+
+pub mod leave_room {
+	pub mod v3 {
+		use alloc::string::String;
+
+		use crate::OwnedRoomId;
+
+		pub struct Request {
+			pub room_id: OwnedRoomId,
+			pub reason: Option<String>,
+		}
+		impl ::core::fmt::Debug for Request {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Request")
+			}
+		}
+		const _: crate::endpoint::Metadata =
+			<Request as crate::endpoint::EndpointRequest>::METADATA;
+		impl crate::endpoint::EndpointRequest for Request {
+			type Response = Response;
+			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
+				"POST",
+				"/_matrix/client/v3/rooms/{room_id}/leave",
+			);
+			fn path_args(&self) -> crate::endpoint::Strs {
+				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(&self.room_id)])
+			}
+			fn query(&self) -> crate::endpoint::Pairs {
+				crate::endpoint::query_pairs_mut(&mut [])
+			}
+			fn body(&self) -> Option<crate::json::Value> {
+				crate::endpoint::body_value(
+					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
+					&mut [("reason", crate::endpoint::enc(&self.reason))],
+				)
+			}
+			fn from_parts(
+				path: &[crate::endpoint::Str],
+				query: &[crate::endpoint::Pair],
+				body: Option<&crate::json::Value>,
+			) -> crate::endpoint::Parsed<Self> {
+				let input = crate::endpoint::Input::new(path, query, body);
+				let value = Self {
+					room_id: input.path()?,
+					reason: input.body("reason")?,
+				};
+				input.finish()?;
+				Ok(value)
+			}
+		}
+		pub struct Response {}
+		impl ::core::fmt::Debug for Response {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Response")
+			}
+		}
+		impl crate::endpoint::EndpointResponse for Response {
+			fn to_body(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [])
+			}
+			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				Ok(Self {})
+			}
+		}
+		impl Response {
+			#[must_use]
+			pub fn new() -> Self {
+				Self {}
+			}
+		}
+		impl Default for Response {
+			fn default() -> Self {
+				Self::new()
+			}
+		}
+	}
+}
+
+pub mod joined_rooms {
+	pub mod v1 {}
+	pub mod v3 {
+		use alloc::vec::Vec;
+
+		use crate::OwnedRoomId;
+
+		pub struct Request {}
+		impl ::core::fmt::Debug for Request {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Request")
+			}
+		}
+		const _: crate::endpoint::Metadata =
+			<Request as crate::endpoint::EndpointRequest>::METADATA;
+		impl crate::endpoint::EndpointRequest for Request {
+			type Response = Response;
+			const METADATA: crate::endpoint::Metadata =
+				crate::endpoint::Metadata::new("GET", "/_matrix/client/v3/joined_rooms");
+			fn path_args(&self) -> crate::endpoint::Strs {
+				crate::endpoint::path_args_from(&mut [])
+			}
+			fn query(&self) -> crate::endpoint::Pairs {
+				crate::endpoint::query_pairs_mut(&mut [])
+			}
+			fn body(&self) -> Option<crate::json::Value> {
+				crate::endpoint::body_value(
+					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
+					&mut [],
+				)
+			}
+			fn from_parts(
+				path: &[crate::endpoint::Str],
+				query: &[crate::endpoint::Pair],
+				body: Option<&crate::json::Value>,
+			) -> crate::endpoint::Parsed<Self> {
+				let input = crate::endpoint::Input::new(path, query, body);
+				let value = Self {};
+				input.finish()?;
+				Ok(value)
+			}
+		}
+		pub struct Response {
+			pub joined_rooms: Vec<OwnedRoomId>,
+		}
+		impl ::core::fmt::Debug for Response {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Response")
+			}
+		}
+		impl crate::endpoint::EndpointResponse for Response {
+			fn to_body(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [(
+					"joined_rooms",
+					crate::endpoint::enc(&self.joined_rooms),
+				)])
+			}
+			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				let input = crate::endpoint::Input::body_only(body);
+				Ok(Self {
+					joined_rooms: input.body("joined_rooms")?,
+				})
+			}
+		}
+	}
+}
+
+pub mod joined_members {
+	pub mod v3 {
+		use alloc::collections::BTreeMap;
+
+		use super::super::RoomMember;
+		use crate::{OwnedRoomId, OwnedUserId};
+
+		pub use super::super::RoomMember as Member;
+
+		pub struct Request {
+			pub room_id: OwnedRoomId,
+		}
+		impl ::core::fmt::Debug for Request {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Request")
+			}
+		}
+		const _: crate::endpoint::Metadata =
+			<Request as crate::endpoint::EndpointRequest>::METADATA;
+		impl crate::endpoint::EndpointRequest for Request {
+			type Response = Response;
+			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
+				"GET",
+				"/_matrix/client/v3/rooms/{room_id}/joined_members",
+			);
+			fn path_args(&self) -> crate::endpoint::Strs {
+				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(&self.room_id)])
+			}
+			fn query(&self) -> crate::endpoint::Pairs {
+				crate::endpoint::query_pairs_mut(&mut [])
+			}
+			fn body(&self) -> Option<crate::json::Value> {
+				crate::endpoint::body_value(
+					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
+					&mut [],
+				)
+			}
+			fn from_parts(
+				path: &[crate::endpoint::Str],
+				query: &[crate::endpoint::Pair],
+				body: Option<&crate::json::Value>,
+			) -> crate::endpoint::Parsed<Self> {
+				let input = crate::endpoint::Input::new(path, query, body);
+				let value = Self {
+					room_id: input.path()?,
+				};
+				input.finish()?;
+				Ok(value)
+			}
+		}
+		pub struct Response {
+			pub joined: BTreeMap<OwnedUserId, RoomMember>,
+		}
+		impl ::core::fmt::Debug for Response {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Response")
+			}
+		}
+		impl crate::endpoint::EndpointResponse for Response {
+			fn to_body(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [(
+					"joined",
+					crate::endpoint::enc(&self.joined),
+				)])
+			}
+			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				let input = crate::endpoint::Input::body_only(body);
+				Ok(Self {
+					joined: input.body("joined")?,
+				})
+			}
+		}
+	}
+}
+
+pub mod get_member_events {
+	pub mod v3 {
+		use alloc::string::String;
+		use alloc::vec::Vec;
+
+		pub use super::super::MembershipEventFilter;
+		use crate::{OwnedRoomId, sswire::RawJsonValue};
+
+		pub struct Request {
+			pub room_id: OwnedRoomId,
+			pub at: Option<String>,
+			pub membership: Option<MembershipEventFilter>,
+			pub not_membership: Option<MembershipEventFilter>,
+		}
+		impl ::core::fmt::Debug for Request {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Request")
+			}
+		}
+		const _: crate::endpoint::Metadata =
+			<Request as crate::endpoint::EndpointRequest>::METADATA;
+		impl crate::endpoint::EndpointRequest for Request {
+			type Response = Response;
+			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
+				"GET",
+				"/_matrix/client/v3/rooms/{room_id}/members",
+			);
+			fn path_args(&self) -> crate::endpoint::Strs {
+				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(&self.room_id)])
+			}
+			fn query(&self) -> crate::endpoint::Pairs {
+				crate::endpoint::query_pairs_mut(&mut [
+					("at", crate::endpoint::enc(&self.at)),
+					("membership", crate::endpoint::enc(&self.membership)),
+					("not_membership", crate::endpoint::enc(&self.not_membership)),
+				])
+			}
+			fn body(&self) -> Option<crate::json::Value> {
+				crate::endpoint::body_value(
+					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
+					&mut [],
+				)
+			}
+			fn from_parts(
+				path: &[crate::endpoint::Str],
+				query: &[crate::endpoint::Pair],
+				body: Option<&crate::json::Value>,
+			) -> crate::endpoint::Parsed<Self> {
+				let input = crate::endpoint::Input::new(path, query, body);
+				let value = Self {
+					room_id: input.path()?,
+					at: input.query("at")?,
+					membership: input.query("membership")?,
+					not_membership: input.query("not_membership")?,
+				};
+				input.finish()?;
+				Ok(value)
+			}
+		}
+		pub struct Response {
+			pub chunk: Vec<RawJsonValue>,
+		}
+		impl ::core::fmt::Debug for Response {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Response")
+			}
+		}
+		impl crate::endpoint::EndpointResponse for Response {
+			fn to_body(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [("chunk", crate::endpoint::enc(&self.chunk))])
+			}
+			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				let input = crate::endpoint::Input::body_only(body);
+				Ok(Self {
+					chunk: input.body("chunk")?,
+				})
+			}
+		}
+	}
+}
+
+pub mod join_room_by_id {
+	pub mod v3 {
+		use alloc::string::String;
+
+		use super::super::ThirdPartySigned;
+		use crate::OwnedRoomId;
+
+		pub struct Request {
+			pub room_id: OwnedRoomId,
+			pub third_party_signed: Option<ThirdPartySigned>,
+			pub reason: Option<String>,
+		}
+		impl ::core::fmt::Debug for Request {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Request")
+			}
+		}
+		const _: crate::endpoint::Metadata =
+			<Request as crate::endpoint::EndpointRequest>::METADATA;
+		impl crate::endpoint::EndpointRequest for Request {
+			type Response = Response;
+			const METADATA: crate::endpoint::Metadata =
+				crate::endpoint::Metadata::new("POST", "/_matrix/client/v3/rooms/{room_id}/join");
+			fn path_args(&self) -> crate::endpoint::Strs {
+				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(&self.room_id)])
+			}
+			fn query(&self) -> crate::endpoint::Pairs {
+				crate::endpoint::query_pairs_mut(&mut [])
+			}
+			fn body(&self) -> Option<crate::json::Value> {
+				crate::endpoint::body_value(
+					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
+					&mut [
+						("third_party_signed", crate::endpoint::enc(&self.third_party_signed)),
+						("reason", crate::endpoint::enc(&self.reason)),
+					],
+				)
+			}
+			fn from_parts(
+				path: &[crate::endpoint::Str],
+				query: &[crate::endpoint::Pair],
+				body: Option<&crate::json::Value>,
+			) -> crate::endpoint::Parsed<Self> {
+				let input = crate::endpoint::Input::new(path, query, body);
+				let value = Self {
+					room_id: input.path()?,
+					third_party_signed: input.body("third_party_signed")?,
+					reason: input.body("reason")?,
+				};
+				input.finish()?;
+				Ok(value)
+			}
+		}
+		pub struct Response {
+			pub room_id: OwnedRoomId,
+		}
+		impl ::core::fmt::Debug for Response {
+			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+				crate::endpoint::opaque_debug(f, "Response")
+			}
+		}
+		impl crate::endpoint::EndpointResponse for Response {
+			fn to_body(&self) -> crate::json::Value {
+				crate::endpoint::body_object(&mut [(
+					"room_id",
+					crate::endpoint::enc(&self.room_id),
+				)])
+			}
+			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+				let input = crate::endpoint::Input::body_only(body);
+				Ok(Self {
+					room_id: input.body("room_id")?,
+				})
+			}
+		}
+
+		impl Response {
+			#[must_use]
+			pub fn new(room_id: OwnedRoomId) -> Self {
+				Self {
+					room_id,
+				}
+			}
+		}
+	}
+}
+
+pub mod invite_user {
+	pub mod v3 {
+		use alloc::{string::String, vec::Vec};
+
+		pub use super::super::InvitationRecipient;
+		use super::super::{
+			DeError, Deserialize, EndpointRequest, EndpointResponse, Input, Invite3pid, Metadata,
+			OwnedRoomId, Serialize, Value, object_from,
+		};
+
+		const _: Metadata = Metadata::new("POST", "/_matrix/client/v3/rooms/{room_id}/invite");
+
+		/// An invitation, by user ID or by third-party identifier.
+		#[derive(Debug)]
+		pub struct Request {
+			pub room_id: OwnedRoomId,
+			pub recipient: InvitationRecipient,
+			pub reason: Option<String>,
+		}
+
+		impl Request {
+			#[must_use]
+			pub fn new(room_id: OwnedRoomId, recipient: InvitationRecipient) -> Self {
+				Self {
+					room_id,
+					recipient,
+					reason: None,
+				}
+			}
+		}
+
+		impl EndpointRequest for Request {
+			type Response = Response;
+
+			const METADATA: Metadata =
+				Metadata::new("POST", "/_matrix/client/v3/rooms/{room_id}/invite");
+
+			fn path_args(&self) -> Vec<String> {
+				alloc::vec![crate::endpoint::to_param(&self.room_id).unwrap_or_default()]
+			}
+
+			fn query(&self) -> Vec<(String, String)> {
+				Vec::new()
+			}
+
+			fn body(&self) -> Option<Value> {
+				let mut fields = match &self.recipient {
+					InvitationRecipient::UserId {
+						user_id,
+					} => alloc::vec![("user_id", user_id.to_json())],
+					InvitationRecipient::ThirdPartyId(third_party) => {
+						let Value::Object(object) = third_party.to_json() else {
+							return None;
+						};
+						return Some(Value::Object({
+							let mut object = object;
+							if let Some(reason) = &self.reason {
+								object.insert("reason".into(), reason.to_json());
+							}
+							object
+						}));
+					}
+				};
+				fields.push(("reason", self.reason.to_json()));
+				Some(Value::Object(object_from(fields)))
+			}
+
+			fn from_parts(
+				path: &[String],
+				_query: &[(String, String)],
+				body: Option<&Value>,
+			) -> Result<Self, DeError> {
+				let body = body.ok_or_else(|| DeError::expected("request body"))?;
+				let input = Input::new(path, &[], Some(body));
+				let room_id = input.path()?;
+				let recipient = if body.get("user_id").is_some() {
+					InvitationRecipient::UserId {
+						user_id: input.body("user_id")?,
+					}
+				} else {
+					InvitationRecipient::ThirdPartyId(Invite3pid::from_json(body)?)
+				};
+				Ok(Self {
+					room_id,
+					recipient,
+					reason: input.body_or_default("reason")?,
+				})
+			}
+		}
+
+		/// Empty response.
+		#[derive(Debug, Default)]
+		pub struct Response {}
+
+		impl Response {
+			#[must_use]
+			pub fn new() -> Self {
+				Self {}
+			}
+		}
+
+		impl EndpointResponse for Response {
+			fn to_body(&self) -> Value {
+				Value::Object(crate::json::Object::default())
+			}
+
+			fn from_body(_body: &Value) -> Result<Self, DeError> {
+				Ok(Self {})
+			}
+		}
+	}
+}
+
+pub mod join_room_by_id_or_alias {
+	pub mod v3 {
+		use alloc::{string::String, vec::Vec};
+
+		use super::super::{
+			DeError, EndpointRequest, EndpointResponse, Input, Metadata, OwnedRoomId,
+			OwnedRoomOrAliasId, OwnedServerName, Serialize, ThirdPartySigned, Value, object_from,
+		};
+
+		const _: Metadata = Metadata::new("POST", "/_matrix/client/v3/join/{room_id_or_alias}");
+
+		/// Joins by room ID or alias. `via` is sent as both `via` and the legacy
+		/// `server_name` query parameter, and read from either.
+		#[derive(Debug)]
+		pub struct Request {
+			pub room_id_or_alias: OwnedRoomOrAliasId,
+			pub third_party_signed: Option<ThirdPartySigned>,
+			pub reason: Option<String>,
+			pub via: Vec<OwnedServerName>,
+		}
+
+		impl EndpointRequest for Request {
+			type Response = Response;
+
+			const METADATA: Metadata =
+				Metadata::new("POST", "/_matrix/client/v3/join/{room_id_or_alias}");
+
+			fn path_args(&self) -> Vec<String> {
+				alloc::vec![crate::endpoint::to_param(&self.room_id_or_alias).unwrap_or_default()]
+			}
+
+			fn query(&self) -> Vec<(String, String)> {
+				crate::endpoint::query_pairs(alloc::vec![
+					("server_name", self.via.to_json()),
+					("via", self.via.to_json()),
+				])
+			}
+
+			fn body(&self) -> Option<Value> {
+				Some(Value::Object(object_from(alloc::vec![
+					("third_party_signed", self.third_party_signed.to_json()),
+					("reason", self.reason.to_json()),
+				])))
+			}
+
+			fn from_parts(
+				path: &[String],
+				query: &[(String, String)],
+				body: Option<&Value>,
+			) -> Result<Self, DeError> {
+				let input = Input::new(path, query, body);
+				let mut via: Vec<OwnedServerName> = if query.iter().any(|(k, _)| k == "via") {
+					input.query("via")?
+				} else {
+					Vec::new()
+				};
+				if query.iter().any(|(k, _)| k == "server_name") {
+					let legacy: Vec<OwnedServerName> = input.query("server_name")?;
+					for server in legacy {
+						if !via.contains(&server) {
+							via.push(server);
+						}
+					}
+				}
+				Ok(Self {
+					room_id_or_alias: input.path()?,
+					third_party_signed: if body.is_some() {
+						input.body_or_default("third_party_signed")?
+					} else {
+						None
+					},
+					reason: if body.is_some() {
+						input.body_or_default("reason")?
+					} else {
+						None
+					},
+					via,
+				})
+			}
+		}
+
+		/// The room that was joined.
+		#[derive(Debug)]
+		pub struct Response {
+			pub room_id: OwnedRoomId,
+		}
+
+		impl Response {
+			#[must_use]
+			pub fn new(room_id: OwnedRoomId) -> Self {
+				Self {
+					room_id,
+				}
+			}
+		}
+
+		impl EndpointResponse for Response {
+			fn to_body(&self) -> Value {
+				Value::Object(object_from(alloc::vec![("room_id", self.room_id.to_json())]))
+			}
+
+			fn from_body(body: &Value) -> Result<Self, DeError> {
+				Ok(Self {
+					room_id: Input::new(&[], &[], Some(body)).body("room_id")?,
+				})
+			}
+		}
+	}
+}
+
+pub mod knock_room {
+	pub mod v3 {
+		use alloc::{string::String, vec::Vec};
+
+		use super::super::{
+			DeError, EndpointRequest, EndpointResponse, Input, Metadata, OwnedRoomId,
+			OwnedRoomOrAliasId, OwnedServerName, Serialize, Value, object_from,
+		};
+
+		const _: Metadata = Metadata::new("POST", "/_matrix/client/v3/knock/{room_id_or_alias}");
+
+		/// Knocks on a room. `via` is sent as both `via` and the legacy `server_name`
+		/// query parameter, and read from either.
+		#[derive(Debug)]
+		pub struct Request {
+			pub room_id_or_alias: OwnedRoomOrAliasId,
+			pub reason: Option<String>,
+			pub via: Vec<OwnedServerName>,
+		}
+
+		impl EndpointRequest for Request {
+			type Response = Response;
+
+			const METADATA: Metadata =
+				Metadata::new("POST", "/_matrix/client/v3/knock/{room_id_or_alias}");
+
+			fn path_args(&self) -> Vec<String> {
+				alloc::vec![crate::endpoint::to_param(&self.room_id_or_alias).unwrap_or_default()]
+			}
+
+			fn query(&self) -> Vec<(String, String)> {
+				crate::endpoint::query_pairs(alloc::vec![
+					("server_name", self.via.to_json()),
+					("via", self.via.to_json()),
+				])
+			}
+
+			fn body(&self) -> Option<Value> {
+				Some(Value::Object(object_from(alloc::vec![("reason", self.reason.to_json())])))
+			}
+
+			fn from_parts(
+				path: &[String],
+				query: &[(String, String)],
+				body: Option<&Value>,
+			) -> Result<Self, DeError> {
+				let input = Input::new(path, query, body);
+				let mut via: Vec<OwnedServerName> = if query.iter().any(|(k, _)| k == "via") {
+					input.query("via")?
+				} else {
+					Vec::new()
+				};
+				if query.iter().any(|(k, _)| k == "server_name") {
+					for server in input.query::<Vec<OwnedServerName>>("server_name")? {
+						if !via.contains(&server) {
+							via.push(server);
+						}
+					}
+				}
+				Ok(Self {
+					room_id_or_alias: input.path()?,
+					reason: if body.is_some() {
+						input.body_or_default("reason")?
+					} else {
+						None
+					},
+					via,
+				})
+			}
+		}
+
+		/// The room that was knocked on.
+		#[derive(Debug)]
+		pub struct Response {
+			pub room_id: OwnedRoomId,
+		}
+
+		impl Response {
+			#[must_use]
+			pub fn new(room_id: OwnedRoomId) -> Self {
+				Self {
+					room_id,
+				}
+			}
+		}
+
+		impl EndpointResponse for Response {
+			fn to_body(&self) -> Value {
+				Value::Object(object_from(alloc::vec![("room_id", self.room_id.to_json())]))
+			}
+
+			fn from_body(body: &Value) -> Result<Self, DeError> {
+				Ok(Self {
+					room_id: Input::new(&[], &[], Some(body)).body("room_id")?,
+				})
+			}
+		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use alloc::vec;
+
+	use super::*;
+	use crate::codec::from_str;
+
+	fn json(text: &str) -> crate::json::Value {
+		from_str(text).unwrap()
+	}
+
+	#[test]
+	fn invite_by_user_id_round_trips() {
+		let request = invite_user::v3::Request {
+			room_id: OwnedRoomId::parse("!r:example.org").unwrap(),
+			recipient: InvitationRecipient::UserId {
+				user_id: OwnedUserId::parse("@carl:example.org").unwrap(),
+			},
+			reason: Some("hi".into()),
+		};
+		let body = request.body().unwrap();
+		assert_eq!(body, json(r#"{"user_id": "@carl:example.org", "reason": "hi"}"#));
+		let back = invite_user::v3::Request::from_parts(
+			&["!r:example.org".to_owned()],
+			&[],
+			Some(&body),
+		)
+		.unwrap();
+		assert!(matches!(back.recipient, InvitationRecipient::UserId { .. }));
+		assert_eq!(back.reason.as_deref(), Some("hi"));
+	}
+
+	#[test]
+	fn invite_by_third_party_id_parses() {
+		let body: Value = from_str(
+			r#"{"id_server":"example.org","id_access_token":"tok","medium":"email","address":"carl@example.org"}"#,
+		)
+		.unwrap();
+		let request = invite_user::v3::Request::from_parts(
+			&["!r:example.org".to_owned()],
+			&[],
+			Some(&body),
+		)
+		.unwrap();
+		let InvitationRecipient::ThirdPartyId(third_party) = request.recipient else {
+			panic!("expected a third-party recipient");
+		};
+		assert_eq!(third_party.medium, "email");
+		assert_eq!(third_party.address, "carl@example.org");
+	}
+
+	#[test]
+	fn join_by_alias_merges_via_and_legacy_server_name() {
+		let query = vec![
+			("via".to_owned(), "a.example".to_owned()),
+			("server_name".to_owned(), "b.example".to_owned()),
+			("server_name".to_owned(), "a.example".to_owned()),
+		];
+		let body = json(r#"{"reason": "because"}"#);
+		let request = join_room_by_id_or_alias::v3::Request::from_parts(
+			&["#room:example.org".to_owned()],
+			&query,
+			Some(&body),
+		)
+		.unwrap();
+		let via: Vec<&str> = request.via.iter().map(crate::OwnedServerName::as_str).collect();
+		assert_eq!(via, ["a.example", "b.example"]);
+		assert_eq!(request.reason.as_deref(), Some("because"));
+		assert!(request.third_party_signed.is_none());
+	}
+
+	#[test]
+	fn joined_member_empty_avatar_is_none() {
+		let member: RoomMember = from_str(r#"{"display_name":"Carl","avatar_url":""}"#).unwrap();
+		assert_eq!(member.display_name.as_deref(), Some("Carl"));
+		assert!(member.avatar_url.is_none());
+	}
+
+	#[test]
+	fn knock_merges_via_and_legacy_server_name() {
+		let query = vec![
+			("server_name".to_owned(), "legacy.example".to_owned()),
+			("via".to_owned(), "new.example".to_owned()),
+		];
+		let request = knock_room::v3::Request::from_parts(
+			&["!r:example.org".to_owned()],
+			&query,
+			Some(&json(r#"{"reason": "let me in"}"#)),
+		)
+		.unwrap();
+		let via: Vec<&str> = request.via.iter().map(crate::OwnedServerName::as_str).collect();
+		assert_eq!(via, ["new.example", "legacy.example"]);
+		assert_eq!(request.reason.as_deref(), Some("let me in"));
+	}
+
+	#[test]
+	fn membership_filter_uses_lowercase_names() {
+		assert_eq!(MembershipEventFilter::Knock.to_json(), json(r#""knock""#));
+		let parsed: MembershipEventFilter = from_str("\"leave\"").unwrap();
+		assert_eq!(parsed, MembershipEventFilter::Leave);
+	}
+}
