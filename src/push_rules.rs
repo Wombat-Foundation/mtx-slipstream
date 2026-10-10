@@ -102,6 +102,7 @@ pub enum PredefinedOverrideRuleId {
 	ServerAcl,
 	SuppressEdits,
 	PollResponse,
+	StablePollResponse,
 }
 impl PredefinedOverrideRuleId {
 	#[must_use]
@@ -120,6 +121,7 @@ impl PredefinedOverrideRuleId {
 			Self::ServerAcl => ".m.rule.room.server_acl",
 			Self::SuppressEdits => ".m.rule.suppress_edits",
 			Self::PollResponse => ".org.matrix.msc3930.rule.poll_response",
+			Self::StablePollResponse => ".m.rule.poll_response",
 		}
 	}
 }
@@ -156,6 +158,10 @@ pub enum PredefinedUnderrideRuleId {
 	PollStart,
 	PollEndOneToOne,
 	PollEnd,
+	StablePollStartOneToOne,
+	StablePollStart,
+	StablePollEndOneToOne,
+	StablePollEnd,
 }
 impl PredefinedUnderrideRuleId {
 	#[must_use]
@@ -170,6 +176,10 @@ impl PredefinedUnderrideRuleId {
 			Self::PollStart => ".org.matrix.msc3930.rule.poll_start",
 			Self::PollEndOneToOne => ".org.matrix.msc3930.rule.poll_end_one_to_one",
 			Self::PollEnd => ".org.matrix.msc3930.rule.poll_end",
+			Self::StablePollStartOneToOne => ".m.rule.poll_start_one_to_one",
+			Self::StablePollStart => ".m.rule.poll_start",
+			Self::StablePollEndOneToOne => ".m.rule.poll_end_one_to_one",
+			Self::StablePollEnd => ".m.rule.poll_end",
 		}
 	}
 }
@@ -1254,6 +1264,12 @@ fn default_override_rules(user_id: &str) -> Vec<ConditionalPushRule> {
 			vec![type_is("org.matrix.msc3381.poll.response")],
 			Vec::new(),
 		),
+		default_conditional(
+			PredefinedOverrideRuleId::StablePollResponse.as_str(),
+			true,
+			vec![type_is("m.poll.response")],
+			Vec::new(),
+		),
 	]
 }
 
@@ -1314,6 +1330,30 @@ fn default_underride_rules() -> Vec<ConditionalPushRule> {
 			PredefinedUnderrideRuleId::PollEnd.as_str(),
 			true,
 			vec![type_is("org.matrix.msc3381.poll.end")],
+			action_list(&[], true),
+		),
+		default_conditional(
+			PredefinedUnderrideRuleId::StablePollStartOneToOne.as_str(),
+			true,
+			vec![member_count_is("2"), type_is("m.poll.start")],
+			action_list(core::slice::from_ref(&sound), true),
+		),
+		default_conditional(
+			PredefinedUnderrideRuleId::StablePollStart.as_str(),
+			true,
+			vec![type_is("m.poll.start")],
+			action_list(&[], true),
+		),
+		default_conditional(
+			PredefinedUnderrideRuleId::StablePollEndOneToOne.as_str(),
+			true,
+			vec![member_count_is("2"), type_is("m.poll.end")],
+			action_list(core::slice::from_ref(&sound), true),
+		),
+		default_conditional(
+			PredefinedUnderrideRuleId::StablePollEnd.as_str(),
+			true,
+			vec![type_is("m.poll.end")],
 			action_list(&[], true),
 		),
 	]
@@ -2422,14 +2462,78 @@ mod tests {
 		assert!(
 			rules.get(RuleKind::Override, ".org.matrix.msc3930.rule.poll_response").is_some()
 		);
+		assert!(rules.get(RuleKind::Override, ".m.rule.poll_response").is_some());
 		for id in [
 			".org.matrix.msc3930.rule.poll_start_one_to_one",
 			".org.matrix.msc3930.rule.poll_start",
 			".org.matrix.msc3930.rule.poll_end_one_to_one",
 			".org.matrix.msc3930.rule.poll_end",
+			".m.rule.poll_start_one_to_one",
+			".m.rule.poll_start",
+			".m.rule.poll_end_one_to_one",
+			".m.rule.poll_end",
 		] {
 			assert!(rules.get(RuleKind::Underride, id).is_some(), "{id}");
 		}
+	}
+
+	#[test]
+	fn stable_and_unstable_poll_start_notify() {
+		let unstable = actions(
+			r#"{"type":"org.matrix.msc3381.poll.start","sender":"@a:x","content":{}}"#,
+			5,
+		);
+		assert_eq!(unstable, [Action::Notify]);
+		let stable = actions(r#"{"type":"m.poll.start","sender":"@a:x","content":{}}"#, 5);
+		assert_eq!(stable, [Action::Notify]);
+		let unstable_1to1 = actions(
+			r#"{"type":"org.matrix.msc3381.poll.start","sender":"@a:x","content":{}}"#,
+			2,
+		);
+		assert_eq!(
+			unstable_1to1,
+			[Action::Notify, Action::SetTweak(Tweak::Sound("default".into()))]
+		);
+		let stable_1to1 = actions(r#"{"type":"m.poll.start","sender":"@a:x","content":{}}"#, 2);
+		assert_eq!(
+			stable_1to1,
+			[Action::Notify, Action::SetTweak(Tweak::Sound("default".into()))]
+		);
+	}
+
+	#[test]
+	fn stable_and_unstable_poll_end_notify() {
+		let unstable = actions(
+			r#"{"type":"org.matrix.msc3381.poll.end","sender":"@a:x","content":{}}"#,
+			5,
+		);
+		assert_eq!(unstable, [Action::Notify]);
+		let stable = actions(r#"{"type":"m.poll.end","sender":"@a:x","content":{}}"#, 5);
+		assert_eq!(stable, [Action::Notify]);
+		let unstable_1to1 = actions(
+			r#"{"type":"org.matrix.msc3381.poll.end","sender":"@a:x","content":{}}"#,
+			2,
+		);
+		assert_eq!(
+			unstable_1to1,
+			[Action::Notify, Action::SetTweak(Tweak::Sound("default".into()))]
+		);
+		let stable_1to1 = actions(r#"{"type":"m.poll.end","sender":"@a:x","content":{}}"#, 2);
+		assert_eq!(
+			stable_1to1,
+			[Action::Notify, Action::SetTweak(Tweak::Sound("default".into()))]
+		);
+	}
+
+	#[test]
+	fn stable_and_unstable_poll_response_are_silent() {
+		let unstable = actions(
+			r#"{"type":"org.matrix.msc3381.poll.response","sender":"@a:x","content":{}}"#,
+			5,
+		);
+		assert!(unstable.is_empty());
+		let stable = actions(r#"{"type":"m.poll.response","sender":"@a:x","content":{}}"#, 5);
+		assert!(stable.is_empty());
 	}
 
 	#[test]
