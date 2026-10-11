@@ -1127,4 +1127,23 @@ mod tests {
 		);
 		assert_eq!(back.get("version").and_then(Value::as_str), Some("3"));
 	}
+
+	#[test]
+	fn create_backup_version_body_is_the_algorithm_object() {
+		use crate::endpoint::EndpointRequest;
+
+		let body = from_str::<Value>(
+			r#"{"algorithm":"m.megolm_backup.v1.curve25519-aes-sha2","auth_data":{"public_key":"k"}}"#,
+		)
+		.unwrap();
+		let request =
+			create_backup_version::v3::Request::from_parts(&[], &[], Some(&body)).unwrap();
+		let stored = from_str::<Value>(request.algorithm.as_ref()).unwrap();
+		assert_eq!(
+			stored.get("algorithm").and_then(Value::as_str),
+			Some("m.megolm_backup.v1.curve25519-aes-sha2")
+		);
+		assert!(stored.get("auth_data").is_some());
+		assert_eq!(request.body().unwrap(), body);
+	}
 }

@@ -512,3 +512,20 @@ pub mod get_key_changes {
 		}
 	}
 }
+
+#[cfg(test)]
+mod upload_signatures_tests {
+	use super::upload_signatures::v3::Request;
+	use crate::{codec::from_str, endpoint::EndpointRequest, json::Value};
+
+	#[test]
+	fn body_is_the_user_key_signature_map() {
+		let body = from_str::<Value>(
+			r#"{"@a:hs1":{"DEVICE":{"user_id":"@a:hs1","signatures":{"@a:hs1":{"ed25519:X":"sig"}}}}}"#,
+		)
+		.unwrap();
+		let request = Request::from_parts(&[], &[], Some(&body)).unwrap();
+		assert_eq!(request.signed_keys.len(), 1);
+		assert_eq!(request.body().unwrap(), body);
+	}
+}
