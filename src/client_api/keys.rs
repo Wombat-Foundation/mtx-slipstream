@@ -396,10 +396,7 @@ pub mod upload_signatures {
 				crate::endpoint::query_pairs_mut(&mut [])
 			}
 			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [("signed_keys", crate::endpoint::enc(&self.signed_keys))],
-				)
+				Some(crate::endpoint::enc(&self.signed_keys))
 			}
 			fn from_parts(
 				path: &[crate::endpoint::Str],
@@ -408,7 +405,9 @@ pub mod upload_signatures {
 			) -> crate::endpoint::Parsed<Self> {
 				let input = crate::endpoint::Input::new(path, query, body);
 				let value = Self {
-					signed_keys: input.body("signed_keys")?,
+					signed_keys: crate::codec::Deserialize::from_json(
+						body.ok_or_else(|| crate::codec::DeError::expected("request body"))?,
+					)?,
 				};
 				input.finish()?;
 				Ok(value)

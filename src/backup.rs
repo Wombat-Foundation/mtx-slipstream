@@ -119,10 +119,7 @@ pub mod create_backup_version {
 				crate::endpoint::query_pairs_mut(&mut [])
 			}
 			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [("algorithm", crate::endpoint::enc(&self.algorithm))],
-				)
+				Some(crate::endpoint::enc(&self.algorithm))
 			}
 			fn from_parts(
 				path: &[crate::endpoint::Str],
@@ -131,7 +128,9 @@ pub mod create_backup_version {
 			) -> crate::endpoint::Parsed<Self> {
 				let input = crate::endpoint::Input::new(path, query, body);
 				let value = Self {
-					algorithm: input.body("algorithm")?,
+					algorithm: crate::codec::Deserialize::from_json(
+						body.ok_or_else(|| crate::codec::DeError::expected("request body"))?,
+					)?,
 				};
 				input.finish()?;
 				Ok(value)
