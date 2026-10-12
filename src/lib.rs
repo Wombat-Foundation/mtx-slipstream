@@ -2532,7 +2532,7 @@ pub mod api {
 		}
 		pub mod session {
 			pub use crate::session::{
-				get_login_token, get_login_types, login, logout, logout_all,
+				get_login_token, get_login_types, login, logout, logout_all, refresh_token,
 			};
 		}
 		pub mod to_device {
@@ -3192,10 +3192,8 @@ pub mod api {
 								!matches!(
 									key.as_str(),
 									"m.room_versions"
-										| "m.change_password"
-										| "m.set_displayname"
-										| "m.set_avatar_url"
-										| "m.3pid_changes"
+										| "m.change_password" | "m.set_displayname"
+										| "m.set_avatar_url" | "m.3pid_changes"
 										| "m.get_login_token"
 								)
 							})

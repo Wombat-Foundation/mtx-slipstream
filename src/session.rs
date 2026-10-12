@@ -654,3 +654,107 @@ pub mod logout_all {
 		}
 	}
 }
+
+pub mod refresh_token {
+	pub mod v3 {
+		use alloc::{string::String, vec::Vec};
+		use core::time::Duration;
+
+		use crate::{
+			codec::{DeError, Serialize},
+			endpoint::{EndpointRequest, EndpointResponse, Input, Metadata, object_from},
+			json::Value,
+		};
+
+		/// Exchanges a refresh token for a new access token (MSC2918).
+		#[derive(Debug)]
+		pub struct Request {
+			pub refresh_token: String,
+		}
+
+		impl Request {
+			#[must_use]
+			pub fn new(refresh_token: String) -> Self {
+				Self {
+					refresh_token,
+				}
+			}
+		}
+
+		const _: Metadata = Metadata::new("POST", "/_matrix/client/v3/refresh");
+		impl EndpointRequest for Request {
+			type Response = Response;
+
+			const METADATA: Metadata = Metadata::new("POST", "/_matrix/client/v3/refresh");
+
+			fn path_args(&self) -> Vec<String> {
+				Vec::new()
+			}
+
+			fn query(&self) -> Vec<(String, String)> {
+				Vec::new()
+			}
+
+			fn body(&self) -> Option<Value> {
+				Some(Value::Object(object_from(alloc::vec![(
+					"refresh_token",
+					self.refresh_token.to_json()
+				)])))
+			}
+
+			fn from_parts(
+				_path: &[String],
+				_query: &[(String, String)],
+				body: Option<&Value>,
+			) -> Result<Self, DeError> {
+				let body = body.ok_or_else(|| DeError::expected("request body"))?;
+				let input = Input::new(&[], &[], Some(body));
+				Ok(Self {
+					refresh_token: input.body("refresh_token")?,
+				})
+			}
+		}
+
+		#[derive(Debug)]
+		pub struct Response {
+			pub access_token: String,
+			pub refresh_token: Option<String>,
+			/// How long the new access token is valid for.
+			pub expires_in_ms: Option<Duration>,
+		}
+
+		impl Response {
+			#[must_use]
+			pub fn new(access_token: String) -> Self {
+				Self {
+					access_token,
+					refresh_token: None,
+					expires_in_ms: None,
+				}
+			}
+		}
+
+		impl EndpointResponse for Response {
+			fn to_body(&self) -> Value {
+				let expires_in_ms = self
+					.expires_in_ms
+					.map(|duration| u64::try_from(duration.as_millis()).unwrap_or(u64::MAX));
+				Value::Object(object_from(alloc::vec![
+					("access_token", self.access_token.to_json()),
+					("refresh_token", self.refresh_token.to_json()),
+					("expires_in_ms", expires_in_ms.to_json()),
+				]))
+			}
+
+			fn from_body(body: &Value) -> Result<Self, DeError> {
+				let input = Input::new(&[], &[], Some(body));
+				let expires_in_ms: Option<u64> = input.body_or_default("expires_in_ms")?;
+				Ok(Self {
+					access_token: input.body("access_token")?,
+					refresh_token: input.body_or_default("refresh_token")?,
+					expires_in_ms: expires_in_ms.map(Duration::from_millis),
+				})
+			}
+		}
+	}
+}
