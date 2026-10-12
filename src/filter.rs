@@ -124,6 +124,10 @@ impl Deserialize for RoomEventFilter {
 		let input = Input::new(&[], &[], Some(value));
 		let contains_url: Option<bool> = input.body("contains_url")?;
 		let lazy: bool = input.body_or_default("lazy_load_members")?;
+		// Validated even when lazy loading is off, so a malformed value is
+		// rejected rather than silently ignored.
+		let include_redundant_members: bool =
+			input.body_or_default("include_redundant_members")?;
 		Ok(Self {
 			limit: input.body("limit")?,
 			types: input.body("types")?,
@@ -143,8 +147,7 @@ impl Deserialize for RoomEventFilter {
 			}),
 			lazy_load_options: if lazy {
 				LazyLoadOptions::Enabled {
-					include_redundant_members: input
-						.body_or_default("include_redundant_members")?,
+					include_redundant_members,
 				}
 			} else {
 				LazyLoadOptions::Disabled
@@ -562,6 +565,21 @@ mod tests {
 		assert_eq!(filter.url_filter, Some(UrlFilter::EventsWithoutUrl));
 		let back = RoomEventFilter::from_json(&filter.to_json()).unwrap();
 		assert_eq!(back.limit, Some(5));
+	}
+
+	#[test]
+	fn malformed_include_redundant_members_is_rejected_without_lazy_loading() {
+		assert!(
+			from_str::<RoomEventFilter>(r#"{"include_redundant_members":"not_a_bool"}"#).is_err()
+		);
+		assert!(
+			from_str::<RoomEventFilter>(
+				r#"{"lazy_load_members":true,"include_redundant_members":"not_a_bool"}"#
+			)
+			.is_err()
+		);
+		let ignored: RoomEventFilter = from_str(r#"{"include_redundant_members":true}"#).unwrap();
+		assert!(ignored.lazy_load_options.is_disabled());
 	}
 
 	#[test]
