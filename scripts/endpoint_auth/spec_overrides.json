@@ -1,0 +1,248 @@
+{
+ "resolved": [
+  {
+   "method": "GET",
+   "path": "/.well-known/matrix/client",
+   "scheme": "None",
+   "reason": "discovery, public",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "GET",
+   "path": "/.well-known/matrix/server",
+   "scheme": "None",
+   "reason": "discovery, public",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "GET",
+   "path": "/.well-known/matrix/support",
+   "scheme": "None",
+   "reason": "discovery, public",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "GET",
+   "path": "/_matrix/client/v1/auth_metadata",
+   "scheme": "None",
+   "reason": "OAuth metadata, public",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "GET",
+   "path": "/_matrix/client/v1/register/m.login.registration_token/validity",
+   "scheme": "None",
+   "reason": "pre-registration, no account yet",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "POST",
+   "path": "/_matrix/client/v3/account/3pid/email/requestToken",
+   "scheme": "None",
+   "reason": "ruwuma None; synapse requires none for requestToken",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "POST",
+   "path": "/_matrix/client/v3/account/password/email/requestToken",
+   "scheme": "None",
+   "reason": "password reset, caller is logged out",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "POST",
+   "path": "/_matrix/client/v3/register/email/requestToken",
+   "scheme": "None",
+   "reason": "pre-registration",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "GET",
+   "path": "/_matrix/client/v3/register/available",
+   "scheme": "None",
+   "reason": "pre-registration",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "GET",
+   "path": "/_matrix/client/v3/login",
+   "scheme": "None",
+   "reason": "login flows, public",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "GET",
+   "path": "/_matrix/client/v3/login/sso/redirect",
+   "scheme": "None",
+   "reason": "SSO start, public",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "POST",
+   "path": "/_matrix/client/v3/refresh",
+   "scheme": "None",
+   "reason": "authenticated by the refresh token in the body",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "GET",
+   "path": "/_matrix/client/v3/profile/{}",
+   "scheme": "None",
+   "reason": "ruwuma None; synapse gates it on `require_auth_for_profile_requests`, which Continuwuity handles in the handler",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "GET",
+   "path": "/_matrix/client/v3/profile/{}/{}",
+   "scheme": "None",
+   "reason": "same as profile",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "GET",
+   "path": "/_matrix/client/v3/publicRooms",
+   "scheme": "None",
+   "reason": "ruwuma None; synapse gates on `allow_public_rooms_without_auth`, Continuwuity's handler checks its own config",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "GET",
+   "path": "/_matrix/client/v3/directory/room/{}",
+   "scheme": "None",
+   "reason": "alias lookup, public in ruwuma and synapse",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "GET",
+   "path": "/_matrix/client/v3/directory/list/room/{}",
+   "scheme": "None",
+   "reason": "room visibility, public",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "GET",
+   "path": "/_matrix/media/v3/download/{}/{}",
+   "scheme": "None",
+   "reason": "legacy unauthenticated media, as ruwuma",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "GET",
+   "path": "/_matrix/media/v3/download/{}/{}/{}",
+   "scheme": "None",
+   "reason": "legacy unauthenticated media, as ruwuma",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "GET",
+   "path": "/_matrix/media/v3/thumbnail/{}/{}",
+   "scheme": "None",
+   "reason": "legacy unauthenticated media, as ruwuma",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "GET",
+   "path": "/_matrix/federation/v1/version",
+   "scheme": "None",
+   "reason": "public in ruwuma and synapse",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "GET",
+   "path": "/_matrix/federation/v1/openid/userinfo",
+   "scheme": "None",
+   "reason": "authenticated by the OpenID token in the query",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "PUT",
+   "path": "/_matrix/federation/v1/3pid/onbind",
+   "scheme": "None",
+   "reason": "called by identity servers, not homeservers",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "GET",
+   "path": "/_matrix/key/v2/server",
+   "scheme": "None",
+   "reason": "server keys are public",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "GET",
+   "path": "/_matrix/key/v2/query/{}",
+   "scheme": "None",
+   "reason": "notary lookups are public",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "POST",
+   "path": "/_matrix/key/v2/query",
+   "scheme": "None",
+   "reason": "notary lookups are public",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "POST",
+   "path": "/_matrix/client/v3/account/3pid/msisdn/requestToken",
+   "scheme": "None",
+   "reason": "same as the email requestToken endpoint: pre-registration or logged-out caller",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "POST",
+   "path": "/_matrix/client/v3/account/password/msisdn/requestToken",
+   "scheme": "None",
+   "reason": "same as the email requestToken endpoint: pre-registration or logged-out caller",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "POST",
+   "path": "/_matrix/client/v3/register/msisdn/requestToken",
+   "scheme": "None",
+   "reason": "same as the email requestToken endpoint: pre-registration or logged-out caller",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "GET",
+   "path": "/_matrix/client/v3/login/sso/redirect/{}",
+   "scheme": "None",
+   "reason": "SSO start, public",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "POST",
+   "path": "/_matrix/client/v3/login",
+   "scheme": "None",
+   "reason": "spec: no security block (unauthenticated). The declared value is AppserviceToken per ruwuma; see SPEC_DIFFERENCES",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "POST",
+   "path": "/_matrix/client/v3/register",
+   "scheme": "None",
+   "reason": "spec: no security block (unauthenticated). The declared value is AppserviceToken per ruwuma; see SPEC_DIFFERENCES",
+   "source": "hand-reviewed"
+  },
+  {
+   "method": "GET",
+   "path": "/.well-known/matrix/policy_server",
+   "scheme": "None",
+   "reason": "spec has no security block; a .well-known document is fetched without credentials like the other .well-known endpoints. Not in ruwuma; synapse has no handler (it only calls policy servers), so the spec text decided",
+   "source": "hand-reviewed"
+  }
+ ],
+ "excluded": [
+  {
+   "method": "GET",
+   "path": "/_matrix/federation/v1/timestamp_to_event/{}",
+   "reason": "spec file lists a client-only scheme (accessToken); excluded from the cross-check, declared ServerSignatures per ruwuma and synapse"
+  }
+ ],
+ "excluded_prefixes": [
+  {
+   "prefix": "/_matrix/app/",
+   "reason": "calls we make to appservices (homeserverAccessToken), never routed"
+  }
+ ]
+}

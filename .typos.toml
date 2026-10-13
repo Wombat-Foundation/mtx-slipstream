@@ -1,0 +1,3 @@
+[default.extend-words]
+# `pn` is a short identifier ("path name"), not a typo of "on".
+pn = "pn"
