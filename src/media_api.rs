@@ -185,7 +185,8 @@ pub mod authenticated_client {
 				}
 				fn query(
 					&self,
-				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)> {
+				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)>
+				{
 					crate::endpoint::query_pairs(::alloc::vec![
 						(
 							stringify!(ts),
@@ -298,7 +299,8 @@ pub mod authenticated_client {
 			impl crate::endpoint::OutgoingResponse for Response {
 				fn try_into_http_response<B: Default + ::bytes::BufMut>(
 					self,
-				) -> Result<::http::Response<B>, crate::api::error::IntoHttpError> {
+				) -> Result<::http::Response<B>, crate::api::error::IntoHttpError>
+				{
 					crate::media_api::file_to_response(
 						&self.file,
 						self.content_type.as_deref(),
@@ -333,7 +335,8 @@ pub mod authenticated_client {
 				}
 				fn query(
 					&self,
-				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)> {
+				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)>
+				{
 					crate::endpoint::query_pairs(::alloc::vec![(
 						stringify!(timeout_ms),
 						if self.timeout_ms == DEFAULT_TIMEOUT {
@@ -429,7 +432,8 @@ pub mod authenticated_client {
 			impl crate::endpoint::OutgoingResponse for Response {
 				fn try_into_http_response<B: Default + ::bytes::BufMut>(
 					self,
-				) -> Result<::http::Response<B>, crate::api::error::IntoHttpError> {
+				) -> Result<::http::Response<B>, crate::api::error::IntoHttpError>
+				{
 					crate::media_api::file_to_response(
 						&self.file,
 						self.content_type.as_deref(),
@@ -466,7 +470,8 @@ pub mod authenticated_client {
 				}
 				fn query(
 					&self,
-				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)> {
+				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)>
+				{
 					crate::endpoint::query_pairs(::alloc::vec![(
 						stringify!(timeout_ms),
 						if self.timeout_ms == DEFAULT_TIMEOUT {
@@ -549,7 +554,8 @@ pub mod authenticated_client {
 			impl crate::endpoint::OutgoingResponse for Response {
 				fn try_into_http_response<B: Default + ::bytes::BufMut>(
 					self,
-				) -> Result<::http::Response<B>, crate::api::error::IntoHttpError> {
+				) -> Result<::http::Response<B>, crate::api::error::IntoHttpError>
+				{
 					crate::media_api::file_to_response(
 						&self.file,
 						self.content_type.as_deref(),
@@ -588,7 +594,8 @@ pub mod authenticated_client {
 				}
 				fn query(
 					&self,
-				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)> {
+				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)>
+				{
 					crate::endpoint::query_pairs(::alloc::vec![
 						(
 							stringify!(method),
@@ -739,7 +746,8 @@ pub mod legacy {
 				}
 				fn query(
 					&self,
-				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)> {
+				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)>
+				{
 					crate::endpoint::query_pairs(::alloc::vec![
 						(
 							stringify!(ts),
@@ -852,7 +860,8 @@ pub mod legacy {
 			impl crate::endpoint::OutgoingResponse for Response {
 				fn try_into_http_response<B: Default + ::bytes::BufMut>(
 					self,
-				) -> Result<::http::Response<B>, crate::api::error::IntoHttpError> {
+				) -> Result<::http::Response<B>, crate::api::error::IntoHttpError>
+				{
 					crate::media_api::file_to_response(
 						&self.file,
 						self.content_type.as_deref(),
@@ -889,7 +898,8 @@ pub mod legacy {
 				}
 				fn query(
 					&self,
-				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)> {
+				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)>
+				{
 					crate::endpoint::query_pairs(::alloc::vec![
 						(
 							stringify!(allow_remote),
@@ -1011,7 +1021,8 @@ pub mod legacy {
 			impl crate::endpoint::OutgoingResponse for Response {
 				fn try_into_http_response<B: Default + ::bytes::BufMut>(
 					self,
-				) -> Result<::http::Response<B>, crate::api::error::IntoHttpError> {
+				) -> Result<::http::Response<B>, crate::api::error::IntoHttpError>
+				{
 					crate::media_api::file_to_response(
 						&self.file,
 						self.content_type.as_deref(),
@@ -1050,7 +1061,8 @@ pub mod legacy {
 				}
 				fn query(
 					&self,
-				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)> {
+				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)>
+				{
 					crate::endpoint::query_pairs(::alloc::vec![
 						(
 							stringify!(allow_remote),
@@ -1157,7 +1169,8 @@ pub mod legacy {
 			impl crate::endpoint::OutgoingResponse for Response {
 				fn try_into_http_response<B: Default + ::bytes::BufMut>(
 					self,
-				) -> Result<::http::Response<B>, crate::api::error::IntoHttpError> {
+				) -> Result<::http::Response<B>, crate::api::error::IntoHttpError>
+				{
 					crate::media_api::file_to_response(
 						&self.file,
 						self.content_type.as_deref(),
@@ -1198,7 +1211,8 @@ pub mod legacy {
 				}
 				fn query(
 					&self,
-				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)> {
+				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)>
+				{
 					crate::endpoint::query_pairs(::alloc::vec![
 						(
 							stringify!(method),
@@ -1903,7 +1917,8 @@ pub mod federation {
 			impl crate::endpoint::OutgoingResponse for Response {
 				fn try_into_http_response<B: Default + ::bytes::BufMut>(
 					self,
-				) -> Result<::http::Response<B>, crate::api::error::IntoHttpError> {
+				) -> Result<::http::Response<B>, crate::api::error::IntoHttpError>
+				{
 					crate::media_api::federation::encode_response(&self.content)
 				}
 			}
@@ -1928,7 +1943,8 @@ pub mod federation {
 				}
 				fn query(
 					&self,
-				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)> {
+				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)>
+				{
 					crate::endpoint::query_pairs(::alloc::vec![(
 						stringify!(timeout_ms),
 						if self.timeout_ms == DEFAULT_TIMEOUT {
@@ -1990,7 +2006,8 @@ pub mod federation {
 			impl crate::endpoint::OutgoingResponse for Response {
 				fn try_into_http_response<B: Default + ::bytes::BufMut>(
 					self,
-				) -> Result<::http::Response<B>, crate::api::error::IntoHttpError> {
+				) -> Result<::http::Response<B>, crate::api::error::IntoHttpError>
+				{
 					crate::media_api::federation::encode_response(&self.content)
 				}
 			}
@@ -2019,7 +2036,8 @@ pub mod federation {
 				}
 				fn query(
 					&self,
-				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)> {
+				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)>
+				{
 					crate::endpoint::query_pairs(::alloc::vec![
 						(
 							stringify!(method),

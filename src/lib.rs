@@ -3192,8 +3192,10 @@ pub mod api {
 								!matches!(
 									key.as_str(),
 									"m.room_versions"
-										| "m.change_password" | "m.set_displayname"
-										| "m.set_avatar_url" | "m.3pid_changes"
+										| "m.change_password"
+										| "m.set_displayname"
+										| "m.set_avatar_url"
+										| "m.3pid_changes"
 										| "m.get_login_token"
 								)
 							})

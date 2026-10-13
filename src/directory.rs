@@ -342,7 +342,8 @@ pub mod get_public_rooms_filtered {
 			}
 			fn query(
 				&self,
-			) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)> {
+			) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)>
+			{
 				crate::endpoint::query_pairs(::alloc::vec![(
 					stringify!(server),
 					crate::codec::Serialize::to_json(&self.server)
@@ -526,7 +527,8 @@ pub mod federation {
 				}
 				fn query(
 					&self,
-				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)> {
+				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)>
+				{
 					crate::endpoint::query_pairs(::alloc::vec![])
 				}
 				fn body(&self) -> Option<crate::json::Value> {
