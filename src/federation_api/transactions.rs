@@ -293,7 +293,8 @@ pub mod edu {
 		fn to_json(&self) -> crate::json::Value {
 			crate::endpoint::body_object(&mut [
 				(stringify!(sender), crate::endpoint::enc(&self.sender)),
-				(stringify!(ev_type), crate::endpoint::enc(&self.ev_type)),
+				// The wire field is `type`; `ev_type` is only the Rust field name.
+				("type", crate::endpoint::enc(&self.ev_type)),
 				(stringify!(message_id), crate::endpoint::enc(&self.message_id)),
 				(stringify!(messages), crate::endpoint::enc(&self.messages)),
 			])
@@ -308,7 +309,7 @@ pub mod edu {
 			let input = crate::endpoint::Input::body_only(value);
 			Ok(Self {
 				sender: input.body(stringify!(sender))?,
-				ev_type: input.body(stringify!(ev_type))?,
+				ev_type: input.body("type")?,
 				message_id: input.body(stringify!(message_id))?,
 				messages: input.body(stringify!(messages))?,
 			})
