@@ -107,9 +107,12 @@ pub mod edu {
 				return Err(crate::codec::DeError::expected(stringify!(ReceiptData)));
 			}
 			let input = crate::endpoint::Input::body_only(value);
+			// A receipt names events by opaque string; like Synapse, don't insist on the
+			// event ID grammar, which servers and clients have not always followed.
+			let event_ids: Vec<alloc::string::String> = input.body(stringify!(event_ids))?;
 			Ok(Self {
 				data: input.body(stringify!(data))?,
-				event_ids: input.body(stringify!(event_ids))?,
+				event_ids: event_ids.into_iter().map(OwnedEventId::from_trusted).collect(),
 			})
 		}
 	}
