@@ -556,4 +556,32 @@ mod tests {
 		assert_eq!(results[&OwnedEventId::parse("$a").unwrap()], Ok(()));
 		assert_eq!(results[&OwnedEventId::parse("$b").unwrap()], Err("bad".to_string()));
 	}
+
+	#[test]
+	fn receipt_event_ids_need_not_follow_the_event_id_grammar() {
+		let content: edu::ReceiptContent = from_str(
+			r#"{"!r:b":{"m.read":{"@u:b":{"data":{"ts":5},"event_ids":["mytesteventid"]}}}}"#,
+		)
+		.unwrap();
+		let map = &content.receipts[&OwnedRoomId::parse("!r:b").unwrap()];
+		let data = &map.read[&OwnedUserId::parse("@u:b").unwrap()];
+		assert_eq!(data.event_ids.len(), 1);
+		assert_eq!(data.event_ids[0].as_str(), "mytesteventid");
+	}
+
+	#[test]
+	fn receipt_event_ids_must_still_be_strings() {
+		assert!(
+			from_str::<edu::ReceiptContent>(
+				r#"{"!r:b":{"m.read":{"@u:b":{"data":{"ts":5},"event_ids":[5]}}}}"#,
+			)
+			.is_err()
+		);
+		assert!(
+			from_str::<edu::ReceiptContent>(
+				r#"{"!r:b":{"m.read":{"@u:b":{"data":{"ts":5},"event_ids":"$e"}}}}"#,
+			)
+			.is_err()
+		);
+	}
 }
