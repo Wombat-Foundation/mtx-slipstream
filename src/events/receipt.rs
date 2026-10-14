@@ -173,7 +173,19 @@ impl Serialize for ReceiptEventContent {
 
 impl Deserialize for ReceiptEventContent {
 	fn from_json(value: &Value) -> Result<Self, DeError> {
-		Deserialize::from_json(value).map(Self)
+		// Receipts name events by opaque string; like Synapse, don't insist on the
+		// event ID grammar (a federated receipt may carry any string).
+		let object = value.as_object().ok_or_else(|| DeError::expected("object"))?;
+		object
+			.iter()
+			.map(|(event_id, receipts)| {
+				Ok((
+					OwnedEventId::from_trusted(event_id.clone()),
+					Deserialize::from_json(receipts)?,
+				))
+			})
+			.collect::<Result<_, DeError>>()
+			.map(Self)
 	}
 }
 
@@ -212,5 +224,19 @@ mod tests {
 		assert_eq!(receipt.thread, ReceiptThread::Main);
 		assert_eq!(receipt.ts, Some(5));
 		assert_eq!(to_string(&event), text);
+	}
+
+	#[test]
+	fn receipt_event_keys_need_not_follow_the_event_id_grammar() {
+		let text =
+			r#"{"content":{"mytesteventid":{"m.read":{"@u:x":{"ts":5}}}},"room_id":"!r:x"}"#;
+		let event = from_str::<ReceiptEvent>(text).unwrap();
+		assert!(event.content.0.keys().any(|id| id.as_str() == "mytesteventid"));
+		assert_eq!(to_string(&event), text);
+	}
+
+	#[test]
+	fn receipt_event_content_must_still_be_an_object() {
+		assert!(from_str::<ReceiptEvent>(r#"{"content":[],"room_id":"!r:x"}"#).is_err());
 	}
 }
