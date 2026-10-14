@@ -234,10 +234,10 @@ pub mod keys {
 				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
 					let input = crate::endpoint::Input::body_only(body);
 					Ok(Self {
-						device_keys: input.body("device_keys")?,
-						master_keys: input.body("master_keys")?,
-						self_signing_keys: input.body("self_signing_keys")?,
-						failures: input.body("failures")?,
+						device_keys: input.body_or_default("device_keys")?,
+						master_keys: input.body_or_default("master_keys")?,
+						self_signing_keys: input.body_or_default("self_signing_keys")?,
+						failures: input.body_or_default("failures")?,
 					})
 				}
 			}
