@@ -241,7 +241,8 @@ pub mod edu {
 				device_id: input.body(stringify!(device_id))?,
 				device_display_name: input.body(stringify!(device_display_name))?,
 				stream_id: input.body(stringify!(stream_id))?,
-				prev_id: input.body(stringify!(prev_id))?,
+				// `prev_id` is optional on the wire (ruma defaults it to empty).
+				prev_id: input.body_or_default(stringify!(prev_id))?,
 				deleted: input.body(stringify!(deleted))?,
 				keys: input.body(stringify!(keys))?,
 			})
