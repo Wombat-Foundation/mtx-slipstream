@@ -115,6 +115,7 @@ pub const fn lookup_auth(method: &str, path: &str) -> Option<AuthScheme> {
 /// - Push rules: ruma only knew the `global` scope; ours takes any `{scope}`.
 /// - Antispam: requests we *send* to spam checkers; the router never serves them.
 /// - `event_relationships` (MSC2836): federation, signed.
+/// - MSC4521 reconciliation and MSC4500 state accumulator: unstable federation, signed.
 /// - Federation `query` and `exchange_third_party_invite`: ruwuma declared
 ///   `AccessToken`, but both are signed federation requests in the spec and in synapse.
 const EXTRA_AUTH: &[(&str, &str, AuthScheme)] = &[
@@ -126,6 +127,26 @@ const EXTRA_AUTH: &[(&str, &str, AuthScheme)] = &[
 	("GET", "/_matrix/client/v3/pushrules/{}/{}/{}/enabled", AuthScheme::AccessToken),
 	("PUT", "/_matrix/client/v3/pushrules/{}/{}/{}/enabled", AuthScheme::AccessToken),
 	("POST", "/_matrix/federation/unstable/event_relationships", AuthScheme::ServerSignatures),
+	(
+		"POST",
+		"/_matrix/federation/unstable/tk.nutra.msc0501/room_diff/{}",
+		AuthScheme::ServerSignatures,
+	),
+	(
+		"GET",
+		"/_matrix/federation/unstable/tk.nutra.msc0501/room_digest/{}",
+		AuthScheme::ServerSignatures,
+	),
+	(
+		"GET",
+		"/_matrix/federation/unstable/tk.nutra.msc0501/room_digest/{}/strata",
+		AuthScheme::ServerSignatures,
+	),
+	(
+		"GET",
+		"/_matrix/federation/unstable/tk.nutra.msc4500/state_accumulator/{}",
+		AuthScheme::ServerSignatures,
+	),
 	(
 		"PUT",
 		"/_matrix/federation/v1/exchange_third_party_invite/{}",

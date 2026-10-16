@@ -986,6 +986,7 @@ pub mod get_room_state;
 pub mod knock;
 pub mod membership;
 pub mod query;
+pub mod reconciliation;
 pub mod space;
 pub mod transactions;
 
