@@ -1,9 +1,7 @@
-//! Federation endpoints for MSC4521 algebraic set reconciliation and the
-//! MSC4500 state accumulator.
+//! Federation endpoints for MSC4521 algebraic set reconciliation.
 //!
-//! Both are still unstable, so they live under `/_matrix/federation/unstable`.
-//! The reconciliation endpoints use the `tk.nutra.msc0501` prefix and the state
-//! accumulator the `tk.nutra.msc4500` prefix.
+//! The reconciliation endpoints are still unstable and use the
+//! `tk.nutra.msc0501` prefix under `/_matrix/federation/unstable`.
 
 use alloc::{string::String, vec::Vec};
 
@@ -417,111 +415,12 @@ pub mod post_room_diff {
 	}
 }
 
-/// `GET .../state_accumulator/{roomId}?event_id=`: MSC4500 state accumulator.
-pub mod get_state_accumulator {
-	pub mod unstable {
-		use super::super::{OwnedEventId, OwnedRoomId, String};
-
-		pub struct Request {
-			pub room_id: OwnedRoomId,
-			pub event_id: OwnedEventId,
-		}
-		impl ::core::fmt::Debug for Request {
-			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
-				crate::endpoint::opaque_debug(f, "Request")
-			}
-		}
-		const _: crate::endpoint::Metadata =
-			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"GET",
-				"/_matrix/federation/unstable/tk.nutra.msc4500/state_accumulator/{room_id}",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(&self.room_id)])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [(
-					"event_id",
-					crate::endpoint::enc(&self.event_id),
-				)])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					room_id: input.path()?,
-					event_id: input.query("event_id")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
-		}
-
-		impl Request {
-			#[must_use]
-			pub fn new(room_id: OwnedRoomId, event_id: OwnedEventId) -> Self {
-				Self {
-					room_id,
-					event_id,
-				}
-			}
-		}
-
-		pub struct Response {
-			pub event_id: OwnedEventId,
-			pub algorithm: String,
-			/// The serialized `LtHash` lattice, base64url.
-			pub lattice: String,
-			pub n_state_events: u64,
-			pub digest: String,
-		}
-		impl ::core::fmt::Debug for Response {
-			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
-				crate::endpoint::opaque_debug(f, "Response")
-			}
-		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [
-					("event_id", crate::endpoint::enc(&self.event_id)),
-					("algorithm", crate::endpoint::enc(&self.algorithm)),
-					("lattice", crate::endpoint::enc(&self.lattice)),
-					("n_state_events", crate::endpoint::enc(&self.n_state_events)),
-					("digest", crate::endpoint::enc(&self.digest)),
-				])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					event_id: input.body("event_id")?,
-					algorithm: input.body("algorithm")?,
-					lattice: input.body("lattice")?,
-					n_state_events: input.body("n_state_events")?,
-					digest: input.body("digest")?,
-				})
-			}
-		}
-	}
-}
-
 #[cfg(test)]
 mod tests {
 	use alloc::{string::ToString, vec};
 
 	use super::{
-		get_room_digest, get_room_digest_strata, get_state_accumulator,
+		get_room_digest, get_room_digest_strata,
 		post_room_diff::unstable::{Request as DiffRequest, SketchBucket},
 	};
 	use crate::{OwnedEventId, OwnedRoomId, endpoint::EndpointRequest};
@@ -591,20 +490,5 @@ mod tests {
 		let body = crate::json::Value::parse(r#"{"mode":"sketch"}"#).unwrap();
 		let path = vec![room().to_string()];
 		assert!(DiffRequest::from_parts(&path, &[], Some(&body)).is_err());
-	}
-
-	#[test]
-	fn state_accumulator_takes_event_id_from_query() {
-		let request = get_state_accumulator::unstable::Request::new(
-			room(),
-			OwnedEventId::parse("$e").unwrap(),
-		);
-		let parsed = get_state_accumulator::unstable::Request::from_parts(
-			&request.path_args(),
-			&request.query(),
-			None,
-		)
-		.unwrap();
-		assert_eq!(parsed.event_id, request.event_id);
 	}
 }

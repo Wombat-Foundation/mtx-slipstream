@@ -143,11 +143,6 @@ const EXTRA_AUTH: &[(&str, &str, AuthScheme)] = &[
 		AuthScheme::ServerSignatures,
 	),
 	(
-		"GET",
-		"/_matrix/federation/unstable/tk.nutra.msc4500/state_accumulator/{}",
-		AuthScheme::ServerSignatures,
-	),
-	(
 		"PUT",
 		"/_matrix/federation/v1/exchange_third_party_invite/{}",
 		AuthScheme::ServerSignatures,
