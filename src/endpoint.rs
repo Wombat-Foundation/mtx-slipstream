@@ -750,7 +750,7 @@ impl<T: EndpointResponse> OutgoingResponse for T {
 pub fn body_field<T: Deserialize>(body: Option<&Value>, name: &str) -> Result<T, DeError> {
 	let null = Value::Null;
 	let value = body.and_then(Value::as_object).and_then(|o| o.get(name)).unwrap_or(&null);
-	T::from_json(value)
+	T::from_json(value).map_err(|DeError(what)| DeError(alloc::format!("`{name}`: {what}")))
 }
 
 /// Builds a JSON object from named values, omitting nulls.
@@ -899,6 +899,7 @@ impl<'a> Input<'a> {
 		let index = self.next.get();
 		self.next.set(index.saturating_add(1));
 		from_param(self.path.get(index).map(String::as_str))
+			.map_err(|DeError(what)| DeError(alloc::format!("path argument {index}: {what}")))
 	}
 
 	/// The named query parameter.
