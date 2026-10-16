@@ -37,7 +37,7 @@ http = "1.3.1"
 # via `cargo bench --features mimalloc` -- dev-dependencies can't be
 # optional in Cargo.
 mimalloc = { version = "0.1", optional = true, default-features = false }
-rezzy = { git = "https://gitlab.com/Wombat-Foundation/rezzy.git", branch = "master", features = ["signing-consensus"] }
+rezzy = { git = "https://gitlab.com/Wombat-Foundation/rezzy.git", branch = "dev", features = ["signing-consensus"] }
 
 [lints.rust]
 unsafe_code = "warn"
