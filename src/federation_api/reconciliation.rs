@@ -236,7 +236,8 @@ pub mod post_room_diff {
 			fn to_json(&self) -> crate::json::Value {
 				crate::endpoint::body_object(&mut [
 					("depth", crate::endpoint::enc(&self.depth)),
-					("prefix", crate::endpoint::enc(&self.prefix)),
+					// A u64 does not fit canonical JSON's integer range, so it is a decimal string.
+					("prefix", crate::endpoint::enc(&alloc::format!("{}", self.prefix))),
 					("capacity", crate::endpoint::enc(&self.capacity)),
 				])
 			}
@@ -247,9 +248,12 @@ pub mod post_room_diff {
 					return Err(crate::codec::DeError::expected("SketchBucket"));
 				}
 				let input = crate::endpoint::Input::body_only(value);
+				let prefix: String = input.body("prefix")?;
 				Ok(Self {
 					depth: input.body("depth")?,
-					prefix: input.body("prefix")?,
+					prefix: prefix
+						.parse()
+						.map_err(|_| crate::codec::DeError::expected("`prefix` as a decimal u64 string"))?,
 					capacity: input.body("capacity")?,
 				})
 			}
