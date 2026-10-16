@@ -482,7 +482,7 @@ pub mod get_state_accumulator {
 		pub struct Response {
 			pub event_id: OwnedEventId,
 			pub algorithm: String,
-			/// The serialized LtHash lattice, base64url.
+			/// The serialized `LtHash` lattice, base64url.
 			pub lattice: String,
 			pub n_state_events: u64,
 			pub digest: String,
