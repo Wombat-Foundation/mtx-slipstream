@@ -251,9 +251,9 @@ pub mod post_room_diff {
 				let prefix: String = input.body("prefix")?;
 				Ok(Self {
 					depth: input.body("depth")?,
-					prefix: prefix
-						.parse()
-						.map_err(|_| crate::codec::DeError::expected("`prefix` as a decimal u64 string"))?,
+					prefix: prefix.parse().map_err(|_| {
+						crate::codec::DeError::expected("`prefix` as a decimal u64 string")
+					})?,
 					capacity: input.body("capacity")?,
 				})
 			}
