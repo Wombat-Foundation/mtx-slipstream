@@ -276,6 +276,33 @@ pub mod post_room_diff {
 			pub scope: Option<String>,
 			pub state_at: Option<OwnedEventId>,
 		}
+		impl Request {
+			/// Creates a sketch-based room diff request without frame negotiation.
+			#[must_use]
+			pub fn new(
+				room_id: OwnedRoomId,
+				frame_id: String,
+				local_digest: String,
+				local_known_event_count: u64,
+				requests: Vec<SketchBucket>,
+				local_sketches: Vec<String>,
+			) -> Self {
+				Self {
+					room_id,
+					mode: String::from("sketch"),
+					digest_type: String::from("algebraic_v1"),
+					frame_id,
+					frame_negotiation: false,
+					frame_event_ids: Vec::new(),
+					local_digest,
+					local_known_event_count,
+					requests,
+					local_sketches,
+					scope: None,
+					state_at: None,
+				}
+			}
+		}
 		impl ::core::fmt::Debug for Request {
 			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
 				crate::endpoint::opaque_debug(f, "Request")
