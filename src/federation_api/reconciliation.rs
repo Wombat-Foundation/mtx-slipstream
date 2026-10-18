@@ -452,9 +452,14 @@ mod tests {
 
 	use super::{
 		get_room_digest, get_room_digest_strata,
-		post_room_diff::unstable::{Request as DiffRequest, SketchBucket},
+		post_room_diff::unstable::{
+			Request as DiffRequest, Response as DiffResponse, SketchBucket,
+		},
 	};
-	use crate::{OwnedEventId, OwnedRoomId, endpoint::EndpointRequest};
+	use crate::{
+		OwnedEventId, OwnedRoomId,
+		endpoint::{EndpointRequest, EndpointResponse},
+	};
 
 	fn room() -> OwnedRoomId {
 		OwnedRoomId::parse("!room:example.org").unwrap()
@@ -521,5 +526,74 @@ mod tests {
 		let body = crate::json::Value::parse(r#"{"mode":"sketch"}"#).unwrap();
 		let path = vec![room().to_string()];
 		assert!(DiffRequest::from_parts(&path, &[], Some(&body)).is_err());
+	}
+
+	#[test]
+	fn room_digest_response_defaults_omitted_lists_and_round_trips() {
+		let fixture = crate::json::Value::parse(
+			r#"{"digest":"digest","digest_type":"algebraic_v1","known_event_count":7,"frame_id":"frame"}"#,
+		)
+		.unwrap();
+		let response = get_room_digest::unstable::Response::from_body(&fixture).unwrap();
+		assert!(response.frame_event_ids.is_empty());
+		assert!(response.extremity_event_ids.is_empty());
+		assert!(response.depth_range.is_empty());
+		assert!(response.origin_server_ts_range.is_empty());
+		assert_eq!(response.to_body(), fixture);
+	}
+
+	#[test]
+	fn room_digest_strata_response_defaults_omitted_lists_and_round_trips() {
+		let fixture = crate::json::Value::parse(
+			r#"{"digest":"digest","digest_type":"algebraic_v1","known_event_count":7,"frame_id":"frame","strata":["stratum"]}"#,
+		)
+		.unwrap();
+		let response = get_room_digest_strata::unstable::Response::from_body(&fixture).unwrap();
+		assert!(response.frame_event_ids.is_empty());
+		assert!(response.extremity_event_ids.is_empty());
+		assert!(response.depth_range.is_empty());
+		assert!(response.origin_server_ts_range.is_empty());
+		assert_eq!(response.strata, vec!["stratum"]);
+		assert_eq!(response.to_body(), fixture);
+	}
+
+	#[test]
+	fn room_diff_response_defaults_omitted_optionals_and_round_trips() {
+		let fixture = crate::json::Value::parse(
+			r#"{"digest_type":"algebraic_v1","remote_known_event_count":9,"frame_id":"frame","frame_status":"accepted","scope":"event_set","sketch_status":"decoded","truncated":false}"#,
+		)
+		.unwrap();
+		let response = DiffResponse::from_body(&fixture).unwrap();
+		assert!(response.missing_event_ids.is_empty());
+		assert!(response.remote_extremity_event_ids.is_empty());
+		assert_eq!(response.requester_only_short_ids, None);
+		assert_eq!(response.expected_requester_side_accumulator, None);
+		assert_eq!(response.negotiated_frame_event_ids, None);
+		assert_eq!(response.state_at, None);
+		assert_eq!(response.to_body(), fixture);
+	}
+
+	#[test]
+	fn room_diff_response_reads_and_writes_negotiated_frame_fields() {
+		let fixture = crate::json::Value::parse(
+			r#"{"digest_type":"algebraic_v1","missing_event_ids":["$missing"],"requester_only_short_ids":["short"],"expected_requester_side_accumulator":"accumulator","remote_known_event_count":9,"remote_extremity_event_ids":["$extremity"],"frame_id":"frame","frame_status":"negotiated","negotiated_frame_event_ids":["$frame"],"scope":"resolved_state","state_at":"$state","sketch_status":"decoded","truncated":false}"#,
+		)
+		.unwrap();
+		let response = DiffResponse::from_body(&fixture).unwrap();
+		assert_eq!(response.missing_event_ids, vec![OwnedEventId::parse("$missing").unwrap()]);
+		assert_eq!(response.requester_only_short_ids, Some(vec!["short".into()]));
+		assert_eq!(response.expected_requester_side_accumulator.as_deref(), Some("accumulator"));
+		assert_eq!(
+			response.remote_extremity_event_ids,
+			vec![OwnedEventId::parse("$extremity").unwrap()]
+		);
+		assert_eq!(response.frame_status, "negotiated");
+		assert_eq!(
+			response.negotiated_frame_event_ids,
+			Some(vec![OwnedEventId::parse("$frame").unwrap()])
+		);
+		assert_eq!(response.scope, "resolved_state");
+		assert_eq!(response.state_at, Some(OwnedEventId::parse("$state").unwrap()));
+		assert_eq!(response.to_body(), fixture);
 	}
 }
