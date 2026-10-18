@@ -3498,7 +3498,6 @@ pub mod api {
 				ThreepidDenied,
 				ThreepidInUse,
 				InviteBlocked,
-				CannotLeaveServerNoticeRoom,
 				UserSuspended,
 				MissingToken,
 				Unauthorized,

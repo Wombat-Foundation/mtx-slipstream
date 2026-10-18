@@ -205,7 +205,6 @@ impl ErrorKind {
 			Self::ThreepidDenied => "M_THREEPID_DENIED",
 			Self::ThreepidInUse => "M_THREEPID_IN_USE",
 			Self::InviteBlocked => "M_INVITE_BLOCKED",
-			Self::CannotLeaveServerNoticeRoom => "M_CANNOT_LEAVE_SERVER_NOTICE_ROOM",
 			_ => "M_UNKNOWN",
 		}
 	}
@@ -274,7 +273,6 @@ impl ErrorKind {
 			"M_THREEPID_DENIED" => Self::ThreepidDenied,
 			"M_THREEPID_IN_USE" => Self::ThreepidInUse,
 			"M_INVITE_BLOCKED" => Self::InviteBlocked,
-			"M_CANNOT_LEAVE_SERVER_NOTICE_ROOM" => Self::CannotLeaveServerNoticeRoom,
 			_ => Self::Unknown,
 		}
 	}
