@@ -3460,6 +3460,7 @@ pub mod api {
 			pub enum RetryAfter {
 				Delay(core::time::Duration),
 			}
+			#[non_exhaustive]
 			#[derive(Clone, Debug)]
 			pub enum ErrorKind {
 				LimitExceeded {
@@ -3498,6 +3499,7 @@ pub mod api {
 				ThreepidDenied,
 				ThreepidInUse,
 				InviteBlocked,
+				CannotLeaveServerNoticeRoom,
 				UserSuspended,
 				MissingToken,
 				Unauthorized,
