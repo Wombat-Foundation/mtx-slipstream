@@ -12,10 +12,13 @@ pub mod edu {
 	use alloc::{collections::BTreeMap, string::String, vec::Vec};
 
 	use crate::{
-		OwnedDeviceId, OwnedEventId, OwnedRoomId, OwnedTransactionId, OwnedUserId, UInt,
+		OwnedDeviceId, OwnedRoomId, OwnedTransactionId, OwnedUserId, UInt,
 		codec::{DeError, Deserialize, Serialize},
 		endpoint::Input,
-		events::{presence::PresenceState, receipt::Receipt},
+		events::{
+			presence::PresenceState,
+			receipt::{Receipt, ReceiptEventId},
+		},
 		json::{Object, Value},
 		sswire::Raw,
 	};
@@ -89,7 +92,7 @@ pub mod edu {
 	#[derive(Debug)]
 	pub struct ReceiptData {
 		pub data: Receipt,
-		pub event_ids: Vec<OwnedEventId>,
+		pub event_ids: Vec<ReceiptEventId>,
 	}
 
 	impl crate::codec::Serialize for ReceiptData {
@@ -107,12 +110,9 @@ pub mod edu {
 				return Err(crate::codec::DeError::expected(stringify!(ReceiptData)));
 			}
 			let input = crate::endpoint::Input::body_only(value);
-			// A receipt names events by opaque string; like Synapse, don't insist on the
-			// event ID grammar, which servers and clients have not always followed.
-			let event_ids: Vec<alloc::string::String> = input.body(stringify!(event_ids))?;
 			Ok(Self {
 				data: input.body(stringify!(data))?,
-				event_ids: event_ids.into_iter().map(OwnedEventId::from_trusted).collect(),
+				event_ids: input.body(stringify!(event_ids))?,
 			})
 		}
 	}
@@ -550,6 +550,7 @@ mod tests {
 		let data = &map.read[&OwnedUserId::parse("@u:b").unwrap()];
 		assert_eq!(data.data.ts, Some(5));
 		assert_eq!(data.event_ids.len(), 1);
+		assert_eq!(data.event_ids[0].as_str(), "$e");
 
 		let results: BTreeMap<OwnedEventId, PduResult> =
 			from_str(r#"{"$a":{},"$b":{"error":"bad"}}"#).unwrap();
@@ -567,6 +568,7 @@ mod tests {
 		let data = &map.read[&OwnedUserId::parse("@u:b").unwrap()];
 		assert_eq!(data.event_ids.len(), 1);
 		assert_eq!(data.event_ids[0].as_str(), "mytesteventid");
+		assert!(to_string(&content).contains(r#""event_ids":["mytesteventid"]"#));
 	}
 
 	#[test]
