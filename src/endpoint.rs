@@ -115,7 +115,7 @@ pub const fn lookup_auth(method: &str, path: &str) -> Option<AuthScheme> {
 /// - Push rules: ruma only knew the `global` scope; ours takes any `{scope}`.
 /// - Antispam: requests we *send* to spam checkers; the router never serves them.
 /// - `event_relationships` (MSC2836): federation, signed.
-/// - MSC4521 reconciliation and MSC4500 state accumulator: unstable federation, signed.
+/// - MSC4521 reconciliation: unstable federation, signed.
 /// - Federation `query` and `exchange_third_party_invite`: ruwuma declared
 ///   `AccessToken`, but both are signed federation requests in the spec and in synapse.
 const EXTRA_AUTH: &[(&str, &str, AuthScheme)] = &[
@@ -770,6 +770,18 @@ pub fn object_from_mut(fields: &mut [(&str, Value)]) -> Object {
 		.collect()
 }
 
+#[cfg(test)]
+mod tests {
+	use super::Input;
+
+	#[test]
+	fn query_errors_include_parameter_name() {
+		let query = alloc::vec![("limit".to_string(), "not-a-number".to_string())];
+		let error = Input::new(&[], &query, None).query::<u32>("limit").unwrap_err();
+		assert!(error.to_string().contains("limit"));
+	}
+}
+
 /// Flattens named values into query pairs: nulls are dropped and arrays repeat the key.
 #[must_use]
 pub fn query_pairs(mut params: Vec<(&str, Value)>) -> Vec<(String, String)> {
@@ -914,10 +926,13 @@ impl<'a> Input<'a> {
 			.filter(|(key, _)| key == name)
 			.map(|(_, value)| value.as_str())
 			.collect();
-		from_param::<T>(values.first().copied()).or_else(|single| {
-			let items = values.iter().map(|value| Value::String((*value).to_string())).collect();
-			T::from_json(&Value::Array(items)).map_err(|_| single)
-		})
+		from_param::<T>(values.first().copied())
+			.or_else(|single| {
+				let items =
+					values.iter().map(|value| Value::String((*value).to_string())).collect();
+				T::from_json(&Value::Array(items)).map_err(|_| single)
+			})
+			.map_err(|DeError(what)| DeError(alloc::format!("`{name}`: {what}")))
 	}
 
 	/// The named query parameter, or `default` when it is not present.

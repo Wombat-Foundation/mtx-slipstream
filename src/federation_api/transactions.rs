@@ -584,4 +584,23 @@ mod tests {
 			.is_err()
 		);
 	}
+
+	#[test]
+	fn direct_device_content_uses_type_wire_key() {
+		let content: edu::DirectDeviceContent = from_str(
+			r#"{"sender":"@u:b","type":"m.room.message","message_id":"txn","messages":{}}"#,
+		)
+		.unwrap();
+		assert_eq!(content.ev_type, "m.room.message");
+		let encoded = to_string(&content);
+		assert!(encoded.contains("\"type\":\"m.room.message\""));
+		assert!(!encoded.contains("ev_type"));
+	}
+
+	#[test]
+	fn device_list_update_defaults_omitted_prev_id() {
+		let content: edu::DeviceListUpdateContent =
+			from_str(r#"{"user_id":"@u:b","device_id":"DEVICE","stream_id":1}"#).unwrap();
+		assert!(content.prev_id.is_empty());
+	}
 }

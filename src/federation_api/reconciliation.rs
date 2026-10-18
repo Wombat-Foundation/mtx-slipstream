@@ -363,6 +363,23 @@ pub mod post_room_diff {
 					scope: input.body("scope")?,
 					state_at: input.body("state_at")?,
 				};
+				if value.mode != "sketch" {
+					return Err(crate::codec::DeError::expected("`mode` to be `sketch`"));
+				}
+				if value.digest_type != "algebraic_v1" {
+					return Err(crate::codec::DeError::expected(
+						"`digest_type` to be `algebraic_v1`",
+					));
+				}
+				if value
+					.scope
+					.as_deref()
+					.is_some_and(|scope| !matches!(scope, "event_set" | "resolved_state"))
+				{
+					return Err(crate::codec::DeError::expected(
+						"`scope` to be `event_set` or `resolved_state`",
+					));
+				}
 				input.finish()?;
 				Ok(value)
 			}
@@ -439,7 +456,9 @@ pub mod post_room_diff {
 					scope: input.body("scope")?,
 					state_at: input.body("state_at")?,
 					sketch_status: input.body("sketch_status")?,
-					truncated: input.body("truncated")?,
+					truncated: input
+						.body::<Option<bool>>("truncated")?
+						.ok_or_else(|| crate::codec::DeError::expected("`truncated`"))?,
 				})
 			}
 		}
@@ -529,6 +548,19 @@ mod tests {
 	}
 
 	#[test]
+	fn room_diff_request_rejects_unsupported_protocol_values() {
+		let base = r#"{"mode":"sketch","digest_type":"algebraic_v1","frame_id":"f","local_digest":"d","local_known_event_count":1,"requests":[],"local_sketches":[]}"#;
+		let path = vec![room().to_string()];
+		for (field, value) in [("mode", "other"), ("digest_type", "other"), ("scope", "other")] {
+			let mut body = crate::json::Value::parse(base).unwrap();
+			body.as_object_mut()
+				.unwrap()
+				.insert(field.into(), crate::json::Value::String(value.into()));
+			assert!(DiffRequest::from_parts(&path, &[], Some(&body)).is_err(), "{field}");
+		}
+	}
+
+	#[test]
 	fn room_digest_response_defaults_omitted_lists_and_round_trips() {
 		let fixture = crate::json::Value::parse(
 			r#"{"digest":"digest","digest_type":"algebraic_v1","known_event_count":7,"frame_id":"frame"}"#,
@@ -539,7 +571,11 @@ mod tests {
 		assert!(response.extremity_event_ids.is_empty());
 		assert!(response.depth_range.is_empty());
 		assert!(response.origin_server_ts_range.is_empty());
-		assert_eq!(response.to_body(), fixture);
+		let encoded = crate::json::Value::parse(
+			r#"{"digest":"digest","digest_type":"algebraic_v1","known_event_count":7,"frame_id":"frame","frame_event_ids":[],"extremity_event_ids":[],"depth_range":[],"origin_server_ts_range":[]}"#,
+		)
+		.unwrap();
+		assert_eq!(response.to_body(), encoded);
 	}
 
 	#[test]
@@ -554,7 +590,11 @@ mod tests {
 		assert!(response.depth_range.is_empty());
 		assert!(response.origin_server_ts_range.is_empty());
 		assert_eq!(response.strata, vec!["stratum"]);
-		assert_eq!(response.to_body(), fixture);
+		let encoded = crate::json::Value::parse(
+			r#"{"digest":"digest","digest_type":"algebraic_v1","known_event_count":7,"frame_id":"frame","frame_event_ids":[],"extremity_event_ids":[],"depth_range":[],"origin_server_ts_range":[],"strata":["stratum"]}"#,
+		)
+		.unwrap();
+		assert_eq!(response.to_body(), encoded);
 	}
 
 	#[test]
@@ -570,7 +610,16 @@ mod tests {
 		assert_eq!(response.expected_requester_side_accumulator, None);
 		assert_eq!(response.negotiated_frame_event_ids, None);
 		assert_eq!(response.state_at, None);
-		assert_eq!(response.to_body(), fixture);
+		let encoded = crate::json::Value::parse(
+			r#"{"digest_type":"algebraic_v1","missing_event_ids":[],"remote_known_event_count":9,"remote_extremity_event_ids":[],"frame_id":"frame","frame_status":"accepted","scope":"event_set","sketch_status":"decoded","truncated":false}"#,
+		)
+		.unwrap();
+		assert_eq!(response.to_body(), encoded);
+		let missing_truncated = crate::json::Value::parse(
+			r#"{"digest_type":"algebraic_v1","remote_known_event_count":9,"frame_id":"frame","frame_status":"accepted","scope":"event_set","sketch_status":"decoded"}"#,
+		)
+		.unwrap();
+		assert!(DiffResponse::from_body(&missing_truncated).is_err());
 	}
 
 	#[test]
