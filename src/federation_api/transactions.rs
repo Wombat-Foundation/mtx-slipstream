@@ -12,10 +12,13 @@ pub mod edu {
 	use alloc::{collections::BTreeMap, string::String, vec::Vec};
 
 	use crate::{
-		OwnedDeviceId, OwnedEventId, OwnedRoomId, OwnedTransactionId, OwnedUserId, UInt,
+		OwnedDeviceId, OwnedRoomId, OwnedTransactionId, OwnedUserId, UInt,
 		codec::{DeError, Deserialize, Serialize},
 		endpoint::Input,
-		events::{presence::PresenceState, receipt::Receipt},
+		events::{
+			presence::PresenceState,
+			receipt::{Receipt, ReceiptEventId},
+		},
 		json::{Object, Value},
 		sswire::Raw,
 	};
@@ -89,7 +92,7 @@ pub mod edu {
 	#[derive(Debug)]
 	pub struct ReceiptData {
 		pub data: Receipt,
-		pub event_ids: Vec<OwnedEventId>,
+		pub event_ids: Vec<ReceiptEventId>,
 	}
 
 	impl crate::codec::Serialize for ReceiptData {
@@ -241,7 +244,8 @@ pub mod edu {
 				device_id: input.body(stringify!(device_id))?,
 				device_display_name: input.body(stringify!(device_display_name))?,
 				stream_id: input.body(stringify!(stream_id))?,
-				prev_id: input.body(stringify!(prev_id))?,
+				// `prev_id` is optional on the wire (ruma defaults it to empty).
+				prev_id: input.body_or_default(stringify!(prev_id))?,
 				deleted: input.body(stringify!(deleted))?,
 				keys: input.body(stringify!(keys))?,
 			})
@@ -293,7 +297,8 @@ pub mod edu {
 		fn to_json(&self) -> crate::json::Value {
 			crate::endpoint::body_object(&mut [
 				(stringify!(sender), crate::endpoint::enc(&self.sender)),
-				(stringify!(ev_type), crate::endpoint::enc(&self.ev_type)),
+				// The wire field is `type`; `ev_type` is only the Rust field name.
+				("type", crate::endpoint::enc(&self.ev_type)),
 				(stringify!(message_id), crate::endpoint::enc(&self.message_id)),
 				(stringify!(messages), crate::endpoint::enc(&self.messages)),
 			])
@@ -308,7 +313,7 @@ pub mod edu {
 			let input = crate::endpoint::Input::body_only(value);
 			Ok(Self {
 				sender: input.body(stringify!(sender))?,
-				ev_type: input.body(stringify!(ev_type))?,
+				ev_type: input.body("type")?,
 				message_id: input.body(stringify!(message_id))?,
 				messages: input.body(stringify!(messages))?,
 			})
@@ -545,10 +550,59 @@ mod tests {
 		let data = &map.read[&OwnedUserId::parse("@u:b").unwrap()];
 		assert_eq!(data.data.ts, Some(5));
 		assert_eq!(data.event_ids.len(), 1);
+		assert_eq!(data.event_ids[0].as_str(), "$e");
 
 		let results: BTreeMap<OwnedEventId, PduResult> =
 			from_str(r#"{"$a":{},"$b":{"error":"bad"}}"#).unwrap();
 		assert_eq!(results[&OwnedEventId::parse("$a").unwrap()], Ok(()));
 		assert_eq!(results[&OwnedEventId::parse("$b").unwrap()], Err("bad".to_string()));
+	}
+
+	#[test]
+	fn receipt_event_ids_need_not_follow_the_event_id_grammar() {
+		let content: edu::ReceiptContent = from_str(
+			r#"{"!r:b":{"m.read":{"@u:b":{"data":{"ts":5},"event_ids":["mytesteventid"]}}}}"#,
+		)
+		.unwrap();
+		let map = &content.receipts[&OwnedRoomId::parse("!r:b").unwrap()];
+		let data = &map.read[&OwnedUserId::parse("@u:b").unwrap()];
+		assert_eq!(data.event_ids.len(), 1);
+		assert_eq!(data.event_ids[0].as_str(), "mytesteventid");
+		assert!(to_string(&content).contains(r#""event_ids":["mytesteventid"]"#));
+	}
+
+	#[test]
+	fn receipt_event_ids_must_still_be_strings() {
+		assert!(
+			from_str::<edu::ReceiptContent>(
+				r#"{"!r:b":{"m.read":{"@u:b":{"data":{"ts":5},"event_ids":[5]}}}}"#,
+			)
+			.is_err()
+		);
+		assert!(
+			from_str::<edu::ReceiptContent>(
+				r#"{"!r:b":{"m.read":{"@u:b":{"data":{"ts":5},"event_ids":"$e"}}}}"#,
+			)
+			.is_err()
+		);
+	}
+
+	#[test]
+	fn direct_device_content_uses_type_wire_key() {
+		let content: edu::DirectDeviceContent = from_str(
+			r#"{"sender":"@u:b","type":"m.room.message","message_id":"txn","messages":{}}"#,
+		)
+		.unwrap();
+		assert_eq!(content.ev_type, "m.room.message");
+		let encoded = to_string(&content);
+		assert!(encoded.contains("\"type\":\"m.room.message\""));
+		assert!(!encoded.contains("ev_type"));
+	}
+
+	#[test]
+	fn device_list_update_defaults_omitted_prev_id() {
+		let content: edu::DeviceListUpdateContent =
+			from_str(r#"{"user_id":"@u:b","device_id":"DEVICE","stream_id":1}"#).unwrap();
+		assert!(content.prev_id.is_empty());
 	}
 }

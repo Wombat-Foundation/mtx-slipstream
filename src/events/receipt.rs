@@ -6,6 +6,40 @@ use crate::{
 	json::{Object, Value},
 };
 
+/// An opaque event identifier used as a receipt content key.
+///
+/// Receipt keys come from federation JSON and are retained verbatim for
+/// compatibility, so they are not validated as Matrix event IDs.
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct ReceiptEventId(alloc::string::String);
+
+impl ReceiptEventId {
+	#[must_use]
+	pub fn from_opaque(value: impl Into<alloc::string::String>) -> Self {
+		Self(value.into())
+	}
+
+	#[must_use]
+	pub fn as_str(&self) -> &str {
+		&self.0
+	}
+}
+
+impl Serialize for ReceiptEventId {
+	fn to_json(&self) -> Value {
+		Value::String(self.0.clone())
+	}
+}
+
+impl Deserialize for ReceiptEventId {
+	fn from_json(value: &Value) -> Result<Self, DeError> {
+		value
+			.as_str()
+			.map(|value| Self(value.into()))
+			.ok_or_else(|| DeError::expected("receipt event ID string"))
+	}
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
 pub enum ReceiptType {
 	#[default]
@@ -77,10 +111,10 @@ pub struct Receipt {
 }
 #[derive(Clone, Debug, Default)]
 pub struct ReceiptEventContent(
-	pub BTreeMap<OwnedEventId, BTreeMap<ReceiptType, BTreeMap<OwnedUserId, Receipt>>>,
+	pub BTreeMap<ReceiptEventId, BTreeMap<ReceiptType, BTreeMap<OwnedUserId, Receipt>>>,
 );
 impl core::ops::Deref for ReceiptEventContent {
-	type Target = BTreeMap<OwnedEventId, BTreeMap<ReceiptType, BTreeMap<OwnedUserId, Receipt>>>;
+	type Target = BTreeMap<ReceiptEventId, BTreeMap<ReceiptType, BTreeMap<OwnedUserId, Receipt>>>;
 
 	fn deref(&self) -> &Self::Target {
 		&self.0
@@ -95,22 +129,22 @@ impl core::ops::DerefMut for ReceiptEventContent {
 
 impl IntoIterator for ReceiptEventContent {
 	type IntoIter = alloc::collections::btree_map::IntoIter<
-		OwnedEventId,
+		ReceiptEventId,
 		BTreeMap<ReceiptType, BTreeMap<OwnedUserId, Receipt>>,
 	>;
-	type Item = (OwnedEventId, BTreeMap<ReceiptType, BTreeMap<OwnedUserId, Receipt>>);
+	type Item = (ReceiptEventId, BTreeMap<ReceiptType, BTreeMap<OwnedUserId, Receipt>>);
 
 	fn into_iter(self) -> Self::IntoIter {
 		self.0.into_iter()
 	}
 }
 
-impl FromIterator<(OwnedEventId, BTreeMap<ReceiptType, BTreeMap<OwnedUserId, Receipt>>)>
+impl FromIterator<(ReceiptEventId, BTreeMap<ReceiptType, BTreeMap<OwnedUserId, Receipt>>)>
 	for ReceiptEventContent
 {
 	fn from_iter<
 		I: IntoIterator<
-			Item = (OwnedEventId, BTreeMap<ReceiptType, BTreeMap<OwnedUserId, Receipt>>),
+			Item = (ReceiptEventId, BTreeMap<ReceiptType, BTreeMap<OwnedUserId, Receipt>>),
 		>,
 	>(
 		iter: I,
@@ -173,7 +207,19 @@ impl Serialize for ReceiptEventContent {
 
 impl Deserialize for ReceiptEventContent {
 	fn from_json(value: &Value) -> Result<Self, DeError> {
-		Deserialize::from_json(value).map(Self)
+		// Receipts name events by opaque string; like Synapse, don't insist on the
+		// event ID grammar (a federated receipt may carry any string).
+		let object = value.as_object().ok_or_else(|| DeError::expected("object"))?;
+		object
+			.iter()
+			.map(|(event_id, receipts)| {
+				Ok((
+					ReceiptEventId::from_opaque(event_id.clone()),
+					Deserialize::from_json(receipts)?,
+				))
+			})
+			.collect::<Result<_, DeError>>()
+			.map(Self)
 	}
 }
 
@@ -207,10 +253,24 @@ mod tests {
 	fn receipt_event_round_trips() {
 		let text = r#"{"content":{"$e":{"m.read":{"@u:x":{"thread_id":"main","ts":5}}}},"room_id":"!r:x"}"#;
 		let event = from_str::<ReceiptEvent>(text).unwrap();
-		let receipt = &event.content.0[&OwnedEventId::parse("$e").unwrap()][&ReceiptType::Read]
+		let receipt = &event.content.0[&ReceiptEventId::from_opaque("$e")][&ReceiptType::Read]
 			[&OwnedUserId::parse("@u:x").unwrap()];
 		assert_eq!(receipt.thread, ReceiptThread::Main);
 		assert_eq!(receipt.ts, Some(5));
 		assert_eq!(to_string(&event), text);
+	}
+
+	#[test]
+	fn receipt_event_keys_need_not_follow_the_event_id_grammar() {
+		let text =
+			r#"{"content":{"mytesteventid":{"m.read":{"@u:x":{"ts":5}}}},"room_id":"!r:x"}"#;
+		let event = from_str::<ReceiptEvent>(text).unwrap();
+		assert!(event.content.0.keys().any(|id| id.as_str() == "mytesteventid"));
+		assert_eq!(to_string(&event), text);
+	}
+
+	#[test]
+	fn receipt_event_content_must_still_be_an_object() {
+		assert!(from_str::<ReceiptEvent>(r#"{"content":[],"room_id":"!r:x"}"#).is_err());
 	}
 }

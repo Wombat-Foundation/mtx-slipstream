@@ -115,6 +115,7 @@ pub const fn lookup_auth(method: &str, path: &str) -> Option<AuthScheme> {
 /// - Push rules: ruma only knew the `global` scope; ours takes any `{scope}`.
 /// - Antispam: requests we *send* to spam checkers; the router never serves them.
 /// - `event_relationships` (MSC2836): federation, signed.
+/// - MSC4521 reconciliation: unstable federation, signed.
 /// - Federation `query` and `exchange_third_party_invite`: ruwuma declared
 ///   `AccessToken`, but both are signed federation requests in the spec and in synapse.
 const EXTRA_AUTH: &[(&str, &str, AuthScheme)] = &[
@@ -126,6 +127,21 @@ const EXTRA_AUTH: &[(&str, &str, AuthScheme)] = &[
 	("GET", "/_matrix/client/v3/pushrules/{}/{}/{}/enabled", AuthScheme::AccessToken),
 	("PUT", "/_matrix/client/v3/pushrules/{}/{}/{}/enabled", AuthScheme::AccessToken),
 	("POST", "/_matrix/federation/unstable/event_relationships", AuthScheme::ServerSignatures),
+	(
+		"POST",
+		"/_matrix/federation/unstable/tk.nutra.msc0501/room_diff/{}",
+		AuthScheme::ServerSignatures,
+	),
+	(
+		"GET",
+		"/_matrix/federation/unstable/tk.nutra.msc0501/room_digest/{}",
+		AuthScheme::ServerSignatures,
+	),
+	(
+		"GET",
+		"/_matrix/federation/unstable/tk.nutra.msc0501/room_digest/{}/strata",
+		AuthScheme::ServerSignatures,
+	),
 	(
 		"PUT",
 		"/_matrix/federation/v1/exchange_third_party_invite/{}",
@@ -734,7 +750,7 @@ impl<T: EndpointResponse> OutgoingResponse for T {
 pub fn body_field<T: Deserialize>(body: Option<&Value>, name: &str) -> Result<T, DeError> {
 	let null = Value::Null;
 	let value = body.and_then(Value::as_object).and_then(|o| o.get(name)).unwrap_or(&null);
-	T::from_json(value)
+	T::from_json(value).map_err(|DeError(what)| DeError(alloc::format!("`{name}`: {what}")))
 }
 
 /// Builds a JSON object from named values, omitting nulls.
@@ -752,6 +768,18 @@ pub fn object_from_mut(fields: &mut [(&str, Value)]) -> Object {
 		.filter(|(_, value)| !value.is_null())
 		.map(|(name, value)| ((*name).to_string(), core::mem::replace(value, Value::Null)))
 		.collect()
+}
+
+#[cfg(test)]
+mod tests {
+	use super::Input;
+
+	#[test]
+	fn query_errors_include_parameter_name() {
+		let query = alloc::vec![("limit".to_string(), "not-a-number".to_string())];
+		let error = Input::new(&[], &query, None).query::<u32>("limit").unwrap_err();
+		assert!(error.to_string().contains("limit"));
+	}
 }
 
 /// Flattens named values into query pairs: nulls are dropped and arrays repeat the key.
@@ -883,6 +911,7 @@ impl<'a> Input<'a> {
 		let index = self.next.get();
 		self.next.set(index.saturating_add(1));
 		from_param(self.path.get(index).map(String::as_str))
+			.map_err(|DeError(what)| DeError(alloc::format!("path argument {index}: {what}")))
 	}
 
 	/// The named query parameter.
@@ -897,10 +926,13 @@ impl<'a> Input<'a> {
 			.filter(|(key, _)| key == name)
 			.map(|(_, value)| value.as_str())
 			.collect();
-		from_param::<T>(values.first().copied()).or_else(|single| {
-			let items = values.iter().map(|value| Value::String((*value).to_string())).collect();
-			T::from_json(&Value::Array(items)).map_err(|_| single)
-		})
+		from_param::<T>(values.first().copied())
+			.or_else(|single| {
+				let items =
+					values.iter().map(|value| Value::String((*value).to_string())).collect();
+				T::from_json(&Value::Array(items)).map_err(|_| single)
+			})
+			.map_err(|DeError(what)| DeError(alloc::format!("`{name}`: {what}")))
 	}
 
 	/// The named query parameter, or `default` when it is not present.

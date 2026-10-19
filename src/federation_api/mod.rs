@@ -235,9 +235,9 @@ pub mod keys {
 					let input = crate::endpoint::Input::body_only(body);
 					Ok(Self {
 						device_keys: input.body("device_keys")?,
-						master_keys: input.body("master_keys")?,
-						self_signing_keys: input.body("self_signing_keys")?,
-						failures: input.body("failures")?,
+						master_keys: input.body_or_default("master_keys")?,
+						self_signing_keys: input.body_or_default("self_signing_keys")?,
+						failures: input.body_or_default("failures")?,
 					})
 				}
 			}
@@ -986,6 +986,7 @@ pub mod get_room_state;
 pub mod knock;
 pub mod membership;
 pub mod query;
+pub mod reconciliation;
 pub mod space;
 pub mod transactions;
 
@@ -1060,6 +1061,16 @@ mod tests {
 		assert!(decoded.pdus[0].get().contains("m.room.message"));
 		let again = decoded.try_into_http_response::<Vec<u8>>().unwrap();
 		assert_eq!(again.status(), http::StatusCode::OK);
+	}
+
+	#[test]
+	fn key_query_response_requires_device_keys() {
+		use super::keys::get_keys::v1::Response;
+		let body = crate::json::Value::parse(
+			r#"{"master_keys":{},"self_signing_keys":{},"failures":{}}"#,
+		)
+		.unwrap();
+		assert!(<Response as crate::endpoint::EndpointResponse>::from_body(&body).is_err());
 	}
 
 	#[test]

@@ -189,7 +189,7 @@ impl crate::codec::Deserialize for ServerSigningKeys {
 
 pub mod get_server_version {
 	pub mod v1 {
-		use alloc::string::String;
+		use alloc::{collections::BTreeMap, string::String};
 
 		/// Server software name and version.
 		#[derive(Debug, Default)]
@@ -257,6 +257,7 @@ pub mod get_server_version {
 		}
 		pub struct Response {
 			pub server: Option<Server>,
+			pub unstable_features: Option<BTreeMap<String, bool>>,
 		}
 		impl ::core::fmt::Debug for Response {
 			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
@@ -265,15 +266,16 @@ pub mod get_server_version {
 		}
 		impl crate::endpoint::EndpointResponse for Response {
 			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [(
-					"server",
-					crate::endpoint::enc(&self.server),
-				)])
+				crate::endpoint::body_object(&mut [
+					("server", crate::endpoint::enc(&self.server)),
+					("unstable_features", crate::endpoint::enc(&self.unstable_features)),
+				])
 			}
 			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
 				let input = crate::endpoint::Input::body_only(body);
 				Ok(Self {
 					server: input.body("server")?,
+					unstable_features: input.body("unstable_features")?,
 				})
 			}
 		}
