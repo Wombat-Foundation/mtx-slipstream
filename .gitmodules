@@ -1,4 +1,4 @@
 [submodule "res"]
-	path = res
-    url = gcrypt::git@gitlab.com:wombat-foundation/slipstream-res.git
+    path = res
+    url = git@nutra.tk:wombat-foundation/slipstream-res.git
     update = none
