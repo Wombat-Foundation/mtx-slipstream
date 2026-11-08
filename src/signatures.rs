@@ -199,7 +199,7 @@ fn signing_bytes(object: &CanonicalJsonObject) -> Result<String, Error> {
 	let mut stripped = object.clone();
 	stripped.remove("signatures");
 	stripped.remove("unsigned");
-	json::write_string_value(&Value::Object(stripped)).map_err(|e| Error::Json(e.to_string()))
+	json::to_canonical_string(&Value::Object(stripped)).map_err(|e| Error::Json(e.to_string()))
 }
 
 /// Builds a ZIP-215 verifier from `keys`.
