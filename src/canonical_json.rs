@@ -36,16 +36,21 @@ pub fn try_from_json_map(map: JsonMap) -> Result<Object, crate::CanonicalJsonErr
 	Ok(map)
 }
 
-/// Serializes `value` into a canonical JSON value.
+/// Serializes `value` into a canonical JSON value, validating the strict
+/// Matrix number rules used for signing.
 ///
 /// # Errors
 ///
-/// Currently infallible; the `Result` mirrors ruma's signature. Unlike ruma's, this does
-/// not reject floats or integers outside the canonical `[-2^53 + 1, 2^53 - 1]` range.
+/// Returns [`crate::CanonicalJsonError`] if any number is a float or outside
+/// the canonical `[-(2^53 - 1), 2^53 - 1]` range.
 pub fn to_canonical_value<T: crate::codec::Serialize>(
 	value: T,
 ) -> Result<Value, crate::CanonicalJsonError> {
-	Ok(crate::codec::to_value(&value))
+	let value = crate::codec::to_value(&value);
+	// Validate only; the value itself is already sorted by `Object`'s BTreeMap.
+	rezzy::json::to_canonical_string(&value)
+		.map_err(|error| crate::CanonicalJsonError::SerDe(error.to_string()))?;
+	Ok(value)
 }
 
 /// Redacts `content` in place according to the room version's rules.
@@ -58,42 +63,21 @@ pub fn redact_content_in_place(
 	version: &crate::RoomVersionId,
 	event_type: impl AsRef<str>,
 ) -> Result<(), RedactionError> {
-	// MSC3389's unstable room version redacts like version 10 but keeps
-	// `rel_type` and `event_id` of `m.relates_to`.
-	let msc3389 = version.as_str() == MSC3389_ROOM_VERSION;
-	if matches!(version, crate::RoomVersionId::Custom(_)) && !msc3389 {
+	// `rezzy` owns the per-room-version rule table, including the MSC3389
+	// relation-preserving variant. Only reject custom versions Rezzy does not
+	// know about; do not special-case any version here.
+	if matches!(version, crate::RoomVersionId::Custom(_))
+		&& version.as_str() != MSC3389_ROOM_VERSION
+	{
 		return Err(RedactionError::UnsupportedRoomVersion(version.as_str().into()));
 	}
-	let preserved_relation = if msc3389 {
-		content.get("m.relates_to").and_then(Value::as_object).map(|relation| {
-			["rel_type", "event_id"]
-				.into_iter()
-				.filter_map(|key| {
-					relation
-						.get(key)
-						.map(|value| (alloc::string::String::from(key), value.clone()))
-				})
-				.collect::<Object>()
-		})
-	} else {
-		None
-	};
-	// TODO: better logic here; it could be v11, v12, etc
-	let rules_version = if msc3389 {
-		"10"
-	} else {
-		version.as_str()
-	};
 	let (redacted, _) = rezzy::split_redaction_content(
 		&Value::Object(content.clone()),
 		event_type.as_ref(),
-		rules_version,
+		version.as_str(),
 	);
 	if let Value::Object(object) = redacted {
 		*content = object;
-	}
-	if let Some(relation) = preserved_relation.filter(|relation| !relation.is_empty()) {
-		content.insert("m.relates_to".into(), Value::Object(relation));
 	}
 	Ok(())
 }
@@ -170,6 +154,13 @@ mod tests {
 			panic!("object")
 		};
 		object
+	}
+
+	#[test]
+	fn to_canonical_value_rejects_floats_and_out_of_range() {
+		assert!(to_canonical_value(Value::parse(r#"{"ok":1}"#).unwrap()).is_ok());
+		assert!(to_canonical_value(Value::parse(r#"{"ratio":0.5}"#).unwrap()).is_err());
+		assert!(to_canonical_value(Value::parse(r#"{"n":9007199254740992}"#).unwrap()).is_err());
 	}
 
 	#[test]

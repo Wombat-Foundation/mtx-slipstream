@@ -4,11 +4,9 @@
 //! serializing, this module provides a `PduStreamWriter` that serializes
 //! PDUs incrementally into a growing byte buffer.
 
-use crate::slipstream_json as simd_json;
-use crate::slipstream_json::prelude::*;
+use crate::federation::raw_pdu::canonical_to_bytes;
+use crate::slipstream_json as sjson;
 use bytes::{BufMut, BytesMut};
-
-use crate::writer::BufWriter;
 
 /// A streaming writer for arrays of serialized PDUs.
 pub struct PduStreamWriter {
@@ -56,14 +54,12 @@ impl PduStreamWriter {
 	/// # Errors
 	///
 	/// Returns `io::Error` if the value cannot be serialized.
-	pub fn write_pdu(&mut self, pdu: &simd_json::OwnedValue) -> std::io::Result<()> {
-		let mut pending = BytesMut::new();
+	pub fn write_pdu(&mut self, pdu: &sjson::OwnedValue) -> std::io::Result<()> {
+		let bytes = canonical_to_bytes(pdu)?;
 		if self.count > 0 {
-			pending.put_u8(b',');
+			self.buf.put_u8(b',');
 		}
-		let mut writer = BufWriter(&mut pending);
-		pdu.write(&mut writer)?;
-		self.buf.extend_from_slice(&pending);
+		self.buf.extend_from_slice(&bytes);
 		self.count = self.count.saturating_add(1);
 		Ok(())
 	}
@@ -157,15 +153,13 @@ impl FederationResponseWriter {
 	/// # Panics
 	///
 	/// Panics if called after [`Self::begin_auth_chain`].
-	pub fn write_state_pdu(&mut self, pdu: &simd_json::OwnedValue) -> std::io::Result<()> {
+	pub fn write_state_pdu(&mut self, pdu: &sjson::OwnedValue) -> std::io::Result<()> {
 		debug_assert_eq!(self.phase, ResponsePhase::State);
-		let mut pending = BytesMut::new();
+		let bytes = canonical_to_bytes(pdu)?;
 		if self.state_count > 0 {
-			pending.put_u8(b',');
+			self.buf.put_u8(b',');
 		}
-		let mut writer = BufWriter(&mut pending);
-		pdu.write(&mut writer)?;
-		self.buf.extend_from_slice(&pending);
+		self.buf.extend_from_slice(&bytes);
 		self.state_count = self.state_count.saturating_add(1);
 		Ok(())
 	}
@@ -205,15 +199,13 @@ impl FederationResponseWriter {
 	/// # Panics
 	///
 	/// Panics if called before [`Self::begin_auth_chain`].
-	pub fn write_auth_chain_pdu(&mut self, pdu: &simd_json::OwnedValue) -> std::io::Result<()> {
+	pub fn write_auth_chain_pdu(&mut self, pdu: &sjson::OwnedValue) -> std::io::Result<()> {
 		debug_assert_eq!(self.phase, ResponsePhase::AuthChain);
-		let mut pending = BytesMut::new();
+		let bytes = canonical_to_bytes(pdu)?;
 		if self.auth_chain_count > 0 {
-			pending.put_u8(b',');
+			self.buf.put_u8(b',');
 		}
-		let mut writer = BufWriter(&mut pending);
-		pdu.write(&mut writer)?;
-		self.buf.extend_from_slice(&pending);
+		self.buf.extend_from_slice(&bytes);
 		self.auth_chain_count = self.auth_chain_count.saturating_add(1);
 		Ok(())
 	}
@@ -244,7 +236,7 @@ impl FederationResponseWriter {
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
-	use simd_json::json;
+	use sjson::json;
 
 	use super::*;
 
@@ -256,7 +248,7 @@ mod tests {
 		stream.write_raw_pdu(r#"{"event_id":"$c","type":"m.room.message"}"#);
 		let bytes = stream.finish();
 		let mut input = bytes.to_vec();
-		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
+		let parsed: sjson::OwnedValue = sjson::to_owned_value(&mut input).unwrap();
 		assert!(parsed.is_array());
 		assert_eq!(parsed.as_array().unwrap().len(), 3);
 	}
@@ -268,7 +260,7 @@ mod tests {
 		stream.write_pdu(&json!({"event_id": "$b"})).unwrap();
 		let bytes = stream.finish();
 		let mut input = bytes.to_vec();
-		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
+		let parsed: sjson::OwnedValue = sjson::to_owned_value(&mut input).unwrap();
 		let items = parsed.as_array().unwrap();
 		assert_eq!(items[0]["event_id"].as_str(), Some("$a"));
 		assert_eq!(items[1]["event_id"].as_str(), Some("$b"));
@@ -283,7 +275,7 @@ mod tests {
 		writer.write_raw_auth_chain_pdu(r#"{"event_id":"$a1"}"#);
 		let bytes = writer.finish();
 		let mut input = bytes.to_vec();
-		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
+		let parsed: sjson::OwnedValue = sjson::to_owned_value(&mut input).unwrap();
 		let state = parsed["state"].as_array().unwrap();
 		let auth_chain = parsed["auth_chain"].as_array().unwrap();
 		assert_eq!(state[0]["event_id"].as_str(), Some("$s1"));
@@ -296,7 +288,7 @@ mod tests {
 		let stream = PduStreamWriter::with_capacity(0);
 		let bytes = stream.finish();
 		let mut input = bytes.to_vec();
-		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
+		let parsed: sjson::OwnedValue = sjson::to_owned_value(&mut input).unwrap();
 		assert_eq!(parsed, json!([]));
 	}
 }

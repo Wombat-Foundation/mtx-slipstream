@@ -1,4 +1,4 @@
-//! Thin adapter for writing simd-json values into a [`BytesMut`] buffer.
+//! Thin adapter for writing rezzy-json values into a [`BytesMut`] buffer.
 
 use std::io;
 

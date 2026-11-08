@@ -1,6 +1,6 @@
 //! High-performance sync v5 (sliding sync) response builder.
 
-use crate::slipstream_json as simd_json;
+use crate::slipstream_json as sjson;
 use crate::slipstream_json::{OwnedValue, prelude::*};
 use bytes::BytesMut;
 
@@ -86,7 +86,7 @@ impl SlidingSyncResponseBuilder {
 		val.as_object_mut()
 			.expect("sync response is a JSON object")
 			.entry("extensions".to_owned())
-			.or_insert_with(|| OwnedValue::from(simd_json::value::owned::Object::default()))
+			.or_insert_with(|| OwnedValue::from(sjson::value::owned::Object::default()))
 			.as_object_mut()
 			.expect("sync response extensions is a JSON object")
 			.insert("io.element.msc4308.thread_subscriptions".to_owned(), subs.clone());
@@ -124,7 +124,7 @@ impl SlidingSyncResponseBuilder {
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
-	use simd_json::json;
+	use sjson::json;
 
 	use super::*;
 
@@ -174,7 +174,7 @@ mod tests {
 		let val = json!({"rooms": {}});
 		let bytes = builder.build_http_response(&val).unwrap();
 		let mut input = bytes.to_vec();
-		let parsed: OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
+		let parsed: OwnedValue = sjson::to_owned_value(&mut input).unwrap();
 		assert_eq!(parsed, val);
 	}
 }
