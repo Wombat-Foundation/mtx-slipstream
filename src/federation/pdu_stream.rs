@@ -47,7 +47,7 @@ impl PduStreamWriter {
 
 	/// Serialize an `OwnedValue` PDU into the stream.
 	///
-	/// The value is serialized via `Self::Writable`
+	/// The value is serialized by the strict canonical writer
 	/// and a comma separator is inserted before the PDU if the stream is not
 	/// empty.
 	///
@@ -247,8 +247,8 @@ mod tests {
 		stream.write_raw_pdu(r#"{"event_id":"$b","type":"m.room.member"}"#);
 		stream.write_raw_pdu(r#"{"event_id":"$c","type":"m.room.message"}"#);
 		let bytes = stream.finish();
-		let mut input = bytes.to_vec();
-		let parsed: sjson::OwnedValue = sjson::to_owned_value(&mut input).unwrap();
+		let input = bytes.to_vec();
+		let parsed: sjson::OwnedValue = sjson::to_owned_value(&input).unwrap();
 		assert!(parsed.is_array());
 		assert_eq!(parsed.as_array().unwrap().len(), 3);
 	}
@@ -259,8 +259,8 @@ mod tests {
 		stream.write_pdu(&json!({"event_id": "$a"})).unwrap();
 		stream.write_pdu(&json!({"event_id": "$b"})).unwrap();
 		let bytes = stream.finish();
-		let mut input = bytes.to_vec();
-		let parsed: sjson::OwnedValue = sjson::to_owned_value(&mut input).unwrap();
+		let input = bytes.to_vec();
+		let parsed: sjson::OwnedValue = sjson::to_owned_value(&input).unwrap();
 		let items = parsed.as_array().unwrap();
 		assert_eq!(items[0]["event_id"].as_str(), Some("$a"));
 		assert_eq!(items[1]["event_id"].as_str(), Some("$b"));
@@ -274,8 +274,8 @@ mod tests {
 		writer.begin_auth_chain();
 		writer.write_raw_auth_chain_pdu(r#"{"event_id":"$a1"}"#);
 		let bytes = writer.finish();
-		let mut input = bytes.to_vec();
-		let parsed: sjson::OwnedValue = sjson::to_owned_value(&mut input).unwrap();
+		let input = bytes.to_vec();
+		let parsed: sjson::OwnedValue = sjson::to_owned_value(&input).unwrap();
 		let state = parsed["state"].as_array().unwrap();
 		let auth_chain = parsed["auth_chain"].as_array().unwrap();
 		assert_eq!(state[0]["event_id"].as_str(), Some("$s1"));
@@ -287,8 +287,8 @@ mod tests {
 	fn test_empty_stream() {
 		let stream = PduStreamWriter::with_capacity(0);
 		let bytes = stream.finish();
-		let mut input = bytes.to_vec();
-		let parsed: sjson::OwnedValue = sjson::to_owned_value(&mut input).unwrap();
+		let input = bytes.to_vec();
+		let parsed: sjson::OwnedValue = sjson::to_owned_value(&input).unwrap();
 		assert_eq!(parsed, json!([]));
 	}
 }

@@ -173,8 +173,8 @@ mod tests {
 		let builder = SlidingSyncResponseBuilder::new();
 		let val = json!({"rooms": {}});
 		let bytes = builder.build_http_response(&val).unwrap();
-		let mut input = bytes.to_vec();
-		let parsed: OwnedValue = sjson::to_owned_value(&mut input).unwrap();
+		let input = bytes.to_vec();
+		let parsed: OwnedValue = sjson::to_owned_value(&input).unwrap();
 		assert_eq!(parsed, val);
 	}
 }

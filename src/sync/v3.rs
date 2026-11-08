@@ -7,7 +7,7 @@
 //!
 //! With a direct pipeline:
 //! ```text
-//! ruma Response → sjson::to_owned_value → OwnedValue → patch → BufWriter → sjson::to_writer → bytes
+//! ruma Response → sjson::to_owned_value → OwnedValue → patch → BufWriter + Writable → bytes
 //! ```
 
 use crate::slipstream_json as sjson;
@@ -226,8 +226,8 @@ mod tests {
 		let builder = SyncResponseBuilder::new();
 		let val = sjson::json!({"next_batch": "s123", "rooms": {"join": {}}});
 		let bytes = builder.build_http_response(&val).unwrap();
-		let mut input = bytes.to_vec();
-		let parsed: OwnedValue = sjson::to_owned_value(&mut input).unwrap();
+		let input = bytes.to_vec();
+		let parsed: OwnedValue = sjson::to_owned_value(&input).unwrap();
 		assert_eq!(parsed, val);
 	}
 }

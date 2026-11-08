@@ -17,46 +17,46 @@ use bytes::BytesMut;
 use alloc::string::String;
 use alloc::vec::Vec;
 
-/// Parse JSON bytes using rezzy-json (strict).
+/// Parse trusted JSON bytes (permissive: a repeated object key keeps its last
+/// value).
 ///
-/// The input buffer is mutated in-place during parsing (rezzy-json's
-/// `ScratchSpace` strategy), so the caller should not rely on the buffer
-/// contents after this call.
-///
-/// # Errors
-///
-/// Returns `sjson::Error` if the input is not valid JSON.
-#[inline]
-pub fn parse_jsonsimd(buf: &mut [u8]) -> Result<sjson::OwnedValue, sjson::Error> {
-	sjson::to_owned_value(buf)
-}
-
-/// Parse a JSON string using rezzy-json.
+/// Do not use this at a trust boundary; use [`parse_pdu_json`], which rejects
+/// duplicate keys.
 ///
 /// # Errors
 ///
 /// Returns `sjson::Error` if the input is not valid JSON.
 #[inline]
-pub fn parse_jsonsimd_str(s: &mut str) -> Result<sjson::OwnedValue, sjson::Error> {
-	let mut buf = s.as_bytes().to_vec();
-	sjson::to_owned_value(&mut buf)
+pub fn parse_json_bytes(buf: &[u8]) -> Result<sjson::OwnedValue, sjson::Error> {
+	sjson::to_owned_value(buf)
 }
 
-/// Parse JSON bytes from the database using rezzy-json.
-///
-/// This is optimized for the PDU reading path where we fetch JSON text from
-/// `RocksDB` and need to deserialize it into an `OwnedValue`.
-///
-/// # Arguments
-///
-/// * `buf` - The raw JSON bytes from the database. **Mutated in-place** by
-///   rezzy-json's parsing strategy.
+/// Parse a trusted JSON string (permissive; see [`parse_json_bytes`]).
 ///
 /// # Errors
 ///
 /// Returns `sjson::Error` if the input is not valid JSON.
-pub fn parse_pdu_json(buf: &mut [u8]) -> Result<sjson::OwnedValue, sjson::Error> {
-	sjson::to_owned_value(buf)
+#[inline]
+pub fn parse_json_str(s: &str) -> Result<sjson::OwnedValue, sjson::Error> {
+	sjson::to_owned_value(s.as_bytes())
+}
+
+/// Parse PDU JSON bytes, rejecting duplicate object keys.
+///
+/// A permissive parse collapses `{"a":1,"a":2}` to `{"a":2}` before the value
+/// is hashed or signed, so ingress must reject ambiguous input here: the
+/// parsed value can no longer tell that a key was repeated.
+///
+/// # Errors
+///
+/// Returns `sjson::Error::DuplicateKey` for a repeated key, and an error if
+/// the input is not valid UTF-8 or not valid JSON.
+pub fn parse_pdu_json(buf: &[u8]) -> Result<sjson::OwnedValue, sjson::Error> {
+	// `parse_bytes_strict` is the eventual direct entry point, but this tree
+	// pins a rezzy revision that predates it; UTF-8 + `parse_strict` gives the
+	// same duplicate-key rejection until the dependency is bumped.
+	let text = core::str::from_utf8(buf).map_err(|_| sjson::Error::InvalidString)?;
+	sjson::OwnedValue::parse_strict(text)
 }
 
 /// Serialize an `OwnedValue` directly to a `BytesMut` buffer.
@@ -65,10 +65,8 @@ pub fn parse_pdu_json(buf: &mut [u8]) -> Result<sjson::OwnedValue, sjson::Error>
 ///
 /// Returns `io::Error` if serialization fails.
 pub fn canonical_to_bytes(pdu: &sjson::OwnedValue) -> io::Result<BytesMut> {
-	// TODO: enforce canonical-input whitespace rules at the tokenizer boundary:
-	// no spaces, tabs, or newlines outside JSON string values.
-	//
-	// The strict canonical writer (sorted keys, no floats, integers within
+	// Canonicalization re-emits compact output, so input whitespace is
+	// irrelevant here. The strict canonical writer (sorted keys, no floats, integers within
 	// ±(2^53 - 1)) lives in `rezzy-json`; do not reimplement it here.
 	let bytes = rezzy::json::to_canonical_bytes(pdu)
 		.map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))?;
@@ -244,24 +242,34 @@ mod tests {
 	use super::*;
 
 	#[test]
-	fn test_parse_jsonsimd() {
-		let mut input = br#"{"event_id":"$abc","type":"m.room.create"}"#.to_vec();
-		let val = parse_jsonsimd(&mut input).unwrap();
+	fn test_parse_json_bytes() {
+		let input = br#"{"event_id":"$abc","type":"m.room.create"}"#;
+		let val = parse_json_bytes(input).unwrap();
 		assert_eq!(val["event_id"], "$abc");
 	}
 
 	#[test]
-	fn test_parse_jsonsimd_str() {
-		let mut input = r#"{"key":"value"}"#.to_string();
-		let val = parse_jsonsimd_str(&mut input).unwrap();
+	fn test_parse_json_str() {
+		let val = parse_json_str(r#"{"key":"value"}"#).unwrap();
 		assert_eq!(val["key"], "value");
 	}
 
 	#[test]
 	fn test_parse_pdu_json() {
-		let mut input = br#"{"event_id":"$abc","content":{}}"#.to_vec();
-		let val = parse_pdu_json(&mut input).unwrap();
+		let input = br#"{"event_id":"$abc","content":{}}"#;
+		let val = parse_pdu_json(input).unwrap();
 		assert_eq!(val["event_id"], "$abc");
+	}
+
+	#[test]
+	fn test_parse_pdu_json_rejects_duplicate_keys() {
+		assert!(matches!(parse_pdu_json(br#"{"a":1,"a":2}"#), Err(sjson::Error::DuplicateKey)));
+		assert!(matches!(
+			parse_pdu_json(br#"{"content":{"b":1,"b":1}}"#),
+			Err(sjson::Error::DuplicateKey)
+		));
+		// The permissive parser keeps the last value.
+		assert_eq!(parse_json_bytes(br#"{"a":1,"a":2}"#).unwrap()["a"].as_i64(), Some(2));
 	}
 
 	#[test]
@@ -272,8 +280,8 @@ mod tests {
 			"content": {"creator": "@user:example.com"}
 		});
 		let bytes = canonical_to_bytes(&obj).unwrap();
-		let mut input = bytes.to_vec();
-		let parsed: sjson::OwnedValue = sjson::to_owned_value(&mut input).unwrap();
+		let input = bytes.to_vec();
+		let parsed: sjson::OwnedValue = sjson::to_owned_value(&input).unwrap();
 		assert_eq!(parsed["event_id"], "$abc");
 	}
 
@@ -281,8 +289,8 @@ mod tests {
 	fn test_canonical_to_string() {
 		let obj = json!({"key": "value"});
 		let s = canonical_to_string(&obj).unwrap();
-		let mut input = s.into_bytes();
-		let parsed: sjson::OwnedValue = sjson::to_owned_value(&mut input).unwrap();
+		let input = s.into_bytes();
+		let parsed: sjson::OwnedValue = sjson::to_owned_value(&input).unwrap();
 		assert_eq!(parsed["key"], "value");
 	}
 
@@ -294,8 +302,8 @@ mod tests {
 			"type": "m.room.create"
 		});
 		let bytes = canonical_to_bytes_without(&obj, &["unsigned"]).unwrap();
-		let mut input = bytes.to_vec();
-		let parsed: sjson::OwnedValue = sjson::to_owned_value(&mut input).unwrap();
+		let input = bytes.to_vec();
+		let parsed: sjson::OwnedValue = sjson::to_owned_value(&input).unwrap();
 		assert_eq!(parsed["event_id"], "$abc");
 		assert!(parsed.get("unsigned").is_none());
 	}
@@ -360,8 +368,8 @@ mod tests {
 		let raw = br#"{"event_id":"$abc","type":"m.room.message"}"#;
 		let out = splice_insert_fields(raw, &[("unsigned", br#"{"age":42}"#)]);
 
-		let mut input = out.clone();
-		let parsed: sjson::OwnedValue = sjson::to_owned_value(&mut input).unwrap();
+		let input = out.clone();
+		let parsed: sjson::OwnedValue = sjson::to_owned_value(&input).unwrap();
 		assert_eq!(parsed["event_id"].as_str(), Some("$abc"));
 		assert_eq!(parsed["unsigned"]["age"].as_i64(), Some(42));
 	}
@@ -371,8 +379,8 @@ mod tests {
 		let raw = br"{}";
 		let out = splice_insert_fields(raw, &[("age", b"42")]);
 
-		let mut input = out.clone();
-		let parsed: sjson::OwnedValue = sjson::to_owned_value(&mut input).unwrap();
+		let input = out.clone();
+		let parsed: sjson::OwnedValue = sjson::to_owned_value(&input).unwrap();
 		assert_eq!(parsed["age"].as_i64(), Some(42));
 	}
 
@@ -381,8 +389,8 @@ mod tests {
 		let raw = br#"{"event_id":"$abc"}"#;
 		let out = splice_insert_fields(raw, &[("age", b"1"), ("transaction_id", br#""t1""#)]);
 
-		let mut input = out.clone();
-		let parsed: sjson::OwnedValue = sjson::to_owned_value(&mut input).unwrap();
+		let input = out.clone();
+		let parsed: sjson::OwnedValue = sjson::to_owned_value(&input).unwrap();
 		assert_eq!(parsed["event_id"].as_str(), Some("$abc"));
 		assert_eq!(parsed["age"].as_i64(), Some(1));
 		assert_eq!(parsed["transaction_id"].as_str(), Some("t1"));
@@ -402,8 +410,8 @@ mod tests {
 		let raw = b"{ }";
 		let out = splice_insert_fields(raw, &[("age", b"42")]);
 
-		let mut input = out.clone();
-		let parsed: sjson::OwnedValue = sjson::to_owned_value(&mut input).unwrap();
+		let input = out.clone();
+		let parsed: sjson::OwnedValue = sjson::to_owned_value(&input).unwrap();
 		assert_eq!(parsed["age"].as_i64(), Some(42));
 	}
 
@@ -412,8 +420,8 @@ mod tests {
 		let raw = br#"{"event_id":"$abc","age":1}"#;
 		let out = splice_insert_fields(raw, &[("age", b"999"), ("new_field", b"7")]);
 
-		let mut input = out.clone();
-		let parsed: sjson::OwnedValue = sjson::to_owned_value(&mut input).unwrap();
+		let input = out.clone();
+		let parsed: sjson::OwnedValue = sjson::to_owned_value(&input).unwrap();
 		// Existing "age" is left untouched, not duplicated or overwritten.
 		assert_eq!(parsed["age"].as_i64(), Some(1));
 		assert_eq!(parsed["new_field"].as_i64(), Some(7));
@@ -427,8 +435,8 @@ mod tests {
 		let raw = br#"{"content":{"age":5}}"#;
 		let out = splice_insert_fields(raw, &[("age", b"42")]);
 
-		let mut input = out.clone();
-		let parsed: sjson::OwnedValue = sjson::to_owned_value(&mut input).unwrap();
+		let input = out.clone();
+		let parsed: sjson::OwnedValue = sjson::to_owned_value(&input).unwrap();
 		assert_eq!(parsed["age"].as_i64(), Some(42));
 		assert_eq!(parsed["content"]["age"].as_i64(), Some(5));
 	}
