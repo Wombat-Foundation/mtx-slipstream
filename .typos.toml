@@ -1,3 +1,7 @@
 [default.extend-words]
 # `pn` is a short identifier ("path name"), not a typo of "on".
 pn = "pn"
+
+[files]
+# Generated clone fingerprints are hexadecimal, not words.
+extend-exclude = [".jscpd-baseline.json"]

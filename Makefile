@@ -31,8 +31,13 @@ all: format
 
 
 .PHONY: check
-check: ##H Type-check without building
+check: ##H Type-check and reject new code duplicates
 	$(CARGO) check --all-targets --all-features
+	jscpd --baseline .jscpd-baseline.json --fail-on-new-clones 0 $$(git ls-files '*.rs')
+
+.PHONY: dupe-baseline
+dupe-baseline: ##H Refresh the jscpd duplicate-code baseline
+	jscpd --baseline .jscpd-baseline.json --update-baseline --reporters silent $$(git ls-files '*.rs')
 
 .PHONY: macro
 macro: ##H See macro expansion costs
@@ -55,6 +60,17 @@ doc: ##H Build docs
 	echo '<meta http-equiv="refresh" content="0;url=mtx_slipstream/index.html">' > target/doc/index.html
 
 
+
+.PHONY: publish
+publish: ##H Preview package and simulate dry-run publish
+	@echo "Note: the dry-run requires every dependency to be publishable."
+	@echo "Previewing packaged files..."
+	@echo "-----------------------------------"
+	$(CARGO) +nightly package --list
+	@echo ""
+	@echo "Simulating publish (--dry-run)"
+	@echo "-----------------------------------"
+	$(CARGO) +nightly publish --dry-run
 
 .PHONY: test
 test: ##H Run tests
