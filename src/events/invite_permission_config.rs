@@ -2,7 +2,7 @@
 
 use alloc::{string::String, vec::Vec};
 
-use crate::UserId;
+use crate::UserIdOrPrincipal;
 
 /// How an invite from a user is treated.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -86,11 +86,11 @@ fn glob_match(glob: &str, target: &str) -> bool {
 impl InvitePermissionConfigEventContent {
 	/// The level for invites from `sender`, from the ignore lists alone.
 	#[must_use]
-	pub fn user_filter_level(&self, sender: &UserId) -> FilterLevel {
+	pub fn user_filter_level(&self, sender: &UserIdOrPrincipal) -> FilterLevel {
 		let user = sender.as_str();
 		// Cygnus principals have no server part; only the user glob can match them.
 		let ignored = self.ignored_users.iter().any(|glob| glob_match(glob, user))
-			|| sender.server_name_opt().is_some_and(|server| {
+			|| sender.server_name().is_some_and(|server| {
 				self.ignored_servers.iter().any(|glob| glob_match(glob, server.as_str()))
 			});
 		if ignored {
@@ -104,7 +104,7 @@ impl InvitePermissionConfigEventContent {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{OwnedUserId, codec::from_str};
+	use crate::{OwnedUserIdOrPrincipal, codec::from_str};
 
 	#[test]
 	fn ignore_lists_use_globs() {
@@ -113,21 +113,22 @@ mod tests {
 		)
 		.unwrap();
 		assert_eq!(
-			config.user_filter_level(&OwnedUserId::parse("@spam1:ok.org").unwrap()),
+			config.user_filter_level(&OwnedUserIdOrPrincipal::parse("@spam1:ok.org").unwrap()),
 			FilterLevel::Ignore
 		);
 		assert_eq!(
-			config.user_filter_level(&OwnedUserId::parse("@bob:evil.org").unwrap()),
+			config.user_filter_level(&OwnedUserIdOrPrincipal::parse("@bob:evil.org").unwrap()),
 			FilterLevel::Ignore
 		);
 		assert_eq!(
-			config.user_filter_level(&OwnedUserId::parse("@bob:ok.org").unwrap()),
+			config.user_filter_level(&OwnedUserIdOrPrincipal::parse("@bob:ok.org").unwrap()),
 			FilterLevel::Allow
 		);
 
 		// Cygnus principals have no server name and must not panic.
 		let principal =
-			OwnedUserId::parse("@Cl5rPGgj2s7JHMwFxSEOHfFYM_K0PDpnhXEMYwMgQuo").unwrap();
+			OwnedUserIdOrPrincipal::parse("@Cl5rPGgj2s7JHMwFxSEOHfFYM_K0PDpnhXEMYwMgQuo")
+				.unwrap();
 		assert_eq!(config.user_filter_level(&principal), FilterLevel::Allow);
 	}
 }

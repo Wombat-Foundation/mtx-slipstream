@@ -103,14 +103,17 @@ fn principal_body(value: &str) -> bool {
 		)
 }
 
-/// A Matrix user ID or a Cygnus user principal.
+/// A Matrix user ID or a Cygnus user principal, for wire fields that can carry
+/// either form.
 ///
 /// Cygnus room-version events carry principals in their `sender` and user
-/// `state_key` fields, where ordinary Matrix rooms carry a user ID. Accepting
-/// both here lets the event wire types decode either without knowing the room
-/// version; protocol checks must still reject a principal outside Cygnus rooms.
+/// `state_key` fields, where ordinary Matrix rooms carry a user ID. This is the
+/// permissive grammar check for those fields only; ordinary user-ID fields
+/// must use [`matrix_user_id`] (as `OwnedUserId` does). It does not establish
+/// protocol validity: callers must still reject principals outside Cygnus
+/// rooms.
 #[must_use]
-pub fn user_id(value: &str) -> bool {
+pub fn user_id_or_principal(value: &str) -> bool {
 	matrix_user_id(value) || user_principal(value)
 }
 
@@ -213,18 +216,18 @@ mod tests {
 
 	#[test]
 	fn user_ids() {
-		assert!(user_id("@alice:example.org"));
-		assert!(user_id("@Alice.Weird=chars/+:example.org:8448"));
+		assert!(matrix_user_id("@alice:example.org"));
+		assert!(matrix_user_id("@Alice.Weird=chars/+:example.org:8448"));
 		for bad in
 			["alice:example.org", "@alice", "@alice:", "@a:b c", "!a:b", "@a\0b:example.org"]
 		{
-			assert!(!user_id(bad), "{bad}");
+			assert!(!matrix_user_id(bad), "{bad}");
 		}
 		// Historical IDs are accepted (appendices, "Historical User IDs"), even the
 		// empty localpart, which is merely non-compliant.
-		assert!(user_id("@:example.org"));
+		assert!(matrix_user_id("@:example.org"));
 		let long = alloc::format!("@{}:example.org", "a".repeat(250));
-		assert!(!user_id(&long));
+		assert!(!matrix_user_id(&long));
 	}
 
 	#[test]
@@ -236,8 +239,8 @@ mod tests {
 		assert!(principal(server));
 		assert!(user_principal(user));
 		assert!(!user_principal(server));
-		assert!(user_id(user), "a Cygnus user principal is a wire user ID");
-		assert!(!user_id(server), "a server principal is not a user ID");
+		assert!(user_id_or_principal(user), "a Cygnus user principal is a wire user ID");
+		assert!(!user_id_or_principal(server), "a server principal is not a user ID");
 		assert!(matrix_user_id("@alice:example.org"));
 		assert!(!matrix_user_id(user));
 
@@ -258,19 +261,37 @@ mod tests {
 		// The all-zero digest is canonical and must remain valid.
 		assert!(user_principal("@AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"));
 
-		let parsed = crate::OwnedUserId::parse(user).unwrap();
+		// Principals are only accepted by the wire-level union type, never by
+		// ordinary user-ID fields.
+		assert!(crate::OwnedUserId::parse(user).is_err());
+		assert!(
+			crate::codec::from_str::<crate::OwnedUserId>(&alloc::format!("\"{user}\"")).is_err()
+		);
+
+		let parsed = crate::OwnedUserIdOrPrincipal::parse(user).unwrap();
 		assert!(parsed.is_principal());
 		assert!(!parsed.is_matrix_user_id());
-		assert_eq!(parsed.server_name_opt(), None);
-		assert!(parsed.validate_strict().is_err(), "principals are not Matrix user IDs");
+		assert_eq!(parsed.server_name(), None);
+		assert_eq!(parsed.localpart(), &user[1..]);
+		assert!(parsed.as_user_id().is_none());
+		assert!(crate::OwnedUserId::try_from(parsed.clone()).is_err());
 		let encoded = crate::codec::to_string(&parsed);
-		assert_eq!(crate::codec::from_str::<crate::OwnedUserId>(&encoded).unwrap(), parsed);
+		assert_eq!(
+			crate::codec::from_str::<crate::OwnedUserIdOrPrincipal>(&encoded).unwrap(),
+			parsed
+		);
 
-		let m = crate::OwnedUserId::parse("@alice:example.org").unwrap();
+		let m = crate::OwnedUserIdOrPrincipal::parse("@alice:example.org").unwrap();
 		assert!(!m.is_principal());
 		assert!(m.is_matrix_user_id());
-		assert_eq!(m.server_name_opt().unwrap().as_str(), "example.org");
-		assert!(m.validate_strict().is_ok());
+		assert_eq!(m.server_name().unwrap().as_str(), "example.org");
+		assert_eq!(m.localpart(), "alice");
+		assert_eq!(m.as_user_id().unwrap().as_str(), "@alice:example.org");
+		assert!(crate::OwnedUserId::try_from(m).is_ok());
+		let strict = crate::OwnedUserId::parse("@alice:example.org").unwrap();
+		assert_eq!(strict.server_name_opt().unwrap().as_str(), "example.org");
+		assert_eq!(strict.localpart(), "alice");
+		assert!(strict.validate_strict().is_ok());
 	}
 
 	#[test]
