@@ -1,13 +1,20 @@
 //! Types used by the `X-Matrix` federation authorization header.
 
-use alloc::string::String;
+use alloc::{
+	format,
+	string::{String, ToString},
+};
 
-use http::HeaderValue;
+use http::{HeaderValue, Method};
 
-use crate::{OwnedServerName, OwnedServerSigningKeyId};
+use crate::{
+	CanonicalJsonObject, CanonicalJsonValue, OwnedServerName, OwnedServerSigningKeyId,
+	ServerName,
+	signatures::{self, Ed25519KeyPair},
+};
 
 /// The parsed fields of an `X-Matrix` authorization header.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct XMatrix {
 	pub origin: OwnedServerName,
 	pub destination: Option<OwnedServerName>,
@@ -42,6 +49,49 @@ impl crate::codec::Deserialize for XMatrix {
 }
 
 impl XMatrix {
+	/// Sign a federation request and return its `X-Matrix` credentials.
+	///
+	/// `uri` must be the path and query sent on the wire. `content` is present
+	/// only when the request carries a JSON body.
+	///
+	/// # Errors
+	/// Returns a signing or key-ID error if the request cannot be signed.
+	pub fn sign(
+		keypair: &Ed25519KeyPair,
+		origin: &ServerName,
+		destination: &ServerName,
+		method: &Method,
+		uri: &str,
+		content: Option<&CanonicalJsonValue>,
+	) -> Result<Self, signatures::Error> {
+		let key = OwnedServerSigningKeyId::parse(format!("ed25519:{}", keypair.version()))
+			.map_err(|error| signatures::Error::Key(error.to_string()))?;
+		let mut object = CanonicalJsonObject::new();
+		object.insert("destination".into(), destination.as_str().into());
+		object.insert("method".into(), method.as_str().into());
+		object.insert("origin".into(), origin.as_str().into());
+		object.insert("uri".into(), uri.into());
+		if let Some(content) = content {
+			object.insert("content".into(), content.clone());
+		}
+		signatures::sign_json(origin.as_str(), keypair, &mut object)?;
+		let sig = object
+			.get("signatures")
+			.and_then(CanonicalJsonValue::as_object)
+			.and_then(|signatures| signatures.get(origin.as_str()))
+			.and_then(CanonicalJsonValue::as_object)
+			.and_then(|signatures| signatures.get(key.as_str()))
+			.and_then(CanonicalJsonValue::as_str)
+			.ok_or_else(|| signatures::Error::Json("signed request lacks its signature".into()))?
+			.to_string();
+		Ok(Self {
+			origin: origin.to_owned(),
+			destination: Some(destination.to_owned()),
+			key,
+			sig,
+		})
+	}
+
 	/// Decodes an `X-Matrix` authorization header.
 	#[must_use]
 	pub fn decode(value: &HeaderValue) -> Option<Self> {
@@ -95,7 +145,12 @@ impl XMatrix {
 #[cfg(test)]
 mod tests {
 	use super::XMatrix;
-	use crate::{OwnedServerName, OwnedServerSigningKeyId, codec};
+	use crate::{
+		CanonicalJsonObject, CanonicalJsonValue, OwnedServerName, OwnedServerSigningKeyId, codec,
+		signatures::{self, Ed25519KeyPair, PublicKeyMap, PublicKeySet},
+		sswire::Base64,
+	};
+	use http::Method;
 
 	#[test]
 	fn x_matrix_round_trips() {
@@ -119,5 +174,39 @@ mod tests {
 		let encoded = value.encode();
 		assert!(!encoded.to_str().unwrap().contains("destination="));
 		assert_eq!(XMatrix::decode(&encoded), Some(value));
+	}
+
+	#[test]
+	fn signed_federation_request_verifies_and_binds_uri() {
+		let pair = Ed25519KeyPair::from_der(&Ed25519KeyPair::generate().unwrap(), "test".into())
+			.unwrap();
+		let origin = OwnedServerName::parse("origin.example").unwrap();
+		let destination = OwnedServerName::parse("destination.example").unwrap();
+		let method = Method::PUT;
+		let uri = "/_matrix/federation/v2/send_join/room/event?omit_members=false";
+		let content = CanonicalJsonValue::Object(CanonicalJsonObject::new());
+		let auth =
+			XMatrix::sign(&pair, &origin, &destination, &method, uri, Some(&content)).unwrap();
+		assert_eq!(XMatrix::decode(&auth.encode()), Some(auth.clone()));
+
+		let mut object = CanonicalJsonObject::new();
+		object.insert("content".into(), content);
+		object.insert("destination".into(), destination.as_str().into());
+		object.insert("method".into(), method.as_str().into());
+		object.insert("origin".into(), origin.as_str().into());
+		object.insert("uri".into(), uri.into());
+		let mut key_signatures = CanonicalJsonObject::new();
+		key_signatures.insert(auth.key.as_str().into(), auth.sig.clone().into());
+		let mut signatures = CanonicalJsonObject::new();
+		signatures.insert(origin.as_str().into(), CanonicalJsonValue::Object(key_signatures));
+		object.insert("signatures".into(), CanonicalJsonValue::Object(signatures));
+
+		let mut keys = PublicKeyMap::new();
+		let mut origin_keys = PublicKeySet::new();
+		origin_keys.insert(auth.key.clone(), Base64::new(pair.public_key().to_vec()));
+		keys.insert(origin.clone(), origin_keys);
+		signatures::verify_json(&keys, object.clone()).unwrap();
+		object.insert("uri".into(), "/_matrix/federation/v2/send_join/other/event".into());
+		assert!(signatures::verify_json(&keys, object).is_err());
 	}
 }
