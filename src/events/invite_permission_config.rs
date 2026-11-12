@@ -88,9 +88,11 @@ impl InvitePermissionConfigEventContent {
 	#[must_use]
 	pub fn user_filter_level(&self, sender: &UserId) -> FilterLevel {
 		let user = sender.as_str();
-		let server = sender.server_name();
+		// Cygnus principals have no server part; only the user glob can match them.
 		let ignored = self.ignored_users.iter().any(|glob| glob_match(glob, user))
-			|| self.ignored_servers.iter().any(|glob| glob_match(glob, server.as_str()));
+			|| sender.server_name_opt().is_some_and(|server| {
+				self.ignored_servers.iter().any(|glob| glob_match(glob, server.as_str()))
+			});
 		if ignored {
 			FilterLevel::Ignore
 		} else {
@@ -122,5 +124,10 @@ mod tests {
 			config.user_filter_level(&OwnedUserId::parse("@bob:ok.org").unwrap()),
 			FilterLevel::Allow
 		);
+
+		// Cygnus principals have no server name and must not panic.
+		let principal =
+			OwnedUserId::parse("@Cl5rPGgj2s7JHMwFxSEOHfFYM_K0PDpnhXEMYwMgQuo").unwrap();
+		assert_eq!(config.user_filter_level(&principal), FilterLevel::Allow);
 	}
 }

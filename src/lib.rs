@@ -941,7 +941,7 @@ impl OwnedUserId {
 	///
 	/// Returns an error when the identifier does not match the Matrix user ID grammar.
 	pub fn validate_strict(&self) -> Result<(), MatrixIdParseError> {
-		let conforming = crate::id_validation::user_id(self.as_str())
+		let conforming = crate::id_validation::matrix_user_id(self.as_str())
 			&& crate::id_validation::user_localpart_is_fully_conforming(self.localpart());
 		conforming.then_some(()).ok_or(MatrixIdParseError)
 	}

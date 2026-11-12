@@ -274,6 +274,21 @@ impl OwnedServerName {
 	}
 }
 impl OwnedUserId {
+	/// Whether this is a Matrix user ID (`@localpart:server`), as opposed to a
+	/// Cygnus user principal (`@` plus a 43-character base64url digest).
+	#[must_use]
+	pub fn is_matrix_user_id(&self) -> bool {
+		crate::id_validation::matrix_user_id(self.as_str())
+	}
+
+	/// Whether this is a Cygnus user principal (`@` plus a 43-character
+	/// base64url digest). Principals have no localpart/server split and are
+	/// only valid as event senders in Cygnus room-version rooms.
+	#[must_use]
+	pub fn is_principal(&self) -> bool {
+		crate::id_validation::user_principal(self.as_str())
+	}
+
 	#[must_use]
 	pub fn localpart(&self) -> &str {
 		self.as_str()
@@ -298,13 +313,23 @@ impl OwnedUserId {
 		Self::parse(alloc::format!("@{localpart}:{}", server_name.as_str()))
 	}
 
+	/// The server name of a Matrix user ID, or `None` for a Cygnus principal.
+	///
+	/// Prefer this over [`Self::server_name`] on any path that can see a
+	/// Cygnus event sender.
+	#[must_use]
+	pub fn server_name_opt(&self) -> Option<OwnedServerName> {
+		crate::server_part(self.as_str())
+	}
+
 	#[must_use]
 	///
 	/// # Panics
 	///
-	/// Panics if this value is not a valid user ID with a server name.
+	/// Panics if this value is not a valid user ID with a server name. Cygnus
+	/// principals have no server name; use [`Self::server_name_opt`] there.
 	pub fn server_name(&self) -> OwnedServerName {
-		crate::server_part(self.as_str()).expect("validated user ID must have a server name")
+		self.server_name_opt().expect("user ID has no server name (Cygnus principal?)")
 	}
 }
 /// The part of an identifier between its sigil and the first `:`.
