@@ -7,10 +7,10 @@
 //!
 //! With a direct pipeline:
 //! ```text
-//! ruma Response → simd_json::to_owned_value → OwnedValue → patch → BufWriter → simd_json::to_writer → bytes
+//! ruma Response → sjson::to_owned_value → OwnedValue → patch → BufWriter + Writable → bytes
 //! ```
 
-use crate::slipstream_json as simd_json;
+use crate::slipstream_json as sjson;
 use crate::slipstream_json::{OwnedValue, prelude::*};
 use bytes::BytesMut;
 
@@ -92,7 +92,7 @@ impl SyncResponseBuilder {
 	/// # Errors
 	///
 	/// Returns `io::Error` if serialization fails.
-	pub fn build_http_response(self, val: &simd_json::OwnedValue) -> std::io::Result<BytesMut> {
+	pub fn build_http_response(self, val: &sjson::OwnedValue) -> std::io::Result<BytesMut> {
 		let mut buf = BytesMut::with_capacity(8192);
 		let mut writer = BufWriter(&mut buf);
 		val.write(&mut writer)?;
@@ -103,7 +103,7 @@ impl SyncResponseBuilder {
 		if let Some(join) = val.get_mut("rooms").and_then(|r| r.get_mut("join")) {
 			for (room_id, state_after) in &self.joined_state_after {
 				if let Some(room) = join.get_mut(room_id.as_str()) {
-					let mut events = simd_json::value::owned::Object::new();
+					let mut events = sjson::value::owned::Object::new();
 					events.insert("events".to_owned(), state_after.clone());
 					let state_after_obj = OwnedValue::Object(events);
 					if let Some(obj) = room.as_object_mut() {
@@ -117,7 +117,7 @@ impl SyncResponseBuilder {
 		if let Some(leave) = val.get_mut("rooms").and_then(|r| r.get_mut("leave")) {
 			for (room_id, state_after) in &self.left_state_after {
 				if let Some(room) = leave.get_mut(room_id.as_str()) {
-					let mut events = simd_json::value::owned::Object::new();
+					let mut events = sjson::value::owned::Object::new();
 					events.insert("events".to_owned(), state_after.clone());
 					let state_after_obj = OwnedValue::Object(events);
 					if let Some(obj) = room.as_object_mut() {
@@ -141,10 +141,10 @@ impl SyncResponseBuilder {
 				continue;
 			};
 			if !room.contains_key("ephemeral") {
-				room.insert("ephemeral".to_owned(), simd_json::json!({ "events": [] }));
+				room.insert("ephemeral".to_owned(), sjson::json!({ "events": [] }));
 			}
 			if self.is_initial_sync && !room.contains_key("account_data") {
-				room.insert("account_data".to_owned(), simd_json::json!({ "events": [] }));
+				room.insert("account_data".to_owned(), sjson::json!({ "events": [] }));
 			}
 		}
 	}
@@ -161,9 +161,7 @@ impl SyncResponseBuilder {
 		}
 		if val.get("rooms").is_none_or(|r| r.get("knock").is_none()) {
 			let rooms_obj = val.as_object_mut().and_then(|o| {
-				o.entry("rooms".to_owned())
-					.or_insert_with(|| simd_json::json!({}))
-					.as_object_mut()
+				o.entry("rooms".to_owned()).or_insert_with(|| sjson::json!({})).as_object_mut()
 			});
 			if let Some(rooms) = rooms_obj {
 				rooms.insert("knock".to_owned(), knock_json.clone());
@@ -190,9 +188,9 @@ mod tests {
 	fn test_patch_state_after() {
 		let builder = SyncResponseBuilder::new().joined_state_after(vec![(
 			"!room:example.com".to_owned(),
-			simd_json::json!([{"type": "m.room.create"}]),
+			sjson::json!([{"type": "m.room.create"}]),
 		)]);
-		let mut val = simd_json::json!({
+		let mut val = sjson::json!({
 			"rooms": { "join": { "!room:example.com": { "timeline": {"events": []} } } }
 		});
 		builder.patch(&mut val);
@@ -206,7 +204,7 @@ mod tests {
 	#[test]
 	fn test_patch_ephemeral() {
 		let builder = SyncResponseBuilder::new().is_initial_sync(true);
-		let mut val = simd_json::json!({
+		let mut val = sjson::json!({
 			"rooms": { "join": { "!room:example.com": { "timeline": {"events": []} } } }
 		});
 		builder.patch(&mut val);
@@ -217,8 +215,8 @@ mod tests {
 	#[test]
 	fn test_patch_knock_rooms() {
 		let builder = SyncResponseBuilder::new()
-			.knocked_rooms_json(simd_json::json!([{"room_id": "!knock:example.com"}]));
-		let mut val = simd_json::json!({ "rooms": { "join": {} } });
+			.knocked_rooms_json(sjson::json!([{"room_id": "!knock:example.com"}]));
+		let mut val = sjson::json!({ "rooms": { "join": {} } });
 		builder.patch(&mut val);
 		assert!(val["rooms"]["knock"].is_array());
 	}
@@ -226,10 +224,10 @@ mod tests {
 	#[test]
 	fn test_build_http_response() {
 		let builder = SyncResponseBuilder::new();
-		let val = simd_json::json!({"next_batch": "s123", "rooms": {"join": {}}});
+		let val = sjson::json!({"next_batch": "s123", "rooms": {"join": {}}});
 		let bytes = builder.build_http_response(&val).unwrap();
-		let mut input = bytes.to_vec();
-		let parsed: OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
+		let input = bytes.to_vec();
+		let parsed: OwnedValue = sjson::to_owned_value(&input).unwrap();
 		assert_eq!(parsed, val);
 	}
 }

@@ -1,4 +1,4 @@
-//! Thin adapter for writing simd-json values into a [`BytesMut`] buffer.
+//! Thin adapter for writing rezzy-json values into a [`BytesMut`] buffer.
 
 use std::io;
 
@@ -49,30 +49,30 @@ mod tests {
 	#[test]
 	fn test_to_bytes_primitives() {
 		let bytes = to_bytes(&json!(true)).unwrap();
-		let mut input = bytes.to_vec();
+		let input = bytes.to_vec();
 		let parsed: slipstream_json::OwnedValue =
-			slipstream_json::to_owned_value(&mut input).unwrap();
+			slipstream_json::to_owned_value(&input).unwrap();
 		assert_eq!(parsed, json!(true));
 
 		let bytes = to_bytes(&json!(42)).unwrap();
-		let mut input = bytes.to_vec();
+		let input = bytes.to_vec();
 		let parsed: slipstream_json::OwnedValue =
-			slipstream_json::to_owned_value(&mut input).unwrap();
+			slipstream_json::to_owned_value(&input).unwrap();
 		assert_eq!(parsed, json!(42));
 
 		let bytes = to_bytes(&json!("hello")).unwrap();
-		let mut input = bytes.to_vec();
+		let input = bytes.to_vec();
 		let parsed: slipstream_json::OwnedValue =
-			slipstream_json::to_owned_value(&mut input).unwrap();
+			slipstream_json::to_owned_value(&input).unwrap();
 		assert_eq!(parsed, json!("hello"));
 	}
 
 	#[test]
 	fn test_to_bytes_map() {
 		let bytes = to_bytes(&json!({"a": 1, "b": "two"})).unwrap();
-		let mut input = bytes.to_vec();
+		let input = bytes.to_vec();
 		let parsed: slipstream_json::OwnedValue =
-			slipstream_json::to_owned_value(&mut input).unwrap();
+			slipstream_json::to_owned_value(&input).unwrap();
 		assert_eq!(parsed, json!({"a": 1, "b": "two"}));
 	}
 
@@ -88,9 +88,9 @@ mod tests {
 			}
 		}))
 		.unwrap();
-		let mut input = bytes.to_vec();
+		let input = bytes.to_vec();
 		let parsed: slipstream_json::OwnedValue =
-			slipstream_json::to_owned_value(&mut input).unwrap();
+			slipstream_json::to_owned_value(&input).unwrap();
 		let events = parsed["rooms"]["join"]["!room:example.com"]["timeline"]["events"]
 			.as_array()
 			.unwrap();

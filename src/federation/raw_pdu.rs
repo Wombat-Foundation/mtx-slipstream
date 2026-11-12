@@ -1,67 +1,62 @@
 //! Direct `OwnedValue` → bytes conversion.
 //!
-//! The current pipeline for federation PDUs is:
+//! The pipeline for federation PDUs is:
 //! ```text
-//! DB (JSON text) → simd_json::from_slice → OwnedValue → patch → simd-json → bytes
+//! DB (JSON text) → rezzy-json parse → OwnedValue → patch → canonical bytes
 //! ```
 //!
-//! This module provides:
-//! 1. **simd-json parsing** — use `simd_json::from_slice` instead of
-//!    `serde_json::from_slice` for SIMD-accelerated deserialization of PDUs
-//!    from the database.
-//! 2. **Direct serialization** — serialize `OwnedValue` directly to bytes,
-//!    skipping the `Box<RawValue>` intermediate allocation.
+//! Parsing, the value model and the strict canonical writer all live in
+//! `rezzy-json`; this module only adapts them to `BytesMut` and the PDU
+//! helpers below.
 
 use std::io;
 
-use crate::slipstream_json as simd_json;
-use crate::slipstream_json::{OwnedValue, prelude::*};
-use bytes::{BufMut, BytesMut};
+use crate::slipstream_json as sjson;
+use bytes::BytesMut;
 
-use crate::writer::BufWriter;
 use alloc::string::String;
 use alloc::vec::Vec;
 
-/// Parse JSON bytes using simd-json (SIMD-accelerated).
+/// Parse trusted JSON bytes (permissive: a repeated object key keeps its last
+/// value).
 ///
-/// The input buffer is mutated in-place during parsing (simd-json's
-/// `ScratchSpace` strategy), so the caller should not rely on the buffer
-/// contents after this call.
+/// Do not use this at a trust boundary; use [`parse_pdu_json`], which rejects
+/// duplicate keys.
 ///
 /// # Errors
 ///
-/// Returns `simd_json::Error` if the input is not valid JSON.
+/// Returns `sjson::Error` if the input is not valid JSON.
 #[inline]
-pub fn parse_jsonsimd(buf: &mut [u8]) -> Result<simd_json::OwnedValue, simd_json::Error> {
-	simd_json::to_owned_value(buf)
+pub fn parse_json_bytes(buf: &[u8]) -> Result<sjson::OwnedValue, sjson::Error> {
+	sjson::to_owned_value(buf)
 }
 
-/// Parse a JSON string using simd-json.
+/// Parse a trusted JSON string (permissive; see [`parse_json_bytes`]).
 ///
 /// # Errors
 ///
-/// Returns `simd_json::Error` if the input is not valid JSON.
+/// Returns `sjson::Error` if the input is not valid JSON.
 #[inline]
-pub fn parse_jsonsimd_str(s: &mut str) -> Result<simd_json::OwnedValue, simd_json::Error> {
-	let mut buf = s.as_bytes().to_vec();
-	simd_json::to_owned_value(&mut buf)
+pub fn parse_json_str(s: &str) -> Result<sjson::OwnedValue, sjson::Error> {
+	sjson::to_owned_value(s.as_bytes())
 }
 
-/// Parse JSON bytes from the database using simd-json.
+/// Parse PDU JSON bytes, rejecting duplicate object keys.
 ///
-/// This is optimized for the PDU reading path where we fetch JSON text from
-/// `RocksDB` and need to deserialize it into an `OwnedValue`.
-///
-/// # Arguments
-///
-/// * `buf` - The raw JSON bytes from the database. **Mutated in-place** by
-///   simd-json's parsing strategy.
+/// A permissive parse collapses `{"a":1,"a":2}` to `{"a":2}` before the value
+/// is hashed or signed, so ingress must reject ambiguous input here: the
+/// parsed value can no longer tell that a key was repeated.
 ///
 /// # Errors
 ///
-/// Returns `simd_json::Error` if the input is not valid JSON.
-pub fn parse_pdu_json(buf: &mut [u8]) -> Result<simd_json::OwnedValue, simd_json::Error> {
-	simd_json::to_owned_value(buf)
+/// Returns `sjson::Error::DuplicateKey` for a repeated key, and an error if
+/// the input is not valid UTF-8 or not valid JSON.
+pub fn parse_pdu_json(buf: &[u8]) -> Result<sjson::OwnedValue, sjson::Error> {
+	// `parse_bytes_strict` is the eventual direct entry point, but this tree
+	// pins a rezzy revision that predates it; UTF-8 + `parse_strict` gives the
+	// same duplicate-key rejection until the dependency is bumped.
+	let text = core::str::from_utf8(buf).map_err(|_| sjson::Error::InvalidString)?;
+	sjson::OwnedValue::parse_strict(text)
 }
 
 /// Serialize an `OwnedValue` directly to a `BytesMut` buffer.
@@ -69,12 +64,13 @@ pub fn parse_pdu_json(buf: &mut [u8]) -> Result<simd_json::OwnedValue, simd_json
 /// # Errors
 ///
 /// Returns `io::Error` if serialization fails.
-pub fn canonical_to_bytes(pdu: &simd_json::OwnedValue) -> io::Result<BytesMut> {
-	// TODO: enforce canonical-input whitespace rules at the tokenizer boundary:
-	// no spaces, tabs, or newlines outside JSON string values.
-	let mut buf = BytesMut::with_capacity(2048);
-	write_canonical_value(&mut buf, pdu)?;
-	Ok(buf)
+pub fn canonical_to_bytes(pdu: &sjson::OwnedValue) -> io::Result<BytesMut> {
+	// Canonicalization re-emits compact output, so input whitespace is
+	// irrelevant here. The strict canonical writer (sorted keys, no floats, integers within
+	// ±(2^53 - 1)) lives in `rezzy-json`; do not reimplement it here.
+	let bytes = rezzy::json::to_canonical_bytes(pdu)
+		.map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))?;
+	Ok(BytesMut::from(bytes.as_slice()))
 }
 
 /// Serialize an `OwnedValue` to a `String`.
@@ -86,7 +82,7 @@ pub fn canonical_to_bytes(pdu: &simd_json::OwnedValue) -> io::Result<BytesMut> {
 /// # Panics
 ///
 /// Panics if the serialized JSON is not valid UTF-8 (should never happen).
-pub fn canonical_to_string(pdu: &simd_json::OwnedValue) -> Result<String, std::io::Error> {
+pub fn canonical_to_string(pdu: &sjson::OwnedValue) -> Result<String, std::io::Error> {
 	let bytes = canonical_to_bytes(pdu)?;
 	Ok(String::from_utf8(bytes.to_vec()).expect("JSON serialization produces valid UTF-8"))
 }
@@ -100,7 +96,7 @@ pub fn canonical_to_string(pdu: &simd_json::OwnedValue) -> Result<String, std::i
 ///
 /// Returns `io::Error` if serialization fails.
 pub fn canonical_to_bytes_without(
-	pdu: &simd_json::OwnedValue,
+	pdu: &sjson::OwnedValue,
 	skip_fields: &[&str],
 ) -> io::Result<BytesMut> {
 	let mut val = pdu.clone();
@@ -112,74 +108,11 @@ pub fn canonical_to_bytes_without(
 	canonical_to_bytes(&val)
 }
 
-/// Matrix canonical JSON requires integers to round-trip exactly through an
-/// IEEE-754 double, i.e. within ±(2^53 - 1). See the Matrix spec's appendix
-/// on canonical JSON.
-const CANONICAL_MAX_SAFE_INT: i64 = 9_007_199_254_740_991;
-const CANONICAL_MIN_SAFE_INT: i64 = -9_007_199_254_740_991;
-
-fn write_canonical_value(buf: &mut BytesMut, value: &simd_json::OwnedValue) -> io::Result<()> {
-	if let Some(array) = value.as_array() {
-		buf.put_u8(b'[');
-		for (index, item) in array.iter().enumerate() {
-			if index > 0 {
-				buf.put_u8(b',');
-			}
-			write_canonical_value(buf, item)?;
-		}
-		buf.put_u8(b']');
-	} else if let Some(object) = value.as_object() {
-		let mut entries: Vec<_> = object.iter().collect();
-		entries.sort_unstable_by_key(|(left, _)| *left);
-
-		buf.put_u8(b'{');
-		for (index, (key, item)) in entries.iter().enumerate() {
-			if index > 0 {
-				buf.put_u8(b',');
-			}
-			OwnedValue::from(key.as_str()).write(&mut BufWriter(buf))?;
-			buf.put_u8(b':');
-			write_canonical_value(buf, item)?;
-		}
-		buf.put_u8(b'}');
-	} else {
-		// Matrix canonical JSON forbids floating-point values outright, and
-		// restricts integers to the range that round-trips exactly through
-		// an f64. Reject violations here rather than silently emitting
-		// non-canonical bytes that would fail interop event-hash checks
-		// against other homeservers.
-		if value.as_i64().is_none() && value.as_u64().is_none() && value.as_f64().is_some() {
-			return Err(io::Error::new(
-				io::ErrorKind::InvalidData,
-				"canonical JSON forbids floating-point values",
-			));
-		}
-		let out_of_range = value
-			.as_i64()
-			.map(|i| !(CANONICAL_MIN_SAFE_INT..=CANONICAL_MAX_SAFE_INT).contains(&i))
-			.or_else(|| {
-				value
-					.as_u64()
-					.map(|u| u > u64::try_from(CANONICAL_MAX_SAFE_INT).unwrap_or(u64::MAX))
-			})
-			.unwrap_or(false);
-		if out_of_range {
-			return Err(io::Error::new(
-				io::ErrorKind::InvalidData,
-				"integer exceeds canonical JSON safe range (+/-(2^53-1))",
-			));
-		}
-		value.write(&mut BufWriter(buf))?;
-	}
-
-	Ok(())
-}
-
 /// Remove fields from a JSON value in place.
 ///
 /// If `pdu` is an object, each field name in `skip_fields` is removed.
 /// Non-object values are left unchanged.
-pub fn remove_fields(pdu: &mut simd_json::OwnedValue, skip_fields: &[&str]) {
+pub fn remove_fields(pdu: &mut sjson::OwnedValue, skip_fields: &[&str]) {
 	if let Some(obj) = pdu.as_object_mut() {
 		for field in skip_fields {
 			obj.remove(*field);
@@ -304,29 +237,39 @@ fn has_top_level_key(body: &[u8], key: &str) -> bool {
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
-	use simd_json::json;
+	use sjson::json;
 
 	use super::*;
 
 	#[test]
-	fn test_parse_jsonsimd() {
-		let mut input = br#"{"event_id":"$abc","type":"m.room.create"}"#.to_vec();
-		let val = parse_jsonsimd(&mut input).unwrap();
+	fn test_parse_json_bytes() {
+		let input = br#"{"event_id":"$abc","type":"m.room.create"}"#;
+		let val = parse_json_bytes(input).unwrap();
 		assert_eq!(val["event_id"], "$abc");
 	}
 
 	#[test]
-	fn test_parse_jsonsimd_str() {
-		let mut input = r#"{"key":"value"}"#.to_string();
-		let val = parse_jsonsimd_str(&mut input).unwrap();
+	fn test_parse_json_str() {
+		let val = parse_json_str(r#"{"key":"value"}"#).unwrap();
 		assert_eq!(val["key"], "value");
 	}
 
 	#[test]
 	fn test_parse_pdu_json() {
-		let mut input = br#"{"event_id":"$abc","content":{}}"#.to_vec();
-		let val = parse_pdu_json(&mut input).unwrap();
+		let input = br#"{"event_id":"$abc","content":{}}"#;
+		let val = parse_pdu_json(input).unwrap();
 		assert_eq!(val["event_id"], "$abc");
+	}
+
+	#[test]
+	fn test_parse_pdu_json_rejects_duplicate_keys() {
+		assert!(matches!(parse_pdu_json(br#"{"a":1,"a":2}"#), Err(sjson::Error::DuplicateKey)));
+		assert!(matches!(
+			parse_pdu_json(br#"{"content":{"b":1,"b":1}}"#),
+			Err(sjson::Error::DuplicateKey)
+		));
+		// The permissive parser keeps the last value.
+		assert_eq!(parse_json_bytes(br#"{"a":1,"a":2}"#).unwrap()["a"].as_i64(), Some(2));
 	}
 
 	#[test]
@@ -337,8 +280,8 @@ mod tests {
 			"content": {"creator": "@user:example.com"}
 		});
 		let bytes = canonical_to_bytes(&obj).unwrap();
-		let mut input = bytes.to_vec();
-		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
+		let input = bytes.to_vec();
+		let parsed: sjson::OwnedValue = sjson::to_owned_value(&input).unwrap();
 		assert_eq!(parsed["event_id"], "$abc");
 	}
 
@@ -346,8 +289,8 @@ mod tests {
 	fn test_canonical_to_string() {
 		let obj = json!({"key": "value"});
 		let s = canonical_to_string(&obj).unwrap();
-		let mut input = s.into_bytes();
-		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
+		let input = s.into_bytes();
+		let parsed: sjson::OwnedValue = sjson::to_owned_value(&input).unwrap();
 		assert_eq!(parsed["key"], "value");
 	}
 
@@ -359,8 +302,8 @@ mod tests {
 			"type": "m.room.create"
 		});
 		let bytes = canonical_to_bytes_without(&obj, &["unsigned"]).unwrap();
-		let mut input = bytes.to_vec();
-		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
+		let input = bytes.to_vec();
+		let parsed: sjson::OwnedValue = sjson::to_owned_value(&input).unwrap();
 		assert_eq!(parsed["event_id"], "$abc");
 		assert!(parsed.get("unsigned").is_none());
 	}
@@ -425,8 +368,8 @@ mod tests {
 		let raw = br#"{"event_id":"$abc","type":"m.room.message"}"#;
 		let out = splice_insert_fields(raw, &[("unsigned", br#"{"age":42}"#)]);
 
-		let mut input = out.clone();
-		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
+		let input = out.clone();
+		let parsed: sjson::OwnedValue = sjson::to_owned_value(&input).unwrap();
 		assert_eq!(parsed["event_id"].as_str(), Some("$abc"));
 		assert_eq!(parsed["unsigned"]["age"].as_i64(), Some(42));
 	}
@@ -436,8 +379,8 @@ mod tests {
 		let raw = br"{}";
 		let out = splice_insert_fields(raw, &[("age", b"42")]);
 
-		let mut input = out.clone();
-		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
+		let input = out.clone();
+		let parsed: sjson::OwnedValue = sjson::to_owned_value(&input).unwrap();
 		assert_eq!(parsed["age"].as_i64(), Some(42));
 	}
 
@@ -446,8 +389,8 @@ mod tests {
 		let raw = br#"{"event_id":"$abc"}"#;
 		let out = splice_insert_fields(raw, &[("age", b"1"), ("transaction_id", br#""t1""#)]);
 
-		let mut input = out.clone();
-		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
+		let input = out.clone();
+		let parsed: sjson::OwnedValue = sjson::to_owned_value(&input).unwrap();
 		assert_eq!(parsed["event_id"].as_str(), Some("$abc"));
 		assert_eq!(parsed["age"].as_i64(), Some(1));
 		assert_eq!(parsed["transaction_id"].as_str(), Some("t1"));
@@ -467,8 +410,8 @@ mod tests {
 		let raw = b"{ }";
 		let out = splice_insert_fields(raw, &[("age", b"42")]);
 
-		let mut input = out.clone();
-		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
+		let input = out.clone();
+		let parsed: sjson::OwnedValue = sjson::to_owned_value(&input).unwrap();
 		assert_eq!(parsed["age"].as_i64(), Some(42));
 	}
 
@@ -477,8 +420,8 @@ mod tests {
 		let raw = br#"{"event_id":"$abc","age":1}"#;
 		let out = splice_insert_fields(raw, &[("age", b"999"), ("new_field", b"7")]);
 
-		let mut input = out.clone();
-		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
+		let input = out.clone();
+		let parsed: sjson::OwnedValue = sjson::to_owned_value(&input).unwrap();
 		// Existing "age" is left untouched, not duplicated or overwritten.
 		assert_eq!(parsed["age"].as_i64(), Some(1));
 		assert_eq!(parsed["new_field"].as_i64(), Some(7));
@@ -492,8 +435,8 @@ mod tests {
 		let raw = br#"{"content":{"age":5}}"#;
 		let out = splice_insert_fields(raw, &[("age", b"42")]);
 
-		let mut input = out.clone();
-		let parsed: simd_json::OwnedValue = simd_json::to_owned_value(&mut input).unwrap();
+		let input = out.clone();
+		let parsed: sjson::OwnedValue = sjson::to_owned_value(&input).unwrap();
 		assert_eq!(parsed["age"].as_i64(), Some(42));
 		assert_eq!(parsed["content"]["age"].as_i64(), Some(5));
 	}
