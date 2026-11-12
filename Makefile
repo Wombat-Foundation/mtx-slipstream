@@ -56,6 +56,17 @@ doc: ##H Build docs
 
 
 
+.PHONY: publish
+publish: ##H Preview package and simulate dry-run publish
+	@echo "Note: the dry-run requires every dependency to be publishable."
+	@echo "Previewing packaged files..."
+	@echo "-----------------------------------"
+	$(CARGO) +nightly package --list
+	@echo ""
+	@echo "Simulating publish (--dry-run)"
+	@echo "-----------------------------------"
+	$(CARGO) +nightly publish --dry-run
+
 .PHONY: test
 test: ##H Run tests
 	$(CARGO) test --lib --tests --timings --all-targets --all-features
