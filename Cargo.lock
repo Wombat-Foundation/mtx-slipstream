@@ -201,9 +201,9 @@ dependencies = [
 
 [[package]]
 name = "itoa"
-version = "1.0.18"
+version = "1.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
+checksum = "3bd1574e617a9a6c1f8f8181bd7e841e1f20e4277607ef28945765188d6284d4"
 
 [[package]]
 name = "libc"
@@ -280,7 +280,7 @@ checksum = "63b8176103e19a2643978565ca18b50549f6101881c443590420e4dc998a3c69"
 [[package]]
 name = "rezzy"
 version = "0.6.0-rc.1"
-source = "git+https://gitlab.com/wombat-foundation/rezzy.git?branch=dev#bd1638277c4858532e5535eea08136384b898453"
+source = "git+https://gitlab.com/wombat-foundation/rezzy.git?branch=dev#1e9a142ef4e23d9ab7168bbe37a698b617d3c539"
 dependencies = [
  "base64",
  "blake3",
@@ -295,7 +295,7 @@ dependencies = [
 [[package]]
 name = "rezzy-json"
 version = "0.6.0-rc.1"
-source = "git+https://gitlab.com/wombat-foundation/rezzy.git?branch=dev#bd1638277c4858532e5535eea08136384b898453"
+source = "git+https://gitlab.com/wombat-foundation/rezzy.git?branch=dev#1e9a142ef4e23d9ab7168bbe37a698b617d3c539"
 dependencies = [
  "ryu",
 ]
@@ -303,7 +303,7 @@ dependencies = [
 [[package]]
 name = "rezzy-log"
 version = "0.6.0-rc.1"
-source = "git+https://gitlab.com/wombat-foundation/rezzy.git?branch=dev#bd1638277c4858532e5535eea08136384b898453"
+source = "git+https://gitlab.com/wombat-foundation/rezzy.git?branch=dev#1e9a142ef4e23d9ab7168bbe37a698b617d3c539"
 dependencies = [
  "tracing",
 ]
@@ -311,7 +311,7 @@ dependencies = [
 [[package]]
 name = "rezzy-recon"
 version = "0.6.0-rc.1"
-source = "git+https://gitlab.com/wombat-foundation/rezzy.git?branch=dev#bd1638277c4858532e5535eea08136384b898453"
+source = "git+https://gitlab.com/wombat-foundation/rezzy.git?branch=dev#1e9a142ef4e23d9ab7168bbe37a698b617d3c539"
 dependencies = [
  "base64",
  "blake3",
