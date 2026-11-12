@@ -804,15 +804,21 @@ impl fmt::Display for OwnedServerName {
 pub struct OwnedUserId(alloc::string::String);
 pub type UserId = OwnedUserId;
 impl OwnedUserId {
-	/// Parses a Matrix identifier, checking its grammar.
+	/// Parses a Matrix user ID (`@localpart:server`), checking its grammar.
+	///
+	/// This accepts historical Matrix user IDs (for example, ones whose
+	/// localpart is not fully conforming); use [`Self::validate_strict`] for the
+	/// current grammar. Cygnus user principals are not Matrix user IDs and are
+	/// rejected here; wire fields that can carry either an event sender or a
+	/// user state key should use [`OwnedUserIdOrPrincipal`] instead.
 	///
 	/// # Errors
 	///
-	/// Returns [`MatrixIdParseError`] if `value` does not match the
-	/// identifier's grammar.
+	/// Returns [`MatrixIdParseError`] if `value` does not match the Matrix user
+	/// ID grammar.
 	pub fn parse(value: impl AsRef<str>) -> Result<Self, MatrixIdParseError> {
 		let value = value.as_ref();
-		if crate::id_validation::user_id(value) {
+		if crate::id_validation::matrix_user_id(value) {
 			Ok(Self(value.to_owned()))
 		} else {
 			Err(MatrixIdParseError)
@@ -941,9 +947,153 @@ impl OwnedUserId {
 	///
 	/// Returns an error when the identifier does not match the Matrix user ID grammar.
 	pub fn validate_strict(&self) -> Result<(), MatrixIdParseError> {
-		let conforming = crate::id_validation::user_id(self.as_str())
+		let conforming = crate::id_validation::matrix_user_id(self.as_str())
 			&& crate::id_validation::user_localpart_is_fully_conforming(self.localpart());
 		conforming.then_some(()).ok_or(MatrixIdParseError)
+	}
+}
+
+/// A Matrix user ID or a Cygnus user principal.
+///
+/// This is the wire-level type for fields that may legitimately carry either
+/// form: a room event's `sender`, or a user `state_key` in a Cygnus room
+/// version. Ordinary user-ID fields use [`OwnedUserId`], which rejects
+/// principals.
+///
+/// Parsing only checks the identifier grammar. It does not establish protocol
+/// validity: callers must still reject a principal outside Cygnus rooms.
+#[derive(Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct OwnedUserIdOrPrincipal(alloc::string::String);
+pub type UserIdOrPrincipal = OwnedUserIdOrPrincipal;
+impl OwnedUserIdOrPrincipal {
+	/// Parses a Matrix user ID or a Cygnus user principal, checking its grammar.
+	///
+	/// This accepts both forms; use [`OwnedUserId::parse`] for fields that must
+	/// not carry a principal. Acceptance here does not establish protocol
+	/// validity, because a principal is only permitted in a Cygnus room version.
+	///
+	/// # Errors
+	///
+	/// Returns [`MatrixIdParseError`] if `value` is neither a Matrix user ID nor
+	/// a canonical Cygnus user principal.
+	pub fn parse(value: impl AsRef<str>) -> Result<Self, MatrixIdParseError> {
+		let value = value.as_ref();
+		if crate::id_validation::user_id_or_principal(value) {
+			Ok(Self(value.to_owned()))
+		} else {
+			Err(MatrixIdParseError)
+		}
+	}
+	/// Constructs a value from one already validated by the caller, such as a
+	/// trusted database row or a value generated here.
+	///
+	/// This bypasses grammar validation and must not be used for wire or
+	/// request data.
+	#[allow(dead_code)]
+	pub(crate) fn from_trusted(value: impl Into<alloc::string::String>) -> Self {
+		Self(value.into())
+	}
+	#[must_use]
+	pub fn as_str(&self) -> &str {
+		&self.0
+	}
+	#[must_use]
+	pub fn as_bytes(&self) -> &[u8] {
+		self.0.as_bytes()
+	}
+	/// The Matrix user ID, or `None` if this is a Cygnus principal.
+	#[must_use]
+	pub fn as_user_id(&self) -> Option<OwnedUserId> {
+		crate::id_validation::matrix_user_id(self.as_str())
+			.then(|| OwnedUserId::from_trusted(self.0.clone()))
+	}
+}
+impl TryFrom<alloc::string::String> for OwnedUserIdOrPrincipal {
+	type Error = MatrixIdParseError;
+	fn try_from(value: alloc::string::String) -> Result<Self, Self::Error> {
+		Self::parse(value)
+	}
+}
+impl TryFrom<&str> for OwnedUserIdOrPrincipal {
+	type Error = MatrixIdParseError;
+	fn try_from(value: &str) -> Result<Self, Self::Error> {
+		Self::parse(value)
+	}
+}
+impl core::str::FromStr for OwnedUserIdOrPrincipal {
+	type Err = MatrixIdParseError;
+	fn from_str(value: &str) -> Result<Self, Self::Err> {
+		Self::parse(value)
+	}
+}
+impl TryFrom<OwnedUserIdOrPrincipal> for OwnedUserId {
+	type Error = MatrixIdParseError;
+	fn try_from(value: OwnedUserIdOrPrincipal) -> Result<Self, Self::Error> {
+		Self::parse(value.0)
+	}
+}
+impl From<OwnedUserId> for OwnedUserIdOrPrincipal {
+	fn from(value: OwnedUserId) -> Self {
+		Self(value.0)
+	}
+}
+impl From<&OwnedUserIdOrPrincipal> for alloc::string::String {
+	fn from(value: &OwnedUserIdOrPrincipal) -> Self {
+		value.0.clone()
+	}
+}
+impl From<OwnedUserIdOrPrincipal> for alloc::string::String {
+	fn from(value: OwnedUserIdOrPrincipal) -> Self {
+		value.0
+	}
+}
+impl AsRef<[u8]> for OwnedUserIdOrPrincipal {
+	fn as_ref(&self) -> &[u8] {
+		self.0.as_bytes()
+	}
+}
+impl AsRef<str> for OwnedUserIdOrPrincipal {
+	fn as_ref(&self) -> &str {
+		self.as_str()
+	}
+}
+impl AsRef<OwnedUserIdOrPrincipal> for OwnedUserIdOrPrincipal {
+	fn as_ref(&self) -> &OwnedUserIdOrPrincipal {
+		self
+	}
+}
+impl Borrow<str> for OwnedUserIdOrPrincipal {
+	fn borrow(&self) -> &str {
+		self.as_str()
+	}
+}
+impl Deref for OwnedUserIdOrPrincipal {
+	type Target = str;
+	fn deref(&self) -> &str {
+		self.as_str()
+	}
+}
+impl fmt::Debug for OwnedUserIdOrPrincipal {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.debug_tuple(stringify!(OwnedUserIdOrPrincipal)).field(&self.0).finish()
+	}
+}
+impl codec::Serialize for OwnedUserIdOrPrincipal {
+	fn to_json(&self) -> json::Value {
+		json::Value::String(self.0.clone())
+	}
+}
+impl codec::Deserialize for OwnedUserIdOrPrincipal {
+	fn from_json(value: &json::Value) -> Result<Self, codec::DeError> {
+		value
+			.as_str()
+			.and_then(|text| Self::parse(text).ok())
+			.ok_or_else(|| codec::DeError::expected(stringify!(OwnedUserIdOrPrincipal)))
+	}
+}
+impl fmt::Display for OwnedUserIdOrPrincipal {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.write_str(self.as_str())
 	}
 }
 #[derive(Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]

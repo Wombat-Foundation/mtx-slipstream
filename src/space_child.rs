@@ -128,7 +128,7 @@ mod tests {
 #[derive(Debug, Eq, PartialEq)]
 pub struct HierarchySpaceChildEvent {
 	pub content: SpaceChildEventContent,
-	pub sender: crate::OwnedUserId,
+	pub sender: crate::OwnedUserIdOrPrincipal,
 	/// The child room.
 	pub state_key: crate::OwnedRoomId,
 	pub origin_server_ts: crate::MilliSecondsSinceUnixEpoch,

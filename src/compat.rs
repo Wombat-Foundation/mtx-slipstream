@@ -6,6 +6,7 @@ use core::fmt;
 use crate::{
 	IdParseError, JsParseIntError, JsTryFromIntError, MxcUriError, OwnedEventId,
 	OwnedRoomAliasId, OwnedRoomId, OwnedRoomOrAliasId, OwnedServerName, OwnedUserId,
+	OwnedUserIdOrPrincipal,
 	api::client::error::{Error, ErrorKind},
 	events::room::member::MembershipState,
 	http_headers::{ContentDisposition, ContentDispositionParseError, ContentDispositionType},
@@ -211,6 +212,31 @@ impl PartialEq<String> for OwnedUserId {
 		self.as_str() == other
 	}
 }
+impl PartialEq<str> for OwnedUserIdOrPrincipal {
+	fn eq(&self, other: &str) -> bool {
+		self.as_str() == other
+	}
+}
+impl PartialEq<&str> for OwnedUserIdOrPrincipal {
+	fn eq(&self, other: &&str) -> bool {
+		self.as_str() == *other
+	}
+}
+impl PartialEq<OwnedUserIdOrPrincipal> for &str {
+	fn eq(&self, other: &OwnedUserIdOrPrincipal) -> bool {
+		*self == other.as_str()
+	}
+}
+impl PartialEq<OwnedUserIdOrPrincipal> for str {
+	fn eq(&self, other: &OwnedUserIdOrPrincipal) -> bool {
+		self == other.as_str()
+	}
+}
+impl PartialEq<String> for OwnedUserIdOrPrincipal {
+	fn eq(&self, other: &String) -> bool {
+		self.as_str() == other
+	}
+}
 impl PartialEq<str> for OwnedRoomOrAliasId {
 	fn eq(&self, other: &str) -> bool {
 		self.as_str() == other
@@ -276,11 +302,7 @@ impl OwnedServerName {
 impl OwnedUserId {
 	#[must_use]
 	pub fn localpart(&self) -> &str {
-		self.as_str()
-			.strip_prefix('@')
-			.unwrap_or(self.as_str())
-			.split_once(':')
-			.map_or(self.as_str(), |(local, _)| local)
+		id_localpart(self.as_str())
 	}
 	/// Builds a user ID from a localpart and an explicit server name.
 	///
@@ -298,13 +320,54 @@ impl OwnedUserId {
 		Self::parse(alloc::format!("@{localpart}:{}", server_name.as_str()))
 	}
 
+	/// The server name of this user ID, or `None` if it was constructed from an
+	/// unchecked value without one.
+	///
+	/// Parsed [`OwnedUserId`] values always have a server name; Cygnus
+	/// principals use [`OwnedUserIdOrPrincipal`] instead.
+	#[must_use]
+	pub fn server_name_opt(&self) -> Option<OwnedServerName> {
+		crate::server_part(self.as_str())
+	}
+
 	#[must_use]
 	///
 	/// # Panics
 	///
-	/// Panics if this value is not a valid user ID with a server name.
+	/// Panics if this value was constructed from an unchecked value that is not
+	/// a valid user ID with a server name. Parsed [`OwnedUserId`] values always
+	/// have one; Cygnus principals use [`OwnedUserIdOrPrincipal`] instead.
 	pub fn server_name(&self) -> OwnedServerName {
-		crate::server_part(self.as_str()).expect("validated user ID must have a server name")
+		self.server_name_opt().expect("user ID has no server name")
+	}
+}
+impl OwnedUserIdOrPrincipal {
+	/// Whether this is a Matrix user ID (`@localpart:server`), as opposed to a
+	/// Cygnus user principal (`@` plus a 43-character base64url digest).
+	#[must_use]
+	pub fn is_matrix_user_id(&self) -> bool {
+		crate::id_validation::matrix_user_id(self.as_str())
+	}
+
+	/// Whether this is a Cygnus user principal (`@` plus a 43-character
+	/// base64url digest). Principals have no localpart/server split and are
+	/// only valid as event senders or user state keys in Cygnus rooms.
+	#[must_use]
+	pub fn is_principal(&self) -> bool {
+		crate::id_validation::user_principal(self.as_str())
+	}
+
+	/// The part after the `@` sigil and before the first `:`, or the digest
+	/// without its `@` sigil for a Cygnus principal.
+	#[must_use]
+	pub fn localpart(&self) -> &str {
+		id_localpart(self.as_str())
+	}
+
+	/// The server name, or `None` for a Cygnus principal.
+	#[must_use]
+	pub fn server_name(&self) -> Option<OwnedServerName> {
+		crate::server_part(self.as_str())
 	}
 }
 /// The part of an identifier between its sigil and the first `:`.

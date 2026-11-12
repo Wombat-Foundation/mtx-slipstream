@@ -1,4 +1,4 @@
-use crate::{MilliSecondsSinceUnixEpoch, OwnedUserId};
+use crate::{MilliSecondsSinceUnixEpoch, OwnedUserIdOrPrincipal};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Default)]
 pub enum PresenceState {
@@ -58,7 +58,7 @@ pub struct PresenceEventContent {
 
 #[derive(Debug)]
 pub struct PresenceEvent {
-	pub sender: OwnedUserId,
+	pub sender: OwnedUserIdOrPrincipal,
 	pub content: PresenceEventContent,
 	pub origin_server_ts: Option<MilliSecondsSinceUnixEpoch>,
 }

@@ -47,9 +47,9 @@ fn dns_name(value: &str) -> bool {
 		&& value.bytes().all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'.')
 }
 
-/// `@localpart:server`.
+/// A Matrix user ID (`@localpart:server`), without the Cygnus principal form.
 #[must_use]
-pub fn user_id(value: &str) -> bool {
+pub fn matrix_user_id(value: &str) -> bool {
 	value.len() <= MAX_BYTES
 		&& value.strip_prefix('@').and_then(|rest| rest.split_once(':')).is_some_and(
 			|(local, server)| {
@@ -60,6 +60,61 @@ pub fn user_id(value: &str) -> bool {
 				!local.contains('\0') && server_name(server)
 			},
 		)
+}
+
+/// A single Cygnus principal: `~` or `@` plus the unpadded base64url encoding
+/// of a 32-byte digest (43 characters).
+///
+/// The final base64url character carries only four meaningful bits for 32
+/// bytes, so only encodings whose low two bits are zero are canonical.
+#[must_use]
+pub fn principal(value: &str) -> bool {
+	value.len() == 44
+		&& (value.starts_with('~') || value.starts_with('@'))
+		&& principal_body(&value[1..])
+}
+
+/// A Cygnus user principal (`@` plus a principal digest).
+#[must_use]
+pub fn user_principal(value: &str) -> bool {
+	value.len() == 44 && value.starts_with('@') && principal_body(&value[1..])
+}
+
+fn principal_body(value: &str) -> bool {
+	value.len() == 43
+		&& value.bytes().all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_')
+		&& matches!(
+			value.as_bytes()[42],
+			b'A' | b'E'
+				| b'I'
+				| b'M'
+				| b'Q'
+				| b'U'
+				| b'Y'
+				| b'c'
+				| b'g'
+				| b'k'
+				| b'o'
+				| b's'
+				| b'w'
+				| b'0'
+				| b'4'
+				| b'8'
+		)
+}
+
+/// A Matrix user ID or a Cygnus user principal, for wire fields that can carry
+/// either form.
+///
+/// Cygnus room-version events carry principals in their `sender` and user
+/// `state_key` fields, where ordinary Matrix rooms carry a user ID. This is the
+/// permissive grammar check for those fields only; ordinary user-ID fields
+/// must use [`matrix_user_id`] (as `OwnedUserId` does). It does not establish
+/// protocol validity: callers must still reject principals outside Cygnus
+/// rooms.
+#[must_use]
+pub fn user_id_or_principal(value: &str) -> bool {
+	matrix_user_id(value) || user_principal(value)
 }
 
 /// Whether a user ID localpart is "fully conforming" to the current grammar
@@ -161,18 +216,82 @@ mod tests {
 
 	#[test]
 	fn user_ids() {
-		assert!(user_id("@alice:example.org"));
-		assert!(user_id("@Alice.Weird=chars/+:example.org:8448"));
+		assert!(matrix_user_id("@alice:example.org"));
+		assert!(matrix_user_id("@Alice.Weird=chars/+:example.org:8448"));
 		for bad in
 			["alice:example.org", "@alice", "@alice:", "@a:b c", "!a:b", "@a\0b:example.org"]
 		{
-			assert!(!user_id(bad), "{bad}");
+			assert!(!matrix_user_id(bad), "{bad}");
 		}
 		// Historical IDs are accepted (appendices, "Historical User IDs"), even the
 		// empty localpart, which is merely non-compliant.
-		assert!(user_id("@:example.org"));
+		assert!(matrix_user_id("@:example.org"));
 		let long = alloc::format!("@{}:example.org", "a".repeat(250));
-		assert!(!user_id(&long));
+		assert!(!matrix_user_id(&long));
+	}
+
+	#[test]
+	fn cygnus_principals() {
+		let user = "@Cl5rPGgj2s7JHMwFxSEOHfFYM_K0PDpnhXEMYwMgQuo";
+		let server = "~soEUx9hiteZoLx9OwBJ94-GCuVrDksXROkIYuLn8Lb0";
+
+		assert!(principal(user));
+		assert!(principal(server));
+		assert!(user_principal(user));
+		assert!(!user_principal(server));
+		assert!(user_id_or_principal(user), "a Cygnus user principal is a wire user ID");
+		assert!(!user_id_or_principal(server), "a server principal is not a user ID");
+		assert!(matrix_user_id("@alice:example.org"));
+		assert!(!matrix_user_id(user));
+
+		// Exactly 43 base64url characters after the sigil, canonical trailing bits.
+		for bad in [
+			"@Cl5rPGgj2s7JHMwFxSEOHfFYM_K0PDpnhXEMYwMgQu",   // 42
+			"@Cl5rPGgj2s7JHMwFxSEOHfFYM_K0PDpnhXEMYwMgQuoo", // 44
+			"@Cl5rPGgj2s7JHMwFxSEOHfFYM_K0PDpnhXEMYwMgQu=",  // padding
+			"@Cl5rPGgj2s7JHMwFxSEOHfFYM_K0PDpnhXEMYwMgQu+",  // standard base64
+			"@Cl5rPGgj2s7JHMwFxSEOHfFYM_K0PDpnhXEMYwMgQu/",  // standard base64
+			"@Cl5rPGgj2s7JHMwFxSEOHfFYM_K0PDpnhXEMYwMgQuB",  // nonzero trailing bits
+			"Cl5rPGgj2s7JHMwFxSEOHfFYM_K0PDpnhXEMYwMgQuo",   // no sigil
+		] {
+			assert!(!principal(bad), "{bad}");
+		}
+		assert!(!user_principal(server), "server principals are not user IDs");
+
+		// The all-zero digest is canonical and must remain valid.
+		assert!(user_principal("@AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"));
+
+		// Principals are only accepted by the wire-level union type, never by
+		// ordinary user-ID fields.
+		assert!(crate::OwnedUserId::parse(user).is_err());
+		assert!(
+			crate::codec::from_str::<crate::OwnedUserId>(&alloc::format!("\"{user}\"")).is_err()
+		);
+
+		let parsed = crate::OwnedUserIdOrPrincipal::parse(user).unwrap();
+		assert!(parsed.is_principal());
+		assert!(!parsed.is_matrix_user_id());
+		assert_eq!(parsed.server_name(), None);
+		assert_eq!(parsed.localpart(), &user[1..]);
+		assert!(parsed.as_user_id().is_none());
+		assert!(crate::OwnedUserId::try_from(parsed.clone()).is_err());
+		let encoded = crate::codec::to_string(&parsed);
+		assert_eq!(
+			crate::codec::from_str::<crate::OwnedUserIdOrPrincipal>(&encoded).unwrap(),
+			parsed
+		);
+
+		let m = crate::OwnedUserIdOrPrincipal::parse("@alice:example.org").unwrap();
+		assert!(!m.is_principal());
+		assert!(m.is_matrix_user_id());
+		assert_eq!(m.server_name().unwrap().as_str(), "example.org");
+		assert_eq!(m.localpart(), "alice");
+		assert_eq!(m.as_user_id().unwrap().as_str(), "@alice:example.org");
+		assert!(crate::OwnedUserId::try_from(m).is_ok());
+		let strict = crate::OwnedUserId::parse("@alice:example.org").unwrap();
+		assert_eq!(strict.server_name_opt().unwrap().as_str(), "example.org");
+		assert_eq!(strict.localpart(), "alice");
+		assert!(strict.validate_strict().is_ok());
 	}
 
 	#[test]
