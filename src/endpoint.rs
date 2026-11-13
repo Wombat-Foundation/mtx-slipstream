@@ -1054,6 +1054,23 @@ macro_rules! endpoint_request_raw_impl {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! endpoint_response_impl {
+	(strict; body { $($field:ident => $key:literal $(= $default:expr)?),* $(,)? }) => {
+		impl $crate::endpoint::EndpointResponse for Response {
+			const REJECT_DUPLICATE_KEYS: bool = true;
+
+			fn to_body(&self) -> $crate::json::Value {
+				$crate::endpoint::body_object(&mut [$(($key, $crate::endpoint::enc(&self.$field))),*])
+			}
+
+			fn from_body(body: &$crate::json::Value) -> $crate::endpoint::Parsed<Self> {
+				#[allow(unused_variables)]
+				let input = $crate::endpoint::Input::body_only(body);
+				Ok(Self {
+					$($field: $crate::endpoint_body_field!(input, $key $(, $default)?),)*
+				})
+			}
+		}
+	};
 	(body { $($field:ident => $key:literal $(= $default:expr)?),* $(,)? }) => {
 		impl $crate::endpoint::EndpointResponse for Response {
 			fn to_body(&self) -> $crate::json::Value {

@@ -36,6 +36,7 @@ pub mod send_knock {
 			}
 		}
 		crate::endpoint_response_impl! {
+			strict;
 			body { knock_room_state => "knock_room_state" }
 		}
 	}

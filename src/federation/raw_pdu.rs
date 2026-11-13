@@ -12,7 +12,7 @@
 use std::io;
 
 use crate::slipstream_json as sjson;
-use bytes::BytesMut;
+use bytes::{BufMut, BytesMut};
 
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -63,9 +63,9 @@ pub fn parse_pdu_json(buf: &[u8]) -> Result<sjson::OwnedValue, sjson::Error> {
 ///
 /// The signed portion is validated with the strict Matrix number rules
 /// (compact output, sorted keys, no floats, integers within ±(2^53 - 1)).
-/// Only the PDU's top-level `unsigned` field is excluded from signing, so it
-/// is not number-validated and is re-emitted unchanged; nested fields are
-/// validated as usual.
+/// The PDU's top-level `signatures` and `unsigned` fields are excluded from
+/// signing, so they are not number-validated and are re-emitted unchanged;
+/// nested fields are validated as usual.
 ///
 /// Validation happens before anything is appended, so `out` is unchanged when
 /// this returns an error.
@@ -76,21 +76,83 @@ pub fn parse_pdu_json(buf: &[u8]) -> Result<sjson::OwnedValue, sjson::Error> {
 /// integer outside the canonical safe range.
 pub fn write_canonical_into(pdu: &sjson::OwnedValue, out: &mut BytesMut) -> io::Result<()> {
 	validate_signed_numbers(pdu)?;
-	let text = rezzy::json::write_string_value(pdu)
-		.map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))?;
-	out.extend_from_slice(text.as_bytes());
+	write_value_into(out, pdu);
 	Ok(())
+}
+
+fn write_value_into(out: &mut BytesMut, value: &sjson::OwnedValue) {
+	use sjson::OwnedValue as Value;
+
+	match value {
+		Value::Null => out.extend_from_slice(b"null"),
+		Value::Bool(true) => out.extend_from_slice(b"true"),
+		Value::Bool(false) => out.extend_from_slice(b"false"),
+		Value::Number(number) => out.extend_from_slice(number.as_str().as_bytes()),
+		Value::String(value) => write_string_into(out, value),
+		Value::Array(items) => {
+			out.put_u8(b'[');
+			for (index, item) in items.iter().enumerate() {
+				if index > 0 {
+					out.put_u8(b',');
+				}
+				write_value_into(out, item);
+			}
+			out.put_u8(b']');
+		}
+		Value::Object(object) => {
+			out.put_u8(b'{');
+			for (index, (key, item)) in object.iter().enumerate() {
+				if index > 0 {
+					out.put_u8(b',');
+				}
+				write_string_into(out, key);
+				out.put_u8(b':');
+				write_value_into(out, item);
+			}
+			out.put_u8(b'}');
+		}
+	}
+}
+
+fn write_string_into(out: &mut BytesMut, value: &str) {
+	const HEX: &[u8; 16] = b"0123456789abcdef";
+	out.put_u8(b'"');
+	let bytes = value.as_bytes();
+	let mut run = 0;
+	for (index, &byte) in bytes.iter().enumerate() {
+		if byte >= 0x20 && byte != b'"' && byte != b'\\' {
+			continue;
+		}
+		out.extend_from_slice(&bytes[run..index]);
+		match byte {
+			b'"' => out.extend_from_slice(b"\\\""),
+			b'\\' => out.extend_from_slice(b"\\\\"),
+			0x08 => out.extend_from_slice(b"\\b"),
+			0x0c => out.extend_from_slice(b"\\f"),
+			b'\n' => out.extend_from_slice(b"\\n"),
+			b'\r' => out.extend_from_slice(b"\\r"),
+			b'\t' => out.extend_from_slice(b"\\t"),
+			_ => {
+				out.extend_from_slice(b"\\u00");
+				out.put_u8(HEX[usize::from(byte >> 4)]);
+				out.put_u8(HEX[usize::from(byte & 0x0f)]);
+			}
+		}
+		run = index.checked_add(1).expect("byte index is within the input length");
+	}
+	out.extend_from_slice(&bytes[run..]);
+	out.put_u8(b'"');
 }
 
 /// Validates the numbers in a PDU's signed portion without serializing it.
 ///
-/// The signature covers everything except the top-level `unsigned` key, so
-/// that key alone is skipped; any `unsigned` nested further down is still
-/// part of the signed data and is validated.
+/// The signature covers everything except the top-level `signatures` and
+/// `unsigned` keys, so those keys alone are skipped; nested occurrences are
+/// still part of the signed data and are validated.
 fn validate_signed_numbers(pdu: &sjson::OwnedValue) -> io::Result<()> {
 	if let sjson::OwnedValue::Object(object) = pdu {
 		for (key, value) in object {
-			if key != "unsigned" {
+			if key != "unsigned" && key != "signatures" {
 				validate_numbers(value)?;
 			}
 		}

@@ -39,6 +39,7 @@ pub mod get_backfill {
 			}
 		}
 		crate::endpoint_response_impl! {
+			strict;
 			body { origin => "origin", origin_server_ts => "origin_server_ts", pdus => "pdus" }
 		}
 	}

@@ -34,6 +34,7 @@ pub mod v1 {
 		}
 	}
 	crate::endpoint_response_impl! {
+		strict;
 		body { pdus => "pdus", auth_chain => "auth_chain" }
 	}
 

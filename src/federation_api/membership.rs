@@ -112,6 +112,7 @@ pub mod prepare_join_event {
 			}
 		}
 		crate::endpoint_response_impl! {
+			strict;
 			body { room_version => "room_version", event => "event" }
 		}
 	}
@@ -149,6 +150,7 @@ pub mod prepare_leave_event {
 			}
 		}
 		crate::endpoint_response_impl! {
+			strict;
 			body { room_version => "room_version", event => "event" }
 		}
 	}
@@ -191,6 +193,8 @@ pub mod create_join_event {
 			}
 		}
 		impl crate::endpoint::EndpointResponse for Response {
+			const REJECT_DUPLICATE_KEYS: bool = true;
+
 			fn to_body(&self) -> crate::json::Value {
 				crate::json::Value::Array(::alloc::vec![
 					crate::codec::Serialize::to_json(&200_u64),
@@ -251,6 +255,8 @@ pub mod create_join_event {
 			}
 		}
 		impl crate::endpoint::EndpointResponse for Response {
+			const REJECT_DUPLICATE_KEYS: bool = true;
+
 			fn to_body(&self) -> crate::json::Value {
 				crate::endpoint::enc(&self.room_state)
 			}
@@ -549,6 +555,8 @@ pub mod create_invite {
 		}
 
 		impl EndpointResponse for Response {
+			const REJECT_DUPLICATE_KEYS: bool = true;
+
 			fn to_body(&self) -> Value {
 				Value::Object(object_from(alloc::vec![("event", self.event.to_json())]))
 			}

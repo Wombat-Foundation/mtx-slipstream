@@ -33,6 +33,7 @@ pub mod get_event_authorization {
 			}
 		}
 		crate::endpoint_response_impl! {
+			strict;
 			body { auth_chain => "auth_chain" }
 		}
 	}

@@ -293,6 +293,7 @@ pub mod event {
 				}
 			}
 			crate::endpoint_response_impl! {
+				strict;
 				body { origin => "origin", origin_server_ts => "origin_server_ts", pdus => "pdus" }
 			}
 
@@ -334,6 +335,7 @@ pub mod event {
 				}
 			}
 			crate::endpoint_response_impl! {
+				strict;
 				body { events => "events", next_batch => "next_batch", limited => "limited", auth_chain => "auth_chain" }
 			}
 		}
@@ -439,6 +441,7 @@ pub mod event {
 				}
 			}
 			crate::endpoint_response_impl! {
+				strict;
 				body { events => "events" }
 			}
 		}

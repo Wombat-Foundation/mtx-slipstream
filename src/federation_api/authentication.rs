@@ -64,6 +64,14 @@ impl XMatrix {
 		uri: &str,
 		content: Option<&CanonicalJsonValue>,
 	) -> Result<Self, signatures::Error> {
+		if keypair.version().is_empty()
+			|| !keypair.version().bytes().all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+		{
+			return Err(signatures::Error::Key(
+				"signing key version must contain only ASCII letters, digits, or underscores"
+					.into(),
+			));
+		}
 		let key = OwnedServerSigningKeyId::parse(format!("ed25519:{}", keypair.version()))
 			.map_err(|error| signatures::Error::Key(error.to_string()))?;
 		let mut object = CanonicalJsonObject::new();
