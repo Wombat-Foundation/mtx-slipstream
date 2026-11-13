@@ -331,40 +331,12 @@ pub mod get_filter {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"GET",
-				"/_matrix/client/v3/user/{user_id}/filter/{filter_id}",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [
-					crate::endpoint::path_param(&self.user_id),
-					crate::endpoint::path_param(&self.filter_id),
-				])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					user_id: input.path()?,
-					filter_id: input.path()?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/v3/user/{user_id}/filter/{filter_id}",
+			path { user_id, filter_id }
+			query {}
+			body {}
 		}
 		pub struct Response {
 			pub filter: FilterDefinition,
@@ -411,36 +383,12 @@ pub mod create_filter {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"POST",
-				"/_matrix/client/v3/user/{user_id}/filter",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(&self.user_id)])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				Some(crate::endpoint::enc(&self.filter))
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					user_id: input.path()?,
-					filter: crate::codec::Deserialize::from_json(
-						body.ok_or_else(|| crate::codec::DeError::expected("request body"))?,
-					)?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_raw_impl! {
+			method: "POST",
+			path: "/_matrix/client/v3/user/{user_id}/filter",
+			path { user_id }
+			query {}
+			raw { filter }
 		}
 		pub struct Response {
 			pub filter_id: alloc::string::String,
@@ -450,19 +398,8 @@ pub mod create_filter {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [(
-					"filter_id",
-					crate::endpoint::enc(&self.filter_id),
-				)])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					filter_id: input.body("filter_id")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { filter_id => "filter_id" }
 		}
 
 		impl Response {

@@ -15,40 +15,12 @@ pub mod upload_keys {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata =
-				crate::endpoint::Metadata::new("POST", "/_matrix/client/v3/keys/upload");
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [
-						("device_keys", crate::endpoint::enc(&self.device_keys)),
-						("one_time_keys", crate::endpoint::enc(&self.one_time_keys)),
-						("fallback_keys", crate::endpoint::enc(&self.fallback_keys)),
-					],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					device_keys: input.body("device_keys")?,
-					one_time_keys: input.body_or("one_time_keys", BTreeMap::new())?,
-					fallback_keys: input.body_or("fallback_keys", BTreeMap::new())?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "POST",
+			path: "/_matrix/client/v3/keys/upload",
+			path {}
+			query {}
+			body { device_keys => "device_keys", one_time_keys => "one_time_keys" = BTreeMap::new(), fallback_keys => "fallback_keys" = BTreeMap::new() }
 		}
 		pub struct Response {
 			pub one_time_key_counts: BTreeMap<crate::OneTimeKeyAlgorithm, crate::UInt>,
@@ -58,19 +30,8 @@ pub mod upload_keys {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [(
-					"one_time_key_counts",
-					crate::endpoint::enc(&self.one_time_key_counts),
-				)])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					one_time_key_counts: input.body("one_time_key_counts")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { one_time_key_counts => "one_time_key_counts" }
 		}
 	}
 }
@@ -130,38 +91,12 @@ pub mod get_keys {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata =
-				crate::endpoint::Metadata::new("POST", "/_matrix/client/v3/keys/query");
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [
-						("device_keys", crate::endpoint::enc(&self.device_keys)),
-						("timeout", crate::endpoint::enc(&self.timeout)),
-					],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					device_keys: input.body("device_keys")?,
-					timeout: input.body("timeout")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "POST",
+			path: "/_matrix/client/v3/keys/query",
+			path {}
+			query {}
+			body { device_keys => "device_keys", timeout => "timeout" }
 		}
 		pub struct Response {
 			pub device_keys: BTreeMap<OwnedUserId, BTreeMap<OwnedDeviceId, Raw<DeviceKeys>>>,
@@ -175,26 +110,8 @@ pub mod get_keys {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [
-					("device_keys", crate::endpoint::enc(&self.device_keys)),
-					("master_keys", crate::endpoint::enc(&self.master_keys)),
-					("self_signing_keys", crate::endpoint::enc(&self.self_signing_keys)),
-					("user_signing_keys", crate::endpoint::enc(&self.user_signing_keys)),
-					("failures", crate::endpoint::enc(&self.failures)),
-				])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					device_keys: input.body("device_keys")?,
-					master_keys: input.body("master_keys")?,
-					self_signing_keys: input.body("self_signing_keys")?,
-					user_signing_keys: input.body("user_signing_keys")?,
-					failures: input.body("failures")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { device_keys => "device_keys", master_keys => "master_keys", self_signing_keys => "self_signing_keys", user_signing_keys => "user_signing_keys", failures => "failures" }
 		}
 	}
 }
@@ -224,38 +141,12 @@ pub mod claim_keys {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata =
-				crate::endpoint::Metadata::new("POST", "/_matrix/client/v3/keys/claim");
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [
-						("one_time_keys", crate::endpoint::enc(&self.one_time_keys)),
-						("timeout", crate::endpoint::enc(&self.timeout)),
-					],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					one_time_keys: input.body("one_time_keys")?,
-					timeout: input.body("timeout")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "POST",
+			path: "/_matrix/client/v3/keys/claim",
+			path {}
+			query {}
+			body { one_time_keys => "one_time_keys", timeout => "timeout" }
 		}
 		pub struct Response {
 			pub one_time_keys: BTreeMap<OwnedUserId, OneTimeKeys>,
@@ -266,20 +157,8 @@ pub mod claim_keys {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [
-					("one_time_keys", crate::endpoint::enc(&self.one_time_keys)),
-					("failures", crate::endpoint::enc(&self.failures)),
-				])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					one_time_keys: input.body("one_time_keys")?,
-					failures: input.body("failures")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { one_time_keys => "one_time_keys", failures => "failures" }
 		}
 
 		impl Response {
@@ -312,44 +191,12 @@ pub mod upload_signing_keys {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"POST",
-				"/_matrix/client/v3/keys/device_signing/upload",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [
-						("auth", crate::endpoint::enc(&self.auth)),
-						("master_key", crate::endpoint::enc(&self.master_key)),
-						("self_signing_key", crate::endpoint::enc(&self.self_signing_key)),
-						("user_signing_key", crate::endpoint::enc(&self.user_signing_key)),
-					],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					auth: input.body("auth")?,
-					master_key: input.body("master_key")?,
-					self_signing_key: input.body("self_signing_key")?,
-					user_signing_key: input.body("user_signing_key")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "POST",
+			path: "/_matrix/client/v3/keys/device_signing/upload",
+			path {}
+			query {}
+			body { auth => "auth", master_key => "master_key", self_signing_key => "self_signing_key", user_signing_key => "user_signing_key" }
 		}
 		pub struct Response {}
 		impl ::core::fmt::Debug for Response {
@@ -357,13 +204,8 @@ pub mod upload_signing_keys {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [])
-			}
-			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				Ok(Self {})
-			}
+		crate::endpoint_response_impl! {
+			body {}
 		}
 	}
 }
@@ -383,35 +225,12 @@ pub mod upload_signatures {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"POST",
-				"/_matrix/client/v3/keys/signatures/upload",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				Some(crate::endpoint::enc(&self.signed_keys))
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					signed_keys: crate::codec::Deserialize::from_json(
-						body.ok_or_else(|| crate::codec::DeError::expected("request body"))?,
-					)?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_raw_impl! {
+			method: "POST",
+			path: "/_matrix/client/v3/keys/signatures/upload",
+			path {}
+			query {}
+			raw { signed_keys }
 		}
 		pub struct Response {
 			pub failures: BTreeMap<OwnedUserId, BTreeMap<OwnedDeviceId, Raw<crate::json::Value>>>,
@@ -421,19 +240,8 @@ pub mod upload_signatures {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [(
-					"failures",
-					crate::endpoint::enc(&self.failures),
-				)])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					failures: input.body("failures")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { failures => "failures" }
 		}
 	}
 }
@@ -453,38 +261,12 @@ pub mod get_key_changes {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata =
-				crate::endpoint::Metadata::new("GET", "/_matrix/client/v3/keys/changes");
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [
-					("from", crate::endpoint::enc(&self.from)),
-					("to", crate::endpoint::enc(&self.to)),
-				])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					from: input.query("from")?,
-					to: input.query("to")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/v3/keys/changes",
+			path {}
+			query { from => "from", to => "to" }
+			body {}
 		}
 		pub struct Response {
 			pub changed: Vec<OwnedUserId>,
@@ -495,20 +277,8 @@ pub mod get_key_changes {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [
-					("changed", crate::endpoint::enc(&self.changed)),
-					("left", crate::endpoint::enc(&self.left)),
-				])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					changed: input.body("changed")?,
-					left: input.body("left")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { changed => "changed", left => "left" }
 		}
 	}
 }

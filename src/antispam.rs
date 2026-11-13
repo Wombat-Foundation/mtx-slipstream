@@ -19,45 +19,12 @@ pub mod meowlnir {
 			}
 			const _: crate::endpoint::Metadata =
 				<Request as crate::endpoint::EndpointRequest>::METADATA;
-			impl crate::endpoint::EndpointRequest for Request {
-				type Response = Response;
-				const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-					"POST",
-					"/_meowlnir/antispam/{management_room}/user_may_invite",
-				);
-				fn path_args(&self) -> crate::endpoint::Strs {
-					crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(
-						&self.management_room,
-					)])
-				}
-				fn query(&self) -> crate::endpoint::Pairs {
-					crate::endpoint::query_pairs_mut(&mut [])
-				}
-				fn body(&self) -> Option<crate::json::Value> {
-					crate::endpoint::body_value(
-						<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-						&mut [
-							("inviter", crate::endpoint::enc(&self.inviter)),
-							("invitee", crate::endpoint::enc(&self.invitee)),
-							("room_id", crate::endpoint::enc(&self.room_id)),
-						],
-					)
-				}
-				fn from_parts(
-					path: &[crate::endpoint::Str],
-					query: &[crate::endpoint::Pair],
-					body: Option<&crate::json::Value>,
-				) -> crate::endpoint::Parsed<Self> {
-					let input = crate::endpoint::Input::new(path, query, body);
-					let value = Self {
-						management_room: input.path()?,
-						inviter: input.body("inviter")?,
-						invitee: input.body("invitee")?,
-						room_id: input.body("room_id")?,
-					};
-					input.finish()?;
-					Ok(value)
-				}
+			crate::endpoint_request_impl! {
+				method: "POST",
+				path: "/_meowlnir/antispam/{management_room}/user_may_invite",
+				path { management_room }
+				query {}
+				body { inviter => "inviter", invitee => "invitee", room_id => "room_id" }
 			}
 			pub struct Response {}
 			impl ::core::fmt::Debug for Response {
@@ -65,13 +32,8 @@ pub mod meowlnir {
 					crate::endpoint::opaque_debug(f, "Response")
 				}
 			}
-			impl crate::endpoint::EndpointResponse for Response {
-				fn to_body(&self) -> crate::json::Value {
-					crate::endpoint::body_object(&mut [])
-				}
-				fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					Ok(Self {})
-				}
+			crate::endpoint_response_impl! {
+				body {}
 			}
 
 			impl Request {
@@ -110,45 +72,12 @@ pub mod meowlnir {
 			}
 			const _: crate::endpoint::Metadata =
 				<Request as crate::endpoint::EndpointRequest>::METADATA;
-			impl crate::endpoint::EndpointRequest for Request {
-				type Response = Response;
-				const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-					"POST",
-					"/_meowlnir/antispam/{management_room}/user_may_join_room",
-				);
-				fn path_args(&self) -> crate::endpoint::Strs {
-					crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(
-						&self.management_room,
-					)])
-				}
-				fn query(&self) -> crate::endpoint::Pairs {
-					crate::endpoint::query_pairs_mut(&mut [])
-				}
-				fn body(&self) -> Option<crate::json::Value> {
-					crate::endpoint::body_value(
-						<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-						&mut [
-							("user_id", crate::endpoint::enc(&self.user_id)),
-							("room_id", crate::endpoint::enc(&self.room_id)),
-							("is_invited", crate::endpoint::enc(&self.is_invited)),
-						],
-					)
-				}
-				fn from_parts(
-					path: &[crate::endpoint::Str],
-					query: &[crate::endpoint::Pair],
-					body: Option<&crate::json::Value>,
-				) -> crate::endpoint::Parsed<Self> {
-					let input = crate::endpoint::Input::new(path, query, body);
-					let value = Self {
-						management_room: input.path()?,
-						user_id: input.body("user_id")?,
-						room_id: input.body("room_id")?,
-						is_invited: input.body("is_invited")?,
-					};
-					input.finish()?;
-					Ok(value)
-				}
+			crate::endpoint_request_impl! {
+				method: "POST",
+				path: "/_meowlnir/antispam/{management_room}/user_may_join_room",
+				path { management_room }
+				query {}
+				body { user_id => "user_id", room_id => "room_id", is_invited => "is_invited" }
 			}
 			pub struct Response {}
 			impl ::core::fmt::Debug for Response {
@@ -156,13 +85,8 @@ pub mod meowlnir {
 					crate::endpoint::opaque_debug(f, "Response")
 				}
 			}
-			impl crate::endpoint::EndpointResponse for Response {
-				fn to_body(&self) -> crate::json::Value {
-					crate::endpoint::body_object(&mut [])
-				}
-				fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					Ok(Self {})
-				}
+			crate::endpoint_response_impl! {
+				body {}
 			}
 
 			impl Request {
@@ -200,43 +124,12 @@ pub mod meowlnir {
 			}
 			const _: crate::endpoint::Metadata =
 				<Request as crate::endpoint::EndpointRequest>::METADATA;
-			impl crate::endpoint::EndpointRequest for Request {
-				type Response = Response;
-				const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-					"POST",
-					"/_meowlnir/antispam/{management_room}/accept_make_join",
-				);
-				fn path_args(&self) -> crate::endpoint::Strs {
-					crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(
-						&self.management_room,
-					)])
-				}
-				fn query(&self) -> crate::endpoint::Pairs {
-					crate::endpoint::query_pairs_mut(&mut [])
-				}
-				fn body(&self) -> Option<crate::json::Value> {
-					crate::endpoint::body_value(
-						<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-						&mut [
-							("user_id", crate::endpoint::enc(&self.user_id)),
-							("room_id", crate::endpoint::enc(&self.room_id)),
-						],
-					)
-				}
-				fn from_parts(
-					path: &[crate::endpoint::Str],
-					query: &[crate::endpoint::Pair],
-					body: Option<&crate::json::Value>,
-				) -> crate::endpoint::Parsed<Self> {
-					let input = crate::endpoint::Input::new(path, query, body);
-					let value = Self {
-						management_room: input.path()?,
-						user_id: input.body("user_id")?,
-						room_id: input.body("room_id")?,
-					};
-					input.finish()?;
-					Ok(value)
-				}
+			crate::endpoint_request_impl! {
+				method: "POST",
+				path: "/_meowlnir/antispam/{management_room}/accept_make_join",
+				path { management_room }
+				query {}
+				body { user_id => "user_id", room_id => "room_id" }
 			}
 			pub struct Response {}
 			impl ::core::fmt::Debug for Response {
@@ -244,13 +137,8 @@ pub mod meowlnir {
 					crate::endpoint::opaque_debug(f, "Response")
 				}
 			}
-			impl crate::endpoint::EndpointResponse for Response {
-				fn to_body(&self) -> crate::json::Value {
-					crate::endpoint::body_object(&mut [])
-				}
-				fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					Ok(Self {})
-				}
+			crate::endpoint_response_impl! {
+				body {}
 			}
 
 			impl Request {
@@ -289,40 +177,12 @@ pub mod draupnir {
 			}
 			const _: crate::endpoint::Metadata =
 				<Request as crate::endpoint::EndpointRequest>::METADATA;
-			impl crate::endpoint::EndpointRequest for Request {
-				type Response = Response;
-				const METADATA: crate::endpoint::Metadata =
-					crate::endpoint::Metadata::new("POST", "/api/1/spam_check/user_may_invite");
-				fn path_args(&self) -> crate::endpoint::Strs {
-					crate::endpoint::path_args_from(&mut [])
-				}
-				fn query(&self) -> crate::endpoint::Pairs {
-					crate::endpoint::query_pairs_mut(&mut [])
-				}
-				fn body(&self) -> Option<crate::json::Value> {
-					crate::endpoint::body_value(
-						<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-						&mut [
-							("room_id", crate::endpoint::enc(&self.room_id)),
-							("inviter", crate::endpoint::enc(&self.inviter)),
-							("invitee", crate::endpoint::enc(&self.invitee)),
-						],
-					)
-				}
-				fn from_parts(
-					path: &[crate::endpoint::Str],
-					query: &[crate::endpoint::Pair],
-					body: Option<&crate::json::Value>,
-				) -> crate::endpoint::Parsed<Self> {
-					let input = crate::endpoint::Input::new(path, query, body);
-					let value = Self {
-						room_id: input.body("room_id")?,
-						inviter: input.body("inviter")?,
-						invitee: input.body("invitee")?,
-					};
-					input.finish()?;
-					Ok(value)
-				}
+			crate::endpoint_request_impl! {
+				method: "POST",
+				path: "/api/1/spam_check/user_may_invite",
+				path {}
+				query {}
+				body { room_id => "room_id", inviter => "inviter", invitee => "invitee" }
 			}
 			pub struct Response {}
 			impl ::core::fmt::Debug for Response {
@@ -330,13 +190,8 @@ pub mod draupnir {
 					crate::endpoint::opaque_debug(f, "Response")
 				}
 			}
-			impl crate::endpoint::EndpointResponse for Response {
-				fn to_body(&self) -> crate::json::Value {
-					crate::endpoint::body_object(&mut [])
-				}
-				fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					Ok(Self {})
-				}
+			crate::endpoint_response_impl! {
+				body {}
 			}
 
 			impl Request {
@@ -372,42 +227,12 @@ pub mod draupnir {
 			}
 			const _: crate::endpoint::Metadata =
 				<Request as crate::endpoint::EndpointRequest>::METADATA;
-			impl crate::endpoint::EndpointRequest for Request {
-				type Response = Response;
-				const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-					"POST",
-					"/api/1/spam_check/user_may_join_room",
-				);
-				fn path_args(&self) -> crate::endpoint::Strs {
-					crate::endpoint::path_args_from(&mut [])
-				}
-				fn query(&self) -> crate::endpoint::Pairs {
-					crate::endpoint::query_pairs_mut(&mut [])
-				}
-				fn body(&self) -> Option<crate::json::Value> {
-					crate::endpoint::body_value(
-						<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-						&mut [
-							("user_id", crate::endpoint::enc(&self.user_id)),
-							("room_id", crate::endpoint::enc(&self.room_id)),
-							("is_invited", crate::endpoint::enc(&self.is_invited)),
-						],
-					)
-				}
-				fn from_parts(
-					path: &[crate::endpoint::Str],
-					query: &[crate::endpoint::Pair],
-					body: Option<&crate::json::Value>,
-				) -> crate::endpoint::Parsed<Self> {
-					let input = crate::endpoint::Input::new(path, query, body);
-					let value = Self {
-						user_id: input.body("user_id")?,
-						room_id: input.body("room_id")?,
-						is_invited: input.body("is_invited")?,
-					};
-					input.finish()?;
-					Ok(value)
-				}
+			crate::endpoint_request_impl! {
+				method: "POST",
+				path: "/api/1/spam_check/user_may_join_room",
+				path {}
+				query {}
+				body { user_id => "user_id", room_id => "room_id", is_invited => "is_invited" }
 			}
 			pub struct Response {}
 			impl ::core::fmt::Debug for Response {
@@ -415,13 +240,8 @@ pub mod draupnir {
 					crate::endpoint::opaque_debug(f, "Response")
 				}
 			}
-			impl crate::endpoint::EndpointResponse for Response {
-				fn to_body(&self) -> crate::json::Value {
-					crate::endpoint::body_object(&mut [])
-				}
-				fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					Ok(Self {})
-				}
+			crate::endpoint_response_impl! {
+				body {}
 			}
 
 			impl Request {

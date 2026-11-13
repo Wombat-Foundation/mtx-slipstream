@@ -70,39 +70,12 @@ pub mod continuwuity_admin_api {
 				}
 				const _: crate::endpoint::Metadata =
 					<Request as crate::endpoint::EndpointRequest>::METADATA;
-				impl crate::endpoint::EndpointRequest for Request {
-					type Response = Response;
-					const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-						"PUT",
-						"/_continuwuity/admin/rooms/{room_id}/ban",
-					);
-					fn path_args(&self) -> crate::endpoint::Strs {
-						crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(
-							&self.room_id,
-						)])
-					}
-					fn query(&self) -> crate::endpoint::Pairs {
-						crate::endpoint::query_pairs_mut(&mut [])
-					}
-					fn body(&self) -> Option<crate::json::Value> {
-						crate::endpoint::body_value(
-							<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-							&mut [("banned", crate::endpoint::enc(&self.banned))],
-						)
-					}
-					fn from_parts(
-						path: &[crate::endpoint::Str],
-						query: &[crate::endpoint::Pair],
-						body: Option<&crate::json::Value>,
-					) -> crate::endpoint::Parsed<Self> {
-						let input = crate::endpoint::Input::new(path, query, body);
-						let value = Self {
-							room_id: input.path()?,
-							banned: input.body("banned")?,
-						};
-						input.finish()?;
-						Ok(value)
-					}
+				crate::endpoint_request_impl! {
+					method: "PUT",
+					path: "/_continuwuity/admin/rooms/{room_id}/ban",
+					path { room_id }
+					query {}
+					body { banned => "banned" }
 				}
 				pub struct Response {
 					pub evicted: Vec<crate::OwnedUserId>,
@@ -117,22 +90,8 @@ pub mod continuwuity_admin_api {
 						crate::endpoint::opaque_debug(f, "Response")
 					}
 				}
-				impl crate::endpoint::EndpointResponse for Response {
-					fn to_body(&self) -> crate::json::Value {
-						crate::endpoint::body_object(&mut [
-							("evicted", crate::endpoint::enc(&self.evicted)),
-							("failed_evicted", crate::endpoint::enc(&self.failed_evicted)),
-							("aliases", crate::endpoint::enc(&self.aliases)),
-						])
-					}
-					fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-						let input = crate::endpoint::Input::body_only(body);
-						Ok(Self {
-							evicted: input.body("evicted")?,
-							failed_evicted: input.body("failed_evicted")?,
-							aliases: input.body("aliases")?,
-						})
-					}
+				crate::endpoint_response_impl! {
+					body { evicted => "evicted", failed_evicted => "failed_evicted", aliases => "aliases" }
 				}
 			}
 		}
@@ -150,32 +109,12 @@ pub mod continuwuity_admin_api {
 				}
 				const _: crate::endpoint::Metadata =
 					<Request as crate::endpoint::EndpointRequest>::METADATA;
-				impl crate::endpoint::EndpointRequest for Request {
-					type Response = Response;
-					const METADATA: crate::endpoint::Metadata =
-						crate::endpoint::Metadata::new("GET", "/_continuwuity/admin/rooms/list");
-					fn path_args(&self) -> crate::endpoint::Strs {
-						crate::endpoint::path_args_from(&mut [])
-					}
-					fn query(&self) -> crate::endpoint::Pairs {
-						crate::endpoint::query_pairs_mut(&mut [])
-					}
-					fn body(&self) -> Option<crate::json::Value> {
-						crate::endpoint::body_value(
-							<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-							&mut [],
-						)
-					}
-					fn from_parts(
-						path: &[crate::endpoint::Str],
-						query: &[crate::endpoint::Pair],
-						body: Option<&crate::json::Value>,
-					) -> crate::endpoint::Parsed<Self> {
-						let input = crate::endpoint::Input::new(path, query, body);
-						let value = Self {};
-						input.finish()?;
-						Ok(value)
-					}
+				crate::endpoint_request_impl! {
+					method: "GET",
+					path: "/_continuwuity/admin/rooms/list",
+					path {}
+					query {}
+					body {}
 				}
 				pub struct Response {
 					pub rooms: Vec<OwnedRoomId>,
@@ -188,19 +127,8 @@ pub mod continuwuity_admin_api {
 						crate::endpoint::opaque_debug(f, "Response")
 					}
 				}
-				impl crate::endpoint::EndpointResponse for Response {
-					fn to_body(&self) -> crate::json::Value {
-						crate::endpoint::body_object(&mut [(
-							"rooms",
-							crate::endpoint::enc(&self.rooms),
-						)])
-					}
-					fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-						let input = crate::endpoint::Input::body_only(body);
-						Ok(Self {
-							rooms: input.body("rooms")?,
-						})
-					}
+				crate::endpoint_response_impl! {
+					body { rooms => "rooms" }
 				}
 			}
 		}
@@ -1081,795 +1009,152 @@ impl fmt::Display for OwnedRoomOrAliasId {
 #[derive(Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct OwnedServerSigningKeyId(alloc::string::String);
 pub type ServerSigningKeyId = OwnedServerSigningKeyId;
-impl OwnedServerSigningKeyId {
-	/// Parses a Matrix identifier, checking its grammar.
-	///
-	/// # Errors
-	///
-	/// Returns [`MatrixIdParseError`] if `value` does not match the
-	/// identifier's grammar.
-	pub fn parse(value: impl AsRef<str>) -> Result<Self, MatrixIdParseError> {
-		let value = value.as_ref();
-		if crate::id_validation::any(value) {
-			Ok(Self(value.to_owned()))
-		} else {
-			Err(MatrixIdParseError)
-		}
-	}
-	/// Constructs an identifier from a value already validated by the
-	/// caller, such as a trusted database row or a value generated here.
-	///
-	/// This bypasses grammar validation and must not be used for wire or
-	/// request data.
-	#[allow(dead_code)]
-	pub(crate) fn from_trusted(value: impl Into<alloc::string::String>) -> Self {
-		Self(value.into())
-	}
-	#[must_use]
-	pub fn as_str(&self) -> &str {
-		&self.0
-	}
-	#[must_use]
-	pub fn as_bytes(&self) -> &[u8] {
-		self.0.as_bytes()
-	}
-}
-impl TryFrom<alloc::string::String> for OwnedServerSigningKeyId {
-	type Error = MatrixIdParseError;
-	fn try_from(value: alloc::string::String) -> Result<Self, Self::Error> {
-		Self::parse(value)
-	}
-}
-impl TryFrom<&str> for OwnedServerSigningKeyId {
-	type Error = MatrixIdParseError;
-	fn try_from(value: &str) -> Result<Self, Self::Error> {
-		Self::parse(value)
-	}
-}
-impl core::str::FromStr for OwnedServerSigningKeyId {
-	type Err = MatrixIdParseError;
-	fn from_str(value: &str) -> Result<Self, Self::Err> {
-		Self::parse(value)
-	}
-}
-impl From<&OwnedServerSigningKeyId> for alloc::string::String {
-	fn from(value: &OwnedServerSigningKeyId) -> Self {
-		value.0.clone()
-	}
-}
-impl From<OwnedServerSigningKeyId> for alloc::string::String {
-	fn from(value: OwnedServerSigningKeyId) -> Self {
-		value.0
-	}
-}
-impl From<&OwnedServerSigningKeyId> for OwnedServerSigningKeyId {
-	fn from(value: &OwnedServerSigningKeyId) -> Self {
-		value.clone()
-	}
-}
-impl AsRef<[u8]> for OwnedServerSigningKeyId {
-	fn as_ref(&self) -> &[u8] {
-		self.0.as_bytes()
-	}
-}
-impl AsRef<str> for OwnedServerSigningKeyId {
-	fn as_ref(&self) -> &str {
-		self.as_str()
-	}
-}
-impl AsRef<OwnedServerSigningKeyId> for OwnedServerSigningKeyId {
-	fn as_ref(&self) -> &OwnedServerSigningKeyId {
-		self
-	}
-}
-impl PartialEq<&OwnedServerSigningKeyId> for OwnedServerSigningKeyId {
-	fn eq(&self, other: &&OwnedServerSigningKeyId) -> bool {
-		self == *other
-	}
-}
-impl Borrow<str> for OwnedServerSigningKeyId {
-	fn borrow(&self) -> &str {
-		self.as_str()
-	}
-}
-impl Deref for OwnedServerSigningKeyId {
-	type Target = str;
-	fn deref(&self) -> &str {
-		self.as_str()
-	}
-}
-impl fmt::Debug for OwnedServerSigningKeyId {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		f.debug_tuple(stringify!(OwnedServerSigningKeyId)).field(&self.0).finish()
-	}
-}
-impl codec::Serialize for OwnedServerSigningKeyId {
-	fn to_json(&self) -> json::Value {
-		json::Value::String(self.0.clone())
-	}
-}
-impl codec::Deserialize for OwnedServerSigningKeyId {
-	fn from_json(value: &json::Value) -> Result<Self, codec::DeError> {
-		value
-			.as_str()
-			.and_then(|text| {
-				if true {
-					Self::parse(text).ok()
+macro_rules! owned_string_id {
+	($ty:ident) => {
+		impl $ty {
+			/// Parses a Matrix identifier, checking its grammar.
+			///
+			/// # Errors
+			///
+			/// Returns [`MatrixIdParseError`] if `value` does not match the
+			/// identifier's grammar.
+			pub fn parse(value: impl AsRef<str>) -> Result<Self, MatrixIdParseError> {
+				let value = value.as_ref();
+				if crate::id_validation::any(value) {
+					Ok(Self(value.to_owned()))
 				} else {
-					// ruma-compatible: MXC URIs are accepted verbatim on the wire;
-
-					// validation happens in `parse`/`is_valid` for callers that need it.
-					Some(Self::from_trusted(text))
+					Err(MatrixIdParseError)
 				}
-			})
-			.ok_or_else(|| codec::DeError::expected(stringify!(OwnedServerSigningKeyId)))
-	}
+			}
+			/// Constructs an identifier from a value already validated by the
+			/// caller, such as a trusted database row or a value generated here.
+			///
+			/// This bypasses grammar validation and must not be used for wire or
+			/// request data.
+			#[allow(dead_code)]
+			pub(crate) fn from_trusted(value: impl Into<alloc::string::String>) -> Self {
+				Self(value.into())
+			}
+			#[must_use]
+			pub fn as_str(&self) -> &str {
+				&self.0
+			}
+			#[must_use]
+			pub fn as_bytes(&self) -> &[u8] {
+				self.0.as_bytes()
+			}
+		}
+		impl TryFrom<alloc::string::String> for $ty {
+			type Error = MatrixIdParseError;
+			fn try_from(value: alloc::string::String) -> Result<Self, Self::Error> {
+				Self::parse(value)
+			}
+		}
+		impl TryFrom<&str> for $ty {
+			type Error = MatrixIdParseError;
+			fn try_from(value: &str) -> Result<Self, Self::Error> {
+				Self::parse(value)
+			}
+		}
+		impl core::str::FromStr for $ty {
+			type Err = MatrixIdParseError;
+			fn from_str(value: &str) -> Result<Self, Self::Err> {
+				Self::parse(value)
+			}
+		}
+		impl From<&$ty> for alloc::string::String {
+			fn from(value: &$ty) -> Self {
+				value.0.clone()
+			}
+		}
+		impl From<$ty> for alloc::string::String {
+			fn from(value: $ty) -> Self {
+				value.0
+			}
+		}
+		impl From<&$ty> for $ty {
+			fn from(value: &$ty) -> Self {
+				value.clone()
+			}
+		}
+		impl AsRef<[u8]> for $ty {
+			fn as_ref(&self) -> &[u8] {
+				self.0.as_bytes()
+			}
+		}
+		impl AsRef<str> for $ty {
+			fn as_ref(&self) -> &str {
+				self.as_str()
+			}
+		}
+		impl AsRef<$ty> for $ty {
+			fn as_ref(&self) -> &$ty {
+				self
+			}
+		}
+		impl PartialEq<&$ty> for $ty {
+			fn eq(&self, other: &&$ty) -> bool {
+				self == *other
+			}
+		}
+		impl Borrow<str> for $ty {
+			fn borrow(&self) -> &str {
+				self.as_str()
+			}
+		}
+		impl Deref for $ty {
+			type Target = str;
+			fn deref(&self) -> &str {
+				self.as_str()
+			}
+		}
+		impl fmt::Debug for $ty {
+			fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+				f.debug_tuple(stringify!($ty)).field(&self.0).finish()
+			}
+		}
+		impl codec::Serialize for $ty {
+			fn to_json(&self) -> json::Value {
+				json::Value::String(self.0.clone())
+			}
+		}
+		impl codec::Deserialize for $ty {
+			fn from_json(value: &json::Value) -> Result<Self, codec::DeError> {
+				value
+					.as_str()
+					.and_then(|text| Self::parse(text).ok())
+					.ok_or_else(|| codec::DeError::expected(stringify!($ty)))
+			}
+		}
+		impl fmt::Display for $ty {
+			fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+				f.write_str(self.as_str())
+			}
+		}
+	};
 }
-impl fmt::Display for OwnedServerSigningKeyId {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		f.write_str(self.as_str())
-	}
-}
+
+owned_string_id!(OwnedServerSigningKeyId);
 #[derive(Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct OwnedSigningKeyId(alloc::string::String);
 pub type SigningKeyId = OwnedSigningKeyId;
-impl OwnedSigningKeyId {
-	/// Parses a Matrix identifier, checking its grammar.
-	///
-	/// # Errors
-	///
-	/// Returns [`MatrixIdParseError`] if `value` does not match the
-	/// identifier's grammar.
-	pub fn parse(value: impl AsRef<str>) -> Result<Self, MatrixIdParseError> {
-		let value = value.as_ref();
-		if crate::id_validation::any(value) {
-			Ok(Self(value.to_owned()))
-		} else {
-			Err(MatrixIdParseError)
-		}
-	}
-	/// Constructs an identifier from a value already validated by the
-	/// caller, such as a trusted database row or a value generated here.
-	///
-	/// This bypasses grammar validation and must not be used for wire or
-	/// request data.
-	#[allow(dead_code)]
-	pub(crate) fn from_trusted(value: impl Into<alloc::string::String>) -> Self {
-		Self(value.into())
-	}
-	#[must_use]
-	pub fn as_str(&self) -> &str {
-		&self.0
-	}
-	#[must_use]
-	pub fn as_bytes(&self) -> &[u8] {
-		self.0.as_bytes()
-	}
-}
-impl TryFrom<alloc::string::String> for OwnedSigningKeyId {
-	type Error = MatrixIdParseError;
-	fn try_from(value: alloc::string::String) -> Result<Self, Self::Error> {
-		Self::parse(value)
-	}
-}
-impl TryFrom<&str> for OwnedSigningKeyId {
-	type Error = MatrixIdParseError;
-	fn try_from(value: &str) -> Result<Self, Self::Error> {
-		Self::parse(value)
-	}
-}
-impl core::str::FromStr for OwnedSigningKeyId {
-	type Err = MatrixIdParseError;
-	fn from_str(value: &str) -> Result<Self, Self::Err> {
-		Self::parse(value)
-	}
-}
-impl From<&OwnedSigningKeyId> for alloc::string::String {
-	fn from(value: &OwnedSigningKeyId) -> Self {
-		value.0.clone()
-	}
-}
-impl From<OwnedSigningKeyId> for alloc::string::String {
-	fn from(value: OwnedSigningKeyId) -> Self {
-		value.0
-	}
-}
-impl From<&OwnedSigningKeyId> for OwnedSigningKeyId {
-	fn from(value: &OwnedSigningKeyId) -> Self {
-		value.clone()
-	}
-}
-impl AsRef<[u8]> for OwnedSigningKeyId {
-	fn as_ref(&self) -> &[u8] {
-		self.0.as_bytes()
-	}
-}
-impl AsRef<str> for OwnedSigningKeyId {
-	fn as_ref(&self) -> &str {
-		self.as_str()
-	}
-}
-impl AsRef<OwnedSigningKeyId> for OwnedSigningKeyId {
-	fn as_ref(&self) -> &OwnedSigningKeyId {
-		self
-	}
-}
-impl PartialEq<&OwnedSigningKeyId> for OwnedSigningKeyId {
-	fn eq(&self, other: &&OwnedSigningKeyId) -> bool {
-		self == *other
-	}
-}
-impl Borrow<str> for OwnedSigningKeyId {
-	fn borrow(&self) -> &str {
-		self.as_str()
-	}
-}
-impl Deref for OwnedSigningKeyId {
-	type Target = str;
-	fn deref(&self) -> &str {
-		self.as_str()
-	}
-}
-impl fmt::Debug for OwnedSigningKeyId {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		f.debug_tuple(stringify!(OwnedSigningKeyId)).field(&self.0).finish()
-	}
-}
-impl codec::Serialize for OwnedSigningKeyId {
-	fn to_json(&self) -> json::Value {
-		json::Value::String(self.0.clone())
-	}
-}
-impl codec::Deserialize for OwnedSigningKeyId {
-	fn from_json(value: &json::Value) -> Result<Self, codec::DeError> {
-		value
-			.as_str()
-			.and_then(|text| {
-				if true {
-					Self::parse(text).ok()
-				} else {
-					// ruma-compatible: MXC URIs are accepted verbatim on the wire;
-
-					// validation happens in `parse`/`is_valid` for callers that need it.
-					Some(Self::from_trusted(text))
-				}
-			})
-			.ok_or_else(|| codec::DeError::expected(stringify!(OwnedSigningKeyId)))
-	}
-}
-impl fmt::Display for OwnedSigningKeyId {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		f.write_str(self.as_str())
-	}
-}
+owned_string_id!(OwnedSigningKeyId);
 #[derive(Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct OwnedDeviceId(alloc::string::String);
 pub type DeviceId = OwnedDeviceId;
-impl OwnedDeviceId {
-	/// Parses a Matrix identifier, checking its grammar.
-	///
-	/// # Errors
-	///
-	/// Returns [`MatrixIdParseError`] if `value` does not match the
-	/// identifier's grammar.
-	pub fn parse(value: impl AsRef<str>) -> Result<Self, MatrixIdParseError> {
-		let value = value.as_ref();
-		if crate::id_validation::any(value) {
-			Ok(Self(value.to_owned()))
-		} else {
-			Err(MatrixIdParseError)
-		}
-	}
-	/// Constructs an identifier from a value already validated by the
-	/// caller, such as a trusted database row or a value generated here.
-	///
-	/// This bypasses grammar validation and must not be used for wire or
-	/// request data.
-	#[allow(dead_code)]
-	pub(crate) fn from_trusted(value: impl Into<alloc::string::String>) -> Self {
-		Self(value.into())
-	}
-	#[must_use]
-	pub fn as_str(&self) -> &str {
-		&self.0
-	}
-	#[must_use]
-	pub fn as_bytes(&self) -> &[u8] {
-		self.0.as_bytes()
-	}
-}
-impl TryFrom<alloc::string::String> for OwnedDeviceId {
-	type Error = MatrixIdParseError;
-	fn try_from(value: alloc::string::String) -> Result<Self, Self::Error> {
-		Self::parse(value)
-	}
-}
-impl TryFrom<&str> for OwnedDeviceId {
-	type Error = MatrixIdParseError;
-	fn try_from(value: &str) -> Result<Self, Self::Error> {
-		Self::parse(value)
-	}
-}
-impl core::str::FromStr for OwnedDeviceId {
-	type Err = MatrixIdParseError;
-	fn from_str(value: &str) -> Result<Self, Self::Err> {
-		Self::parse(value)
-	}
-}
-impl From<&OwnedDeviceId> for alloc::string::String {
-	fn from(value: &OwnedDeviceId) -> Self {
-		value.0.clone()
-	}
-}
-impl From<OwnedDeviceId> for alloc::string::String {
-	fn from(value: OwnedDeviceId) -> Self {
-		value.0
-	}
-}
-impl From<&OwnedDeviceId> for OwnedDeviceId {
-	fn from(value: &OwnedDeviceId) -> Self {
-		value.clone()
-	}
-}
-impl AsRef<[u8]> for OwnedDeviceId {
-	fn as_ref(&self) -> &[u8] {
-		self.0.as_bytes()
-	}
-}
-impl AsRef<str> for OwnedDeviceId {
-	fn as_ref(&self) -> &str {
-		self.as_str()
-	}
-}
-impl AsRef<OwnedDeviceId> for OwnedDeviceId {
-	fn as_ref(&self) -> &OwnedDeviceId {
-		self
-	}
-}
-impl PartialEq<&OwnedDeviceId> for OwnedDeviceId {
-	fn eq(&self, other: &&OwnedDeviceId) -> bool {
-		self == *other
-	}
-}
-impl Borrow<str> for OwnedDeviceId {
-	fn borrow(&self) -> &str {
-		self.as_str()
-	}
-}
-impl Deref for OwnedDeviceId {
-	type Target = str;
-	fn deref(&self) -> &str {
-		self.as_str()
-	}
-}
-impl fmt::Debug for OwnedDeviceId {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		f.debug_tuple(stringify!(OwnedDeviceId)).field(&self.0).finish()
-	}
-}
-impl codec::Serialize for OwnedDeviceId {
-	fn to_json(&self) -> json::Value {
-		json::Value::String(self.0.clone())
-	}
-}
-impl codec::Deserialize for OwnedDeviceId {
-	fn from_json(value: &json::Value) -> Result<Self, codec::DeError> {
-		value
-			.as_str()
-			.and_then(|text| {
-				if true {
-					Self::parse(text).ok()
-				} else {
-					// ruma-compatible: MXC URIs are accepted verbatim on the wire;
-
-					// validation happens in `parse`/`is_valid` for callers that need it.
-					Some(Self::from_trusted(text))
-				}
-			})
-			.ok_or_else(|| codec::DeError::expected(stringify!(OwnedDeviceId)))
-	}
-}
-impl fmt::Display for OwnedDeviceId {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		f.write_str(self.as_str())
-	}
-}
+owned_string_id!(OwnedDeviceId);
 #[derive(Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct OwnedTransactionId(alloc::string::String);
 pub type TransactionId = OwnedTransactionId;
-impl OwnedTransactionId {
-	/// Parses a Matrix identifier, checking its grammar.
-	///
-	/// # Errors
-	///
-	/// Returns [`MatrixIdParseError`] if `value` does not match the
-	/// identifier's grammar.
-	pub fn parse(value: impl AsRef<str>) -> Result<Self, MatrixIdParseError> {
-		let value = value.as_ref();
-		if crate::id_validation::any(value) {
-			Ok(Self(value.to_owned()))
-		} else {
-			Err(MatrixIdParseError)
-		}
-	}
-	/// Constructs an identifier from a value already validated by the
-	/// caller, such as a trusted database row or a value generated here.
-	///
-	/// This bypasses grammar validation and must not be used for wire or
-	/// request data.
-	#[allow(dead_code)]
-	pub(crate) fn from_trusted(value: impl Into<alloc::string::String>) -> Self {
-		Self(value.into())
-	}
-	#[must_use]
-	pub fn as_str(&self) -> &str {
-		&self.0
-	}
-	#[must_use]
-	pub fn as_bytes(&self) -> &[u8] {
-		self.0.as_bytes()
-	}
-}
-impl TryFrom<alloc::string::String> for OwnedTransactionId {
-	type Error = MatrixIdParseError;
-	fn try_from(value: alloc::string::String) -> Result<Self, Self::Error> {
-		Self::parse(value)
-	}
-}
-impl TryFrom<&str> for OwnedTransactionId {
-	type Error = MatrixIdParseError;
-	fn try_from(value: &str) -> Result<Self, Self::Error> {
-		Self::parse(value)
-	}
-}
-impl core::str::FromStr for OwnedTransactionId {
-	type Err = MatrixIdParseError;
-	fn from_str(value: &str) -> Result<Self, Self::Err> {
-		Self::parse(value)
-	}
-}
-impl From<&OwnedTransactionId> for alloc::string::String {
-	fn from(value: &OwnedTransactionId) -> Self {
-		value.0.clone()
-	}
-}
-impl From<OwnedTransactionId> for alloc::string::String {
-	fn from(value: OwnedTransactionId) -> Self {
-		value.0
-	}
-}
-impl From<&OwnedTransactionId> for OwnedTransactionId {
-	fn from(value: &OwnedTransactionId) -> Self {
-		value.clone()
-	}
-}
-impl AsRef<[u8]> for OwnedTransactionId {
-	fn as_ref(&self) -> &[u8] {
-		self.0.as_bytes()
-	}
-}
-impl AsRef<str> for OwnedTransactionId {
-	fn as_ref(&self) -> &str {
-		self.as_str()
-	}
-}
-impl AsRef<OwnedTransactionId> for OwnedTransactionId {
-	fn as_ref(&self) -> &OwnedTransactionId {
-		self
-	}
-}
-impl PartialEq<&OwnedTransactionId> for OwnedTransactionId {
-	fn eq(&self, other: &&OwnedTransactionId) -> bool {
-		self == *other
-	}
-}
-impl Borrow<str> for OwnedTransactionId {
-	fn borrow(&self) -> &str {
-		self.as_str()
-	}
-}
-impl Deref for OwnedTransactionId {
-	type Target = str;
-	fn deref(&self) -> &str {
-		self.as_str()
-	}
-}
-impl fmt::Debug for OwnedTransactionId {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		f.debug_tuple(stringify!(OwnedTransactionId)).field(&self.0).finish()
-	}
-}
-impl codec::Serialize for OwnedTransactionId {
-	fn to_json(&self) -> json::Value {
-		json::Value::String(self.0.clone())
-	}
-}
-impl codec::Deserialize for OwnedTransactionId {
-	fn from_json(value: &json::Value) -> Result<Self, codec::DeError> {
-		value
-			.as_str()
-			.and_then(|text| {
-				if true {
-					Self::parse(text).ok()
-				} else {
-					// ruma-compatible: MXC URIs are accepted verbatim on the wire;
-
-					// validation happens in `parse`/`is_valid` for callers that need it.
-					Some(Self::from_trusted(text))
-				}
-			})
-			.ok_or_else(|| codec::DeError::expected(stringify!(OwnedTransactionId)))
-	}
-}
-impl fmt::Display for OwnedTransactionId {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		f.write_str(self.as_str())
-	}
-}
+owned_string_id!(OwnedTransactionId);
 #[derive(Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct OwnedClientSecret(alloc::string::String);
 pub type ClientSecret = OwnedClientSecret;
-impl OwnedClientSecret {
-	/// Parses a Matrix identifier, checking its grammar.
-	///
-	/// # Errors
-	///
-	/// Returns [`MatrixIdParseError`] if `value` does not match the
-	/// identifier's grammar.
-	pub fn parse(value: impl AsRef<str>) -> Result<Self, MatrixIdParseError> {
-		let value = value.as_ref();
-		if crate::id_validation::any(value) {
-			Ok(Self(value.to_owned()))
-		} else {
-			Err(MatrixIdParseError)
-		}
-	}
-	/// Constructs an identifier from a value already validated by the
-	/// caller, such as a trusted database row or a value generated here.
-	///
-	/// This bypasses grammar validation and must not be used for wire or
-	/// request data.
-	#[allow(dead_code)]
-	pub(crate) fn from_trusted(value: impl Into<alloc::string::String>) -> Self {
-		Self(value.into())
-	}
-	#[must_use]
-	pub fn as_str(&self) -> &str {
-		&self.0
-	}
-	#[must_use]
-	pub fn as_bytes(&self) -> &[u8] {
-		self.0.as_bytes()
-	}
-}
-impl TryFrom<alloc::string::String> for OwnedClientSecret {
-	type Error = MatrixIdParseError;
-	fn try_from(value: alloc::string::String) -> Result<Self, Self::Error> {
-		Self::parse(value)
-	}
-}
-impl TryFrom<&str> for OwnedClientSecret {
-	type Error = MatrixIdParseError;
-	fn try_from(value: &str) -> Result<Self, Self::Error> {
-		Self::parse(value)
-	}
-}
-impl core::str::FromStr for OwnedClientSecret {
-	type Err = MatrixIdParseError;
-	fn from_str(value: &str) -> Result<Self, Self::Err> {
-		Self::parse(value)
-	}
-}
-impl From<&OwnedClientSecret> for alloc::string::String {
-	fn from(value: &OwnedClientSecret) -> Self {
-		value.0.clone()
-	}
-}
-impl From<OwnedClientSecret> for alloc::string::String {
-	fn from(value: OwnedClientSecret) -> Self {
-		value.0
-	}
-}
-impl From<&OwnedClientSecret> for OwnedClientSecret {
-	fn from(value: &OwnedClientSecret) -> Self {
-		value.clone()
-	}
-}
-impl AsRef<[u8]> for OwnedClientSecret {
-	fn as_ref(&self) -> &[u8] {
-		self.0.as_bytes()
-	}
-}
-impl AsRef<str> for OwnedClientSecret {
-	fn as_ref(&self) -> &str {
-		self.as_str()
-	}
-}
-impl AsRef<OwnedClientSecret> for OwnedClientSecret {
-	fn as_ref(&self) -> &OwnedClientSecret {
-		self
-	}
-}
-impl PartialEq<&OwnedClientSecret> for OwnedClientSecret {
-	fn eq(&self, other: &&OwnedClientSecret) -> bool {
-		self == *other
-	}
-}
-impl Borrow<str> for OwnedClientSecret {
-	fn borrow(&self) -> &str {
-		self.as_str()
-	}
-}
-impl Deref for OwnedClientSecret {
-	type Target = str;
-	fn deref(&self) -> &str {
-		self.as_str()
-	}
-}
-impl fmt::Debug for OwnedClientSecret {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		f.debug_tuple(stringify!(OwnedClientSecret)).field(&self.0).finish()
-	}
-}
-impl codec::Serialize for OwnedClientSecret {
-	fn to_json(&self) -> json::Value {
-		json::Value::String(self.0.clone())
-	}
-}
-impl codec::Deserialize for OwnedClientSecret {
-	fn from_json(value: &json::Value) -> Result<Self, codec::DeError> {
-		value
-			.as_str()
-			.and_then(|text| {
-				if true {
-					Self::parse(text).ok()
-				} else {
-					// ruma-compatible: MXC URIs are accepted verbatim on the wire;
-
-					// validation happens in `parse`/`is_valid` for callers that need it.
-					Some(Self::from_trusted(text))
-				}
-			})
-			.ok_or_else(|| codec::DeError::expected(stringify!(OwnedClientSecret)))
-	}
-}
-impl fmt::Display for OwnedClientSecret {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		f.write_str(self.as_str())
-	}
-}
+owned_string_id!(OwnedClientSecret);
 #[derive(Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct OwnedSessionId(alloc::string::String);
 pub type SessionId = OwnedSessionId;
-impl OwnedSessionId {
-	/// Parses a Matrix identifier, checking its grammar.
-	///
-	/// # Errors
-	///
-	/// Returns [`MatrixIdParseError`] if `value` does not match the
-	/// identifier's grammar.
-	pub fn parse(value: impl AsRef<str>) -> Result<Self, MatrixIdParseError> {
-		let value = value.as_ref();
-		if crate::id_validation::any(value) {
-			Ok(Self(value.to_owned()))
-		} else {
-			Err(MatrixIdParseError)
-		}
-	}
-	/// Constructs an identifier from a value already validated by the
-	/// caller, such as a trusted database row or a value generated here.
-	///
-	/// This bypasses grammar validation and must not be used for wire or
-	/// request data.
-	#[allow(dead_code)]
-	pub(crate) fn from_trusted(value: impl Into<alloc::string::String>) -> Self {
-		Self(value.into())
-	}
-	#[must_use]
-	pub fn as_str(&self) -> &str {
-		&self.0
-	}
-	#[must_use]
-	pub fn as_bytes(&self) -> &[u8] {
-		self.0.as_bytes()
-	}
-}
-impl TryFrom<alloc::string::String> for OwnedSessionId {
-	type Error = MatrixIdParseError;
-	fn try_from(value: alloc::string::String) -> Result<Self, Self::Error> {
-		Self::parse(value)
-	}
-}
-impl TryFrom<&str> for OwnedSessionId {
-	type Error = MatrixIdParseError;
-	fn try_from(value: &str) -> Result<Self, Self::Error> {
-		Self::parse(value)
-	}
-}
-impl core::str::FromStr for OwnedSessionId {
-	type Err = MatrixIdParseError;
-	fn from_str(value: &str) -> Result<Self, Self::Err> {
-		Self::parse(value)
-	}
-}
-impl From<&OwnedSessionId> for alloc::string::String {
-	fn from(value: &OwnedSessionId) -> Self {
-		value.0.clone()
-	}
-}
-impl From<OwnedSessionId> for alloc::string::String {
-	fn from(value: OwnedSessionId) -> Self {
-		value.0
-	}
-}
-impl From<&OwnedSessionId> for OwnedSessionId {
-	fn from(value: &OwnedSessionId) -> Self {
-		value.clone()
-	}
-}
-impl AsRef<[u8]> for OwnedSessionId {
-	fn as_ref(&self) -> &[u8] {
-		self.0.as_bytes()
-	}
-}
-impl AsRef<str> for OwnedSessionId {
-	fn as_ref(&self) -> &str {
-		self.as_str()
-	}
-}
-impl AsRef<OwnedSessionId> for OwnedSessionId {
-	fn as_ref(&self) -> &OwnedSessionId {
-		self
-	}
-}
-impl PartialEq<&OwnedSessionId> for OwnedSessionId {
-	fn eq(&self, other: &&OwnedSessionId) -> bool {
-		self == *other
-	}
-}
-impl Borrow<str> for OwnedSessionId {
-	fn borrow(&self) -> &str {
-		self.as_str()
-	}
-}
-impl Deref for OwnedSessionId {
-	type Target = str;
-	fn deref(&self) -> &str {
-		self.as_str()
-	}
-}
-impl fmt::Debug for OwnedSessionId {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		f.debug_tuple(stringify!(OwnedSessionId)).field(&self.0).finish()
-	}
-}
-impl codec::Serialize for OwnedSessionId {
-	fn to_json(&self) -> json::Value {
-		json::Value::String(self.0.clone())
-	}
-}
-impl codec::Deserialize for OwnedSessionId {
-	fn from_json(value: &json::Value) -> Result<Self, codec::DeError> {
-		value
-			.as_str()
-			.and_then(|text| {
-				if true {
-					Self::parse(text).ok()
-				} else {
-					// ruma-compatible: MXC URIs are accepted verbatim on the wire;
-
-					// validation happens in `parse`/`is_valid` for callers that need it.
-					Some(Self::from_trusted(text))
-				}
-			})
-			.ok_or_else(|| codec::DeError::expected(stringify!(OwnedSessionId)))
-	}
-}
-impl fmt::Display for OwnedSessionId {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		f.write_str(self.as_str())
-	}
-}
+owned_string_id!(OwnedSessionId);
 #[derive(Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct OwnedMxcUri(alloc::string::String);
 pub type MxcUri = OwnedMxcUri;
@@ -2454,40 +1739,12 @@ pub mod api {
 					}
 					const _: crate::endpoint::Metadata =
 						<Request as crate::endpoint::EndpointRequest>::METADATA;
-					impl crate::endpoint::EndpointRequest for Request {
-						type Response = Response;
-						const METADATA: crate::endpoint::Metadata =
-							crate::endpoint::Metadata::new(
-								"GET",
-								"/_matrix/client/unstable/uk.half-shot.msc2666/user/mutual_rooms",
-							);
-						fn path_args(&self) -> crate::endpoint::Strs {
-							crate::endpoint::path_args_from(&mut [])
-						}
-						fn query(&self) -> crate::endpoint::Pairs {
-							crate::endpoint::query_pairs_mut(&mut [(
-								"user_id",
-								crate::endpoint::enc(&self.user_id),
-							)])
-						}
-						fn body(&self) -> Option<crate::json::Value> {
-							crate::endpoint::body_value(
-								<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-								&mut [],
-							)
-						}
-						fn from_parts(
-							path: &[crate::endpoint::Str],
-							query: &[crate::endpoint::Pair],
-							body: Option<&crate::json::Value>,
-						) -> crate::endpoint::Parsed<Self> {
-							let input = crate::endpoint::Input::new(path, query, body);
-							let value = Self {
-								user_id: input.query("user_id")?,
-							};
-							input.finish()?;
-							Ok(value)
-						}
+					crate::endpoint_request_impl! {
+						method: "GET",
+						path: "/_matrix/client/unstable/uk.half-shot.msc2666/user/mutual_rooms",
+						path {}
+						query { user_id => "user_id" }
+						body {}
 					}
 					pub struct Response {
 						pub joined: alloc::vec::Vec<OwnedRoomId>,
@@ -2501,23 +1758,8 @@ pub mod api {
 							crate::endpoint::opaque_debug(f, "Response")
 						}
 					}
-					impl crate::endpoint::EndpointResponse for Response {
-						fn to_body(&self) -> crate::json::Value {
-							crate::endpoint::body_object(&mut [
-								("joined", crate::endpoint::enc(&self.joined)),
-								(
-									"next_batch_token",
-									crate::endpoint::enc(&self.next_batch_token),
-								),
-							])
-						}
-						fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-							let input = crate::endpoint::Input::body_only(body);
-							Ok(Self {
-								joined: input.body("joined")?,
-								next_batch_token: input.body("next_batch_token")?,
-							})
-						}
+					crate::endpoint_response_impl! {
+						body { joined => "joined", next_batch_token => "next_batch_token" }
 					}
 				}
 			}
@@ -2577,39 +1819,12 @@ pub mod api {
 					}
 					const _: crate::endpoint::Metadata =
 						<Request as crate::endpoint::EndpointRequest>::METADATA;
-					impl crate::endpoint::EndpointRequest for Request {
-						type Response = Response;
-						const METADATA: crate::endpoint::Metadata =
-							crate::endpoint::Metadata::new(
-								"GET",
-								"/_matrix/client/v3/directory/list/room/{roomId}",
-							);
-						fn path_args(&self) -> crate::endpoint::Strs {
-							crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(
-								&self.room_id,
-							)])
-						}
-						fn query(&self) -> crate::endpoint::Pairs {
-							crate::endpoint::query_pairs_mut(&mut [])
-						}
-						fn body(&self) -> Option<crate::json::Value> {
-							crate::endpoint::body_value(
-								<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-								&mut [],
-							)
-						}
-						fn from_parts(
-							path: &[crate::endpoint::Str],
-							query: &[crate::endpoint::Pair],
-							body: Option<&crate::json::Value>,
-						) -> crate::endpoint::Parsed<Self> {
-							let input = crate::endpoint::Input::new(path, query, body);
-							let value = Self {
-								room_id: input.path()?,
-							};
-							input.finish()?;
-							Ok(value)
-						}
+					crate::endpoint_request_impl! {
+						method: "GET",
+						path: "/_matrix/client/v3/directory/list/room/{roomId}",
+						path { room_id }
+						query {}
+						body {}
 					}
 					pub struct Response {
 						pub visibility: Visibility,
@@ -2622,19 +1837,8 @@ pub mod api {
 							crate::endpoint::opaque_debug(f, "Response")
 						}
 					}
-					impl crate::endpoint::EndpointResponse for Response {
-						fn to_body(&self) -> crate::json::Value {
-							crate::endpoint::body_object(&mut [(
-								"visibility",
-								crate::endpoint::enc(&self.visibility),
-							)])
-						}
-						fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-							let input = crate::endpoint::Input::body_only(body);
-							Ok(Self {
-								visibility: input.body("visibility")?,
-							})
-						}
+					crate::endpoint_response_impl! {
+						body { visibility => "visibility" }
 					}
 				}
 			}
@@ -2655,40 +1859,12 @@ pub mod api {
 					}
 					const _: crate::endpoint::Metadata =
 						<Request as crate::endpoint::EndpointRequest>::METADATA;
-					impl crate::endpoint::EndpointRequest for Request {
-						type Response = Response;
-						const METADATA: crate::endpoint::Metadata =
-							crate::endpoint::Metadata::new(
-								"PUT",
-								"/_matrix/client/v3/directory/list/room/{roomId}",
-							);
-						fn path_args(&self) -> crate::endpoint::Strs {
-							crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(
-								&self.room_id,
-							)])
-						}
-						fn query(&self) -> crate::endpoint::Pairs {
-							crate::endpoint::query_pairs_mut(&mut [])
-						}
-						fn body(&self) -> Option<crate::json::Value> {
-							crate::endpoint::body_value(
-								<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-								&mut [("visibility", crate::endpoint::enc(&self.visibility))],
-							)
-						}
-						fn from_parts(
-							path: &[crate::endpoint::Str],
-							query: &[crate::endpoint::Pair],
-							body: Option<&crate::json::Value>,
-						) -> crate::endpoint::Parsed<Self> {
-							let input = crate::endpoint::Input::new(path, query, body);
-							let value = Self {
-								room_id: input.path()?,
-								visibility: input.body("visibility")?,
-							};
-							input.finish()?;
-							Ok(value)
-						}
+					crate::endpoint_request_impl! {
+						method: "PUT",
+						path: "/_matrix/client/v3/directory/list/room/{roomId}",
+						path { room_id }
+						query {}
+						body { visibility => "visibility" }
 					}
 					pub struct Response {}
 					impl ::core::fmt::Debug for Response {
@@ -2699,15 +1875,8 @@ pub mod api {
 							crate::endpoint::opaque_debug(f, "Response")
 						}
 					}
-					impl crate::endpoint::EndpointResponse for Response {
-						fn to_body(&self) -> crate::json::Value {
-							crate::endpoint::body_object(&mut [])
-						}
-						fn from_body(
-							_body: &crate::json::Value,
-						) -> crate::endpoint::Parsed<Self> {
-							Ok(Self {})
-						}
+					crate::endpoint_response_impl! {
+						body {}
 					}
 				}
 			}
@@ -2775,32 +1944,12 @@ pub mod api {
 				}
 				const _: crate::endpoint::Metadata =
 					<Request as crate::endpoint::EndpointRequest>::METADATA;
-				impl crate::endpoint::EndpointRequest for Request {
-					type Response = Response;
-					const METADATA: crate::endpoint::Metadata =
-						crate::endpoint::Metadata::new("GET", "/.well-known/matrix/client");
-					fn path_args(&self) -> crate::endpoint::Strs {
-						crate::endpoint::path_args_from(&mut [])
-					}
-					fn query(&self) -> crate::endpoint::Pairs {
-						crate::endpoint::query_pairs_mut(&mut [])
-					}
-					fn body(&self) -> Option<crate::json::Value> {
-						crate::endpoint::body_value(
-							<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-							&mut [],
-						)
-					}
-					fn from_parts(
-						path: &[crate::endpoint::Str],
-						query: &[crate::endpoint::Pair],
-						body: Option<&crate::json::Value>,
-					) -> crate::endpoint::Parsed<Self> {
-						let input = crate::endpoint::Input::new(path, query, body);
-						let value = Self {};
-						input.finish()?;
-						Ok(value)
-					}
+				crate::endpoint_request_impl! {
+					method: "GET",
+					path: "/.well-known/matrix/client",
+					path {}
+					query {}
+					body {}
 				}
 				pub struct Response {
 					pub homeserver: HomeserverInfo,
@@ -2817,29 +1966,8 @@ pub mod api {
 						crate::endpoint::opaque_debug(f, "Response")
 					}
 				}
-				impl crate::endpoint::EndpointResponse for Response {
-					fn to_body(&self) -> crate::json::Value {
-						crate::endpoint::body_object(&mut [
-							("homeserver", crate::endpoint::enc(&self.homeserver)),
-							("identity_server", crate::endpoint::enc(&self.identity_server)),
-							(
-								"sliding_sync_proxy",
-								crate::endpoint::enc(&self.sliding_sync_proxy),
-							),
-							("tile_server", crate::endpoint::enc(&self.tile_server)),
-							("rtc_foci", crate::endpoint::enc(&self.rtc_foci)),
-						])
-					}
-					fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-						let input = crate::endpoint::Input::body_only(body);
-						Ok(Self {
-							homeserver: input.body("homeserver")?,
-							identity_server: input.body("identity_server")?,
-							sliding_sync_proxy: input.body("sliding_sync_proxy")?,
-							tile_server: input.body("tile_server")?,
-							rtc_foci: input.body("rtc_foci")?,
-						})
-					}
+				crate::endpoint_response_impl! {
+					body { homeserver => "homeserver", identity_server => "identity_server", sliding_sync_proxy => "sliding_sync_proxy", tile_server => "tile_server", rtc_foci => "rtc_foci" }
 				}
 				#[derive(Clone, Debug, Default)]
 				pub struct RtcFocusInfo(pub crate::json::Value);
@@ -2880,32 +2008,12 @@ pub mod api {
 				}
 				const _: crate::endpoint::Metadata =
 					<Request as crate::endpoint::EndpointRequest>::METADATA;
-				impl crate::endpoint::EndpointRequest for Request {
-					type Response = Response;
-					const METADATA: crate::endpoint::Metadata =
-						crate::endpoint::Metadata::new("GET", "/.well-known/matrix/support");
-					fn path_args(&self) -> crate::endpoint::Strs {
-						crate::endpoint::path_args_from(&mut [])
-					}
-					fn query(&self) -> crate::endpoint::Pairs {
-						crate::endpoint::query_pairs_mut(&mut [])
-					}
-					fn body(&self) -> Option<crate::json::Value> {
-						crate::endpoint::body_value(
-							<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-							&mut [],
-						)
-					}
-					fn from_parts(
-						path: &[crate::endpoint::Str],
-						query: &[crate::endpoint::Pair],
-						body: Option<&crate::json::Value>,
-					) -> crate::endpoint::Parsed<Self> {
-						let input = crate::endpoint::Input::new(path, query, body);
-						let value = Self {};
-						input.finish()?;
-						Ok(value)
-					}
+				crate::endpoint_request_impl! {
+					method: "GET",
+					path: "/.well-known/matrix/support",
+					path {}
+					query {}
+					body {}
 				}
 				pub struct Response {
 					pub contacts: alloc::vec::Vec<Contact>,
@@ -2919,20 +2027,8 @@ pub mod api {
 						crate::endpoint::opaque_debug(f, "Response")
 					}
 				}
-				impl crate::endpoint::EndpointResponse for Response {
-					fn to_body(&self) -> crate::json::Value {
-						crate::endpoint::body_object(&mut [
-							("contacts", crate::endpoint::enc(&self.contacts)),
-							("support_page", crate::endpoint::enc(&self.support_page)),
-						])
-					}
-					fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-						let input = crate::endpoint::Input::body_only(body);
-						Ok(Self {
-							contacts: input.body("contacts")?,
-							support_page: input.body("support_page")?,
-						})
-					}
+				crate::endpoint_response_impl! {
+					body { contacts => "contacts", support_page => "support_page" }
 				}
 				#[derive(Clone, Debug, Default)]
 				pub struct ContactRole(pub crate::json::Value);
@@ -3257,32 +2353,12 @@ pub mod api {
 				}
 				const _: crate::endpoint::Metadata =
 					<Request as crate::endpoint::EndpointRequest>::METADATA;
-				impl crate::endpoint::EndpointRequest for Request {
-					type Response = Response;
-					const METADATA: crate::endpoint::Metadata =
-						crate::endpoint::Metadata::new("GET", "/_matrix/client/v3/capabilities");
-					fn path_args(&self) -> crate::endpoint::Strs {
-						crate::endpoint::path_args_from(&mut [])
-					}
-					fn query(&self) -> crate::endpoint::Pairs {
-						crate::endpoint::query_pairs_mut(&mut [])
-					}
-					fn body(&self) -> Option<crate::json::Value> {
-						crate::endpoint::body_value(
-							<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-							&mut [],
-						)
-					}
-					fn from_parts(
-						path: &[crate::endpoint::Str],
-						query: &[crate::endpoint::Pair],
-						body: Option<&crate::json::Value>,
-					) -> crate::endpoint::Parsed<Self> {
-						let input = crate::endpoint::Input::new(path, query, body);
-						let value = Self {};
-						input.finish()?;
-						Ok(value)
-					}
+				crate::endpoint_request_impl! {
+					method: "GET",
+					path: "/_matrix/client/v3/capabilities",
+					path {}
+					query {}
+					body {}
 				}
 				pub struct Response {
 					pub capabilities: Capabilities,
@@ -3295,19 +2371,8 @@ pub mod api {
 						crate::endpoint::opaque_debug(f, "Response")
 					}
 				}
-				impl crate::endpoint::EndpointResponse for Response {
-					fn to_body(&self) -> crate::json::Value {
-						crate::endpoint::body_object(&mut [(
-							"capabilities",
-							crate::endpoint::enc(&self.capabilities),
-						)])
-					}
-					fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-						let input = crate::endpoint::Input::body_only(body);
-						Ok(Self {
-							capabilities: input.body("capabilities")?,
-						})
-					}
+				crate::endpoint_response_impl! {
+					body { capabilities => "capabilities" }
 				}
 			}
 			pub mod get_supported_versions {
@@ -3322,32 +2387,12 @@ pub mod api {
 				}
 				const _: crate::endpoint::Metadata =
 					<Request as crate::endpoint::EndpointRequest>::METADATA;
-				impl crate::endpoint::EndpointRequest for Request {
-					type Response = Response;
-					const METADATA: crate::endpoint::Metadata =
-						crate::endpoint::Metadata::new("GET", "/_matrix/client/versions");
-					fn path_args(&self) -> crate::endpoint::Strs {
-						crate::endpoint::path_args_from(&mut [])
-					}
-					fn query(&self) -> crate::endpoint::Pairs {
-						crate::endpoint::query_pairs_mut(&mut [])
-					}
-					fn body(&self) -> Option<crate::json::Value> {
-						crate::endpoint::body_value(
-							<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-							&mut [],
-						)
-					}
-					fn from_parts(
-						path: &[crate::endpoint::Str],
-						query: &[crate::endpoint::Pair],
-						body: Option<&crate::json::Value>,
-					) -> crate::endpoint::Parsed<Self> {
-						let input = crate::endpoint::Input::new(path, query, body);
-						let value = Self {};
-						input.finish()?;
-						Ok(value)
-					}
+				crate::endpoint_request_impl! {
+					method: "GET",
+					path: "/_matrix/client/versions",
+					path {}
+					query {}
+					body {}
 				}
 				pub struct Response {
 					pub versions: alloc::vec::Vec<String>,
@@ -3361,20 +2406,8 @@ pub mod api {
 						crate::endpoint::opaque_debug(f, "Response")
 					}
 				}
-				impl crate::endpoint::EndpointResponse for Response {
-					fn to_body(&self) -> crate::json::Value {
-						crate::endpoint::body_object(&mut [
-							("versions", crate::endpoint::enc(&self.versions)),
-							("unstable_features", crate::endpoint::enc(&self.unstable_features)),
-						])
-					}
-					fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-						let input = crate::endpoint::Input::body_only(body);
-						Ok(Self {
-							versions: input.body("versions")?,
-							unstable_features: input.body("unstable_features")?,
-						})
-					}
+				crate::endpoint_response_impl! {
+					body { versions => "versions", unstable_features => "unstable_features" }
 				}
 			}
 			pub mod get_rtc_transports {
@@ -3389,34 +2422,12 @@ pub mod api {
 				}
 				const _: crate::endpoint::Metadata =
 					<Request as crate::endpoint::EndpointRequest>::METADATA;
-				impl crate::endpoint::EndpointRequest for Request {
-					type Response = Response;
-					const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-						"GET",
-						"/_matrix/client/unstable/org.matrix.msc4143/rtc/transports",
-					);
-					fn path_args(&self) -> crate::endpoint::Strs {
-						crate::endpoint::path_args_from(&mut [])
-					}
-					fn query(&self) -> crate::endpoint::Pairs {
-						crate::endpoint::query_pairs_mut(&mut [])
-					}
-					fn body(&self) -> Option<crate::json::Value> {
-						crate::endpoint::body_value(
-							<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-							&mut [],
-						)
-					}
-					fn from_parts(
-						path: &[crate::endpoint::Str],
-						query: &[crate::endpoint::Pair],
-						body: Option<&crate::json::Value>,
-					) -> crate::endpoint::Parsed<Self> {
-						let input = crate::endpoint::Input::new(path, query, body);
-						let value = Self {};
-						input.finish()?;
-						Ok(value)
-					}
+				crate::endpoint_request_impl! {
+					method: "GET",
+					path: "/_matrix/client/unstable/org.matrix.msc4143/rtc/transports",
+					path {}
+					query {}
+					body {}
 				}
 				pub struct Response {
 					pub transports: alloc::vec::Vec<crate::json::Value>,
@@ -3429,19 +2440,8 @@ pub mod api {
 						crate::endpoint::opaque_debug(f, "Response")
 					}
 				}
-				impl crate::endpoint::EndpointResponse for Response {
-					fn to_body(&self) -> crate::json::Value {
-						crate::endpoint::body_object(&mut [(
-							"transports",
-							crate::endpoint::enc(&self.transports),
-						)])
-					}
-					fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-						let input = crate::endpoint::Input::body_only(body);
-						Ok(Self {
-							transports: input.body("transports")?,
-						})
-					}
+				crate::endpoint_response_impl! {
+					body { transports => "transports" }
 				}
 				impl Response {
 					#[must_use]

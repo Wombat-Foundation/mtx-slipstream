@@ -168,45 +168,12 @@ pub mod event {
 			}
 			const _: crate::endpoint::Metadata =
 				<Request as crate::endpoint::EndpointRequest>::METADATA;
-			impl crate::endpoint::EndpointRequest for Request {
-				type Response = Response;
-				const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-					"PUT",
-					"/_matrix/app/v1/transactions/{txn_id}",
-				);
-				fn path_args(&self) -> crate::endpoint::Strs {
-					crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(
-						&self.txn_id,
-					)])
-				}
-				fn query(&self) -> crate::endpoint::Pairs {
-					crate::endpoint::query_pairs_mut(&mut [])
-				}
-				fn body(&self) -> Option<crate::json::Value> {
-					crate::endpoint::body_value(
-						<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-						&mut [
-							("events", crate::endpoint::enc(&self.events)),
-							("ephemeral", crate::endpoint::enc(&self.ephemeral)),
-							("to_device", crate::endpoint::enc(&self.to_device)),
-						],
-					)
-				}
-				fn from_parts(
-					path: &[crate::endpoint::Str],
-					query: &[crate::endpoint::Pair],
-					body: Option<&crate::json::Value>,
-				) -> crate::endpoint::Parsed<Self> {
-					let input = crate::endpoint::Input::new(path, query, body);
-					let value = Self {
-						txn_id: input.path()?,
-						events: input.body("events")?,
-						ephemeral: input.body("ephemeral")?,
-						to_device: input.body("to_device")?,
-					};
-					input.finish()?;
-					Ok(value)
-				}
+			crate::endpoint_request_impl! {
+				method: "PUT",
+				path: "/_matrix/app/v1/transactions/{txn_id}",
+				path { txn_id }
+				query {}
+				body { events => "events", ephemeral => "ephemeral", to_device => "to_device" }
 			}
 			pub struct Response {}
 			impl ::core::fmt::Debug for Response {
@@ -214,13 +181,8 @@ pub mod event {
 					crate::endpoint::opaque_debug(f, "Response")
 				}
 			}
-			impl crate::endpoint::EndpointResponse for Response {
-				fn to_body(&self) -> crate::json::Value {
-					crate::endpoint::body_object(&mut [])
-				}
-				fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					Ok(Self {})
-				}
+			crate::endpoint_response_impl! {
+				body {}
 			}
 		}
 	}
@@ -239,36 +201,12 @@ pub mod query {
 			}
 			const _: crate::endpoint::Metadata =
 				<Request as crate::endpoint::EndpointRequest>::METADATA;
-			impl crate::endpoint::EndpointRequest for Request {
-				type Response = Response;
-				const METADATA: crate::endpoint::Metadata =
-					crate::endpoint::Metadata::new("GET", "/_matrix/app/v1/rooms/{room_alias}");
-				fn path_args(&self) -> crate::endpoint::Strs {
-					crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(
-						&self.room_alias,
-					)])
-				}
-				fn query(&self) -> crate::endpoint::Pairs {
-					crate::endpoint::query_pairs_mut(&mut [])
-				}
-				fn body(&self) -> Option<crate::json::Value> {
-					crate::endpoint::body_value(
-						<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-						&mut [],
-					)
-				}
-				fn from_parts(
-					path: &[crate::endpoint::Str],
-					query: &[crate::endpoint::Pair],
-					body: Option<&crate::json::Value>,
-				) -> crate::endpoint::Parsed<Self> {
-					let input = crate::endpoint::Input::new(path, query, body);
-					let value = Self {
-						room_alias: input.path()?,
-					};
-					input.finish()?;
-					Ok(value)
-				}
+			crate::endpoint_request_impl! {
+				method: "GET",
+				path: "/_matrix/app/v1/rooms/{room_alias}",
+				path { room_alias }
+				query {}
+				body {}
 			}
 			pub struct Response {}
 			impl ::core::fmt::Debug for Response {
@@ -276,13 +214,8 @@ pub mod query {
 					crate::endpoint::opaque_debug(f, "Response")
 				}
 			}
-			impl crate::endpoint::EndpointResponse for Response {
-				fn to_body(&self) -> crate::json::Value {
-					crate::endpoint::body_object(&mut [])
-				}
-				fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					Ok(Self {})
-				}
+			crate::endpoint_response_impl! {
+				body {}
 			}
 		}
 	}
@@ -299,36 +232,12 @@ pub mod query {
 			}
 			const _: crate::endpoint::Metadata =
 				<Request as crate::endpoint::EndpointRequest>::METADATA;
-			impl crate::endpoint::EndpointRequest for Request {
-				type Response = Response;
-				const METADATA: crate::endpoint::Metadata =
-					crate::endpoint::Metadata::new("GET", "/_matrix/app/v1/users/{user_id}");
-				fn path_args(&self) -> crate::endpoint::Strs {
-					crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(
-						&self.user_id,
-					)])
-				}
-				fn query(&self) -> crate::endpoint::Pairs {
-					crate::endpoint::query_pairs_mut(&mut [])
-				}
-				fn body(&self) -> Option<crate::json::Value> {
-					crate::endpoint::body_value(
-						<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-						&mut [],
-					)
-				}
-				fn from_parts(
-					path: &[crate::endpoint::Str],
-					query: &[crate::endpoint::Pair],
-					body: Option<&crate::json::Value>,
-				) -> crate::endpoint::Parsed<Self> {
-					let input = crate::endpoint::Input::new(path, query, body);
-					let value = Self {
-						user_id: input.path()?,
-					};
-					input.finish()?;
-					Ok(value)
-				}
+			crate::endpoint_request_impl! {
+				method: "GET",
+				path: "/_matrix/app/v1/users/{user_id}",
+				path { user_id }
+				query {}
+				body {}
 			}
 			pub struct Response {}
 			impl ::core::fmt::Debug for Response {
@@ -336,13 +245,8 @@ pub mod query {
 					crate::endpoint::opaque_debug(f, "Response")
 				}
 			}
-			impl crate::endpoint::EndpointResponse for Response {
-				fn to_body(&self) -> crate::json::Value {
-					crate::endpoint::body_object(&mut [])
-				}
-				fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					Ok(Self {})
-				}
+			crate::endpoint_response_impl! {
+				body {}
 			}
 		}
 	}
@@ -361,34 +265,12 @@ pub mod ping {
 			}
 			const _: crate::endpoint::Metadata =
 				<Request as crate::endpoint::EndpointRequest>::METADATA;
-			impl crate::endpoint::EndpointRequest for Request {
-				type Response = Response;
-				const METADATA: crate::endpoint::Metadata =
-					crate::endpoint::Metadata::new("POST", "/_matrix/app/v1/ping");
-				fn path_args(&self) -> crate::endpoint::Strs {
-					crate::endpoint::path_args_from(&mut [])
-				}
-				fn query(&self) -> crate::endpoint::Pairs {
-					crate::endpoint::query_pairs_mut(&mut [])
-				}
-				fn body(&self) -> Option<crate::json::Value> {
-					crate::endpoint::body_value(
-						<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-						&mut [("transaction_id", crate::endpoint::enc(&self.transaction_id))],
-					)
-				}
-				fn from_parts(
-					path: &[crate::endpoint::Str],
-					query: &[crate::endpoint::Pair],
-					body: Option<&crate::json::Value>,
-				) -> crate::endpoint::Parsed<Self> {
-					let input = crate::endpoint::Input::new(path, query, body);
-					let value = Self {
-						transaction_id: input.body("transaction_id")?,
-					};
-					input.finish()?;
-					Ok(value)
-				}
+			crate::endpoint_request_impl! {
+				method: "POST",
+				path: "/_matrix/app/v1/ping",
+				path {}
+				query {}
+				body { transaction_id => "transaction_id" }
 			}
 			pub struct Response {}
 			impl ::core::fmt::Debug for Response {
@@ -396,13 +278,8 @@ pub mod ping {
 					crate::endpoint::opaque_debug(f, "Response")
 				}
 			}
-			impl crate::endpoint::EndpointResponse for Response {
-				fn to_body(&self) -> crate::json::Value {
-					crate::endpoint::body_object(&mut [])
-				}
-				fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					Ok(Self {})
-				}
+			crate::endpoint_response_impl! {
+				body {}
 			}
 		}
 	}
@@ -429,39 +306,12 @@ pub mod request_ping {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"POST",
-				"/_matrix/client/v1/appservice/{appservice_id}/ping",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(
-					&self.appservice_id,
-				)])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [("transaction_id", crate::endpoint::enc(&self.transaction_id))],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					appservice_id: input.path()?,
-					transaction_id: input.body("transaction_id")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "POST",
+			path: "/_matrix/client/v1/appservice/{appservice_id}/ping",
+			path { appservice_id }
+			query {}
+			body { transaction_id => "transaction_id" }
 		}
 
 		/// How long the appservice took to answer, in the `duration_ms` field.

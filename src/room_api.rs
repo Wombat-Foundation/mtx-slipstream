@@ -1,30 +1,7 @@
 //! Room-level client endpoints.
 
 /// Whether a room is listed in the public directory.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub enum Visibility {
-	Public,
-	#[default]
-	Private,
-}
-
-impl crate::codec::Serialize for Visibility {
-	fn to_json(&self) -> crate::json::Value {
-		crate::json::Value::String(::alloc::string::String::from(match self {
-			Self::Public => "public",
-			Self::Private => "private",
-		}))
-	}
-}
-impl crate::codec::Deserialize for Visibility {
-	fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
-		match value.as_str() {
-			Some("public") => Ok(Self::Public),
-			Some("private") => Ok(Self::Private),
-			_ => Err(crate::codec::DeError::expected(stringify!(Visibility))),
-		}
-	}
-}
+pub use crate::directory::Visibility;
 
 use alloc::string::String;
 
@@ -266,19 +243,8 @@ pub mod create_room {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [(
-					"room_id",
-					crate::endpoint::enc(&self.room_id),
-				)])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					room_id: input.body("room_id")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { room_id => "room_id" }
 		}
 
 		impl Response {
@@ -308,37 +274,12 @@ pub mod upgrade_room {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"POST",
-				"/_matrix/client/v3/rooms/{room_id}/upgrade",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(&self.room_id)])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [("new_version", crate::endpoint::enc(&self.new_version))],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					room_id: input.path()?,
-					new_version: input.body("new_version")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "POST",
+			path: "/_matrix/client/v3/rooms/{room_id}/upgrade",
+			path { room_id }
+			query {}
+			body { new_version => "new_version" }
 		}
 		pub struct Response {
 			pub replacement_room: OwnedRoomId,
@@ -348,19 +289,8 @@ pub mod upgrade_room {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [(
-					"replacement_room",
-					crate::endpoint::enc(&self.replacement_room),
-				)])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					replacement_room: input.body("replacement_room")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { replacement_room => "replacement_room" }
 		}
 
 		impl Request {
@@ -401,36 +331,12 @@ pub mod aliases {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"GET",
-				"/_matrix/client/v3/rooms/{room_id}/aliases",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(&self.room_id)])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					room_id: input.path()?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/v3/rooms/{room_id}/aliases",
+			path { room_id }
+			query {}
+			body {}
 		}
 		pub struct Response {
 			pub aliases: Vec<OwnedRoomAliasId>,
@@ -440,19 +346,8 @@ pub mod aliases {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [(
-					"aliases",
-					crate::endpoint::enc(&self.aliases),
-				)])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					aliases: input.body("aliases")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { aliases => "aliases" }
 		}
 
 		impl Request {
@@ -482,40 +377,12 @@ pub mod get_room_event {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"GET",
-				"/_matrix/client/v3/rooms/{room_id}/event/{event_id}",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [
-					crate::endpoint::path_param(&self.room_id),
-					crate::endpoint::path_param(&self.event_id),
-				])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					room_id: input.path()?,
-					event_id: input.path()?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/v3/rooms/{room_id}/event/{event_id}",
+			path { room_id, event_id }
+			query {}
+			body {}
 		}
 		pub struct Response {
 			pub event: Raw<AnyTimelineEvent>,
@@ -565,42 +432,13 @@ pub mod get_event_by_timestamp {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"GET",
-				"/_matrix/client/unstable/org.matrix.msc3030/rooms/{room_id}/timestamp_to_event",
-			)
-			.with_aliases(&["/_matrix/client/v1/rooms/{room_id}/timestamp_to_event"]);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(&self.room_id)])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [
-					("ts", crate::endpoint::enc(&self.ts)),
-					("dir", crate::endpoint::enc(&self.dir)),
-				])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					room_id: input.path()?,
-					ts: input.query("ts")?,
-					dir: input.query("dir")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/unstable/org.matrix.msc3030/rooms/{room_id}/timestamp_to_event",
+			aliases: ["/_matrix/client/v1/rooms/{room_id}/timestamp_to_event"],
+			path { room_id }
+			query { ts => "ts", dir => "dir" }
+			body {}
 		}
 		pub struct Response {
 			pub event_id: OwnedEventId,
@@ -611,20 +449,8 @@ pub mod get_event_by_timestamp {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [
-					("event_id", crate::endpoint::enc(&self.event_id)),
-					("origin_server_ts", crate::endpoint::enc(&self.origin_server_ts)),
-				])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					event_id: input.body("event_id")?,
-					origin_server_ts: input.body("origin_server_ts")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { event_id => "event_id", origin_server_ts => "origin_server_ts" }
 		}
 
 		impl Request {
@@ -679,39 +505,12 @@ pub mod get_summary {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"GET",
-				"/_matrix/client/v1/room_summary/{room_id_or_alias}",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(
-					&self.room_id_or_alias,
-				)])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [("via", crate::endpoint::enc(&self.via))])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					room_id_or_alias: input.path()?,
-					via: input.query("via")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/v1/room_summary/{room_id_or_alias}",
+			path { room_id_or_alias }
+			query { via => "via" }
+			body {}
 		}
 
 		impl Request {
@@ -821,36 +620,12 @@ pub mod initial_sync {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"GET",
-				"/_matrix/client/v3/rooms/{room_id}/initialSync",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(&self.room_id)])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					room_id: input.path()?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/v3/rooms/{room_id}/initialSync",
+			path { room_id }
+			query {}
+			body {}
 		}
 
 		impl Request {

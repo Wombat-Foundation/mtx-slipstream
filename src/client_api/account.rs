@@ -78,36 +78,12 @@ pub mod request_openid_token {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"POST",
-				"/_matrix/client/v3/user/{userId}/openid/request_token",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(&self.user_id)])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					user_id: input.path()?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "POST",
+			path: "/_matrix/client/v3/user/{userId}/openid/request_token",
+			path { user_id }
+			query {}
+			body {}
 		}
 		pub struct Response {
 			pub access_token: String,
@@ -120,24 +96,8 @@ pub mod request_openid_token {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [
-					("access_token", crate::endpoint::enc(&self.access_token)),
-					("token_type", crate::endpoint::enc(&self.token_type)),
-					("matrix_server_name", crate::endpoint::enc(&self.matrix_server_name)),
-					("expires_in", crate::endpoint::enc(&self.expires_in)),
-				])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					access_token: input.body("access_token")?,
-					token_type: input.body("token_type")?,
-					matrix_server_name: input.body("matrix_server_name")?,
-					expires_in: input.body("expires_in")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { access_token => "access_token", token_type => "token_type", matrix_server_name => "matrix_server_name", expires_in => "expires_in" }
 		}
 	}
 }
@@ -156,40 +116,12 @@ pub mod change_password {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata =
-				crate::endpoint::Metadata::new("POST", "/_matrix/client/v3/account/password");
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [
-						("new_password", crate::endpoint::enc(&self.new_password)),
-						("logout_devices", crate::endpoint::enc(&self.logout_devices)),
-						("auth", crate::endpoint::enc(&self.auth)),
-					],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					new_password: input.body("new_password")?,
-					logout_devices: input.body_or("logout_devices", true)?,
-					auth: input.body("auth")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "POST",
+			path: "/_matrix/client/v3/account/password",
+			path {}
+			query {}
+			body { new_password => "new_password", logout_devices => "logout_devices" = true, auth => "auth" }
 		}
 		pub struct Response {}
 		impl ::core::fmt::Debug for Response {
@@ -197,13 +129,8 @@ pub mod change_password {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [])
-			}
-			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				Ok(Self {})
-			}
+		crate::endpoint_response_impl! {
+			body {}
 		}
 	}
 }
@@ -285,19 +212,8 @@ pub mod deactivate {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [(
-					"id_server_unbind_result",
-					crate::endpoint::enc(&self.id_server_unbind_result),
-				)])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					id_server_unbind_result: input.body("id_server_unbind_result")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { id_server_unbind_result => "id_server_unbind_result" }
 		}
 	}
 }
@@ -314,37 +230,12 @@ pub mod get_username_availability {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata =
-				crate::endpoint::Metadata::new("GET", "/_matrix/client/v3/register/available");
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [(
-					"username",
-					crate::endpoint::enc(&self.username),
-				)])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					username: input.query("username")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/v3/register/available",
+			path {}
+			query { username => "username" }
+			body {}
 		}
 		pub struct Response {
 			pub available: bool,
@@ -354,19 +245,8 @@ pub mod get_username_availability {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [(
-					"available",
-					crate::endpoint::enc(&self.available),
-				)])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					available: input.body("available")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { available => "available" }
 		}
 	}
 }
@@ -381,32 +261,12 @@ pub mod whoami {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata =
-				crate::endpoint::Metadata::new("GET", "/_matrix/client/v3/account/whoami");
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/v3/account/whoami",
+			path {}
+			query {}
+			body {}
 		}
 		pub struct Response {
 			pub user_id: crate::OwnedUserId,
@@ -418,22 +278,8 @@ pub mod whoami {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [
-					("user_id", crate::endpoint::enc(&self.user_id)),
-					("device_id", crate::endpoint::enc(&self.device_id)),
-					("is_guest", crate::endpoint::enc(&self.is_guest)),
-				])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					user_id: input.body("user_id")?,
-					device_id: input.body("device_id")?,
-					is_guest: input.body("is_guest")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { user_id => "user_id", device_id => "device_id", is_guest => "is_guest" }
 		}
 	}
 }
@@ -452,42 +298,12 @@ pub mod request_password_change_token_via_email {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"POST",
-				"/_matrix/client/v3/account/password/email/requestToken",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [
-						("client_secret", crate::endpoint::enc(&self.client_secret)),
-						("email", crate::endpoint::enc(&self.email)),
-						("send_attempt", crate::endpoint::enc(&self.send_attempt)),
-					],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					client_secret: input.body("client_secret")?,
-					email: input.body("email")?,
-					send_attempt: input.body("send_attempt")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "POST",
+			path: "/_matrix/client/v3/account/password/email/requestToken",
+			path {}
+			query {}
+			body { client_secret => "client_secret", email => "email", send_attempt => "send_attempt" }
 		}
 		pub struct Response {
 			pub sid: String,
@@ -497,16 +313,8 @@ pub mod request_password_change_token_via_email {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [("sid", crate::endpoint::enc(&self.sid))])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					sid: input.body("sid")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { sid => "sid" }
 		}
 	}
 }
@@ -525,42 +333,12 @@ pub mod request_3pid_management_token_via_email {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"POST",
-				"/_matrix/client/v3/account/3pid/email/requestToken",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [
-						("client_secret", crate::endpoint::enc(&self.client_secret)),
-						("email", crate::endpoint::enc(&self.email)),
-						("send_attempt", crate::endpoint::enc(&self.send_attempt)),
-					],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					client_secret: input.body("client_secret")?,
-					email: input.body("email")?,
-					send_attempt: input.body("send_attempt")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "POST",
+			path: "/_matrix/client/v3/account/3pid/email/requestToken",
+			path {}
+			query {}
+			body { client_secret => "client_secret", email => "email", send_attempt => "send_attempt" }
 		}
 		pub struct Response {
 			pub sid: String,
@@ -570,16 +348,8 @@ pub mod request_3pid_management_token_via_email {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [("sid", crate::endpoint::enc(&self.sid))])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					sid: input.body("sid")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { sid => "sid" }
 		}
 	}
 }
@@ -599,44 +369,12 @@ pub mod request_3pid_management_token_via_msisdn {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"POST",
-				"/_matrix/client/v3/account/3pid/msisdn/requestToken",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [
-						("client_secret", crate::endpoint::enc(&self.client_secret)),
-						("country", crate::endpoint::enc(&self.country)),
-						("phone_number", crate::endpoint::enc(&self.phone_number)),
-						("send_attempt", crate::endpoint::enc(&self.send_attempt)),
-					],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					client_secret: input.body("client_secret")?,
-					country: input.body("country")?,
-					phone_number: input.body("phone_number")?,
-					send_attempt: input.body("send_attempt")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "POST",
+			path: "/_matrix/client/v3/account/3pid/msisdn/requestToken",
+			path {}
+			query {}
+			body { client_secret => "client_secret", country => "country", phone_number => "phone_number", send_attempt => "send_attempt" }
 		}
 		pub struct Response {
 			pub sid: String,
@@ -646,16 +384,8 @@ pub mod request_3pid_management_token_via_msisdn {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [("sid", crate::endpoint::enc(&self.sid))])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					sid: input.body("sid")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { sid => "sid" }
 		}
 	}
 }
@@ -670,32 +400,12 @@ pub mod get_3pids {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata =
-				crate::endpoint::Metadata::new("GET", "/_matrix/client/v3/account/3pid");
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/v3/account/3pid",
+			path {}
+			query {}
+			body {}
 		}
 		pub struct Response {
 			pub threepids: Vec<crate::thirdparty::ThirdPartyIdentifier>,
@@ -705,19 +415,8 @@ pub mod get_3pids {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [(
-					"threepids",
-					crate::endpoint::enc(&self.threepids),
-				)])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					threepids: input.body("threepids")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { threepids => "threepids" }
 		}
 	}
 }
@@ -738,47 +437,12 @@ pub mod add_3pid {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata =
-				crate::endpoint::Metadata::new("POST", "/_matrix/client/v3/account/3pid/add");
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [
-						("client_secret", crate::endpoint::enc(&self.client_secret)),
-						("sid", crate::endpoint::enc(&self.sid)),
-						("id_server", crate::endpoint::enc(&self.id_server)),
-						(
-							"id_server_access_token",
-							crate::endpoint::enc(&self.id_server_access_token),
-						),
-						("auth", crate::endpoint::enc(&self.auth)),
-					],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					client_secret: input.body("client_secret")?,
-					sid: input.body("sid")?,
-					id_server: input.body("id_server")?,
-					id_server_access_token: input.body("id_server_access_token")?,
-					auth: input.body("auth")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "POST",
+			path: "/_matrix/client/v3/account/3pid/add",
+			path {}
+			query {}
+			body { client_secret => "client_secret", sid => "sid", id_server => "id_server", id_server_access_token => "id_server_access_token", auth => "auth" }
 		}
 		pub struct Response {}
 		impl ::core::fmt::Debug for Response {
@@ -786,13 +450,8 @@ pub mod add_3pid {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [])
-			}
-			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				Ok(Self {})
-			}
+		crate::endpoint_response_impl! {
+			body {}
 		}
 	}
 }
@@ -812,45 +471,12 @@ pub mod delete_3pid {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata =
-				crate::endpoint::Metadata::new("POST", "/_matrix/client/v3/account/3pid/delete");
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [
-						("medium", crate::endpoint::enc(&self.medium)),
-						("address", crate::endpoint::enc(&self.address)),
-						("id_server", crate::endpoint::enc(&self.id_server)),
-						(
-							"id_server_access_token",
-							crate::endpoint::enc(&self.id_server_access_token),
-						),
-					],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					medium: input.body("medium")?,
-					address: input.body("address")?,
-					id_server: input.body("id_server")?,
-					id_server_access_token: input.body("id_server_access_token")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "POST",
+			path: "/_matrix/client/v3/account/3pid/delete",
+			path {}
+			query {}
+			body { medium => "medium", address => "address", id_server => "id_server", id_server_access_token => "id_server_access_token" }
 		}
 		pub struct Response {
 			pub id_server_unbind_result: super::super::ThirdPartyIdRemovalStatus,
@@ -860,19 +486,8 @@ pub mod delete_3pid {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [(
-					"id_server_unbind_result",
-					crate::endpoint::enc(&self.id_server_unbind_result),
-				)])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					id_server_unbind_result: input.body("id_server_unbind_result")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { id_server_unbind_result => "id_server_unbind_result" }
 		}
 	}
 }
@@ -889,39 +504,12 @@ pub mod check_registration_token_validity {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"GET",
-				"/_matrix/client/v1/register/m.login.registration_token/validity",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [(
-					"token",
-					crate::endpoint::enc(&self.token),
-				)])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					token: input.query("token")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/v1/register/m.login.registration_token/validity",
+			path {}
+			query { token => "token" }
+			body {}
 		}
 		pub struct Response {
 			pub valid: bool,
@@ -931,16 +519,8 @@ pub mod check_registration_token_validity {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [("valid", crate::endpoint::enc(&self.valid))])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					valid: input.body("valid")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { valid => "valid" }
 		}
 	}
 }
@@ -959,42 +539,12 @@ pub mod request_registration_token_via_email {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"POST",
-				"/_matrix/client/v3/register/email/requestToken",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [
-						("client_secret", crate::endpoint::enc(&self.client_secret)),
-						("email", crate::endpoint::enc(&self.email)),
-						("send_attempt", crate::endpoint::enc(&self.send_attempt)),
-					],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					client_secret: input.body("client_secret")?,
-					email: input.body("email")?,
-					send_attempt: input.body("send_attempt")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "POST",
+			path: "/_matrix/client/v3/register/email/requestToken",
+			path {}
+			query {}
+			body { client_secret => "client_secret", email => "email", send_attempt => "send_attempt" }
 		}
 		pub struct Response {
 			pub sid: String,
@@ -1004,16 +554,8 @@ pub mod request_registration_token_via_email {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [("sid", crate::endpoint::enc(&self.sid))])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					sid: input.body("sid")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { sid => "sid" }
 		}
 	}
 }

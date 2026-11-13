@@ -100,6 +100,358 @@ pub fn file_to_response<B: Default + BufMut>(
 	builder.body(body).map_err(|e| IntoHttpError(alloc::string::ToString::to_string(&e)))
 }
 
+/// Declares a media preview request; the two API versions share one shape.
+macro_rules! media_preview_request {
+	($path:literal) => {
+		#[derive(Debug)]
+		pub struct Request {
+			pub ts: Option<crate::MilliSecondsSinceUnixEpoch>,
+			pub url: ::alloc::string::String,
+		}
+		const _: crate::endpoint::Metadata = crate::endpoint::Metadata::new("GET", $path);
+		impl crate::endpoint::EndpointRequest for Request {
+			type Response = Response;
+			const METADATA: crate::endpoint::Metadata =
+				crate::endpoint::Metadata::new("GET", $path);
+			fn path_args(&self) -> ::alloc::vec::Vec<::alloc::string::String> {
+				::alloc::vec::Vec::new()
+			}
+			fn query(
+				&self,
+			) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)> {
+				crate::endpoint::query_pairs(::alloc::vec![
+					(
+						stringify!(ts),
+						if self.ts.is_none() {
+							crate::json::Value::Null
+						} else {
+							crate::codec::Serialize::to_json(&self.ts)
+						}
+					),
+					(stringify!(url), crate::codec::Serialize::to_json(&self.url)),
+				])
+			}
+			fn body(&self) -> Option<crate::json::Value> {
+				None
+			}
+			fn from_parts(
+				path: &[::alloc::string::String],
+				query: &[(::alloc::string::String, ::alloc::string::String)],
+				body: Option<&crate::json::Value>,
+			) -> Result<Self, crate::codec::DeError> {
+				let input = crate::endpoint::Input::new(path, query, body);
+				let value = Self {
+					ts: input
+						.query::<Option<Option<crate::MilliSecondsSinceUnixEpoch>>>(stringify!(
+							ts
+						))?
+						.unwrap_or(None),
+					url: input.query(stringify!(url))?,
+				};
+				input.finish()?;
+				Ok(value)
+			}
+		}
+	};
+}
+
+/// Encodes the optional `timeout_ms` query parameter.
+fn timeout_query_value(timeout: Duration) -> crate::json::Value {
+	if timeout == DEFAULT_TIMEOUT {
+		crate::json::Value::Null
+	} else {
+		crate::codec::Serialize::to_json(&timeout)
+	}
+}
+
+/// Encodes the legacy `allow_remote` query parameter.
+fn allow_remote_query_value(allow_remote: bool) -> crate::json::Value {
+	if allow_remote {
+		crate::json::Value::Null
+	} else {
+		crate::codec::Serialize::to_json(&allow_remote)
+	}
+}
+
+/// Encodes the legacy `allow_redirect` query parameter.
+fn allow_redirect_query_value(allow_redirect: bool) -> crate::json::Value {
+	if allow_redirect {
+		crate::codec::Serialize::to_json(&allow_redirect)
+	} else {
+		crate::json::Value::Null
+	}
+}
+
+/// Decodes the optional `timeout_ms` query parameter.
+fn timeout_from_input(
+	input: &crate::endpoint::Input<'_>,
+) -> Result<Duration, crate::codec::DeError> {
+	Ok(input.query::<Option<Duration>>(stringify!(timeout_ms))?.unwrap_or(DEFAULT_TIMEOUT))
+}
+
+/// Decodes the legacy `allow_remote` query parameter.
+fn allow_remote_from_input(
+	input: &crate::endpoint::Input<'_>,
+) -> Result<bool, crate::codec::DeError> {
+	Ok(input.query::<Option<bool>>(stringify!(allow_remote))?.unwrap_or(true))
+}
+
+/// Decodes the legacy `allow_redirect` query parameter.
+fn allow_redirect_from_input(
+	input: &crate::endpoint::Input<'_>,
+) -> Result<bool, crate::codec::DeError> {
+	Ok(input.query::<Option<bool>>(stringify!(allow_redirect))?.unwrap_or(false))
+}
+
+/// Declares a media download request shared by the authenticated, legacy and
+/// federation APIs.
+macro_rules! media_download_request {
+	(
+		path: $path:literal,
+		path { $($field:ident : $ty:ty),* $(,)? }
+		$(legacy { $($lfield:ident => ($lquery:ident, $ldecode:ident)),* $(,)? })?
+	) => {
+		#[derive(Debug)]
+		pub struct Request {
+			$(pub $field: $ty,)*
+			$($(pub $lfield: bool,)*)?
+			pub timeout_ms: Duration,
+		}
+		const _: crate::endpoint::Metadata = crate::endpoint::Metadata::new("GET", $path);
+		impl crate::endpoint::EndpointRequest for Request {
+			type Response = Response;
+			const METADATA: crate::endpoint::Metadata =
+				crate::endpoint::Metadata::new("GET", $path);
+			fn path_args(&self) -> ::alloc::vec::Vec<::alloc::string::String> {
+				::alloc::vec![
+					$(crate::endpoint::to_param(&self.$field).unwrap_or_default()),*
+				]
+			}
+			fn query(
+				&self,
+			) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)> {
+				crate::endpoint::query_pairs(::alloc::vec![
+					$($((stringify!($lfield), crate::media_api::$lquery(self.$lfield))),*,)?
+					(
+						stringify!(timeout_ms),
+						crate::media_api::timeout_query_value(self.timeout_ms)
+					),
+				])
+			}
+			fn body(&self) -> Option<crate::json::Value> {
+				None
+			}
+			fn from_parts(
+				path: &[::alloc::string::String],
+				query: &[(::alloc::string::String, ::alloc::string::String)],
+				body: Option<&crate::json::Value>,
+			) -> Result<Self, crate::codec::DeError> {
+				let input = crate::endpoint::Input::new(path, query, body);
+				let value = Self {
+					$($field: input.path()?,)*
+					$($($lfield: crate::media_api::$ldecode(&input)?,)*)?
+					timeout_ms: crate::media_api::timeout_from_input(&input)?,
+				};
+				input.finish()?;
+				Ok(value)
+			}
+		}
+	};
+}
+
+/// Declares a media thumbnail request shared by the authenticated, legacy and
+/// federation APIs.
+macro_rules! media_thumbnail_request {
+	(
+		path: $path:literal,
+		path { $($field:ident : $ty:ty),* $(,)? }
+		$(legacy { $($lfield:ident => ($lquery:ident, $ldecode:ident)),* $(,)? })?
+	) => {
+		#[derive(Debug)]
+		pub struct Request {
+			$(pub $field: $ty,)*
+			pub method: Option<crate::media::Method>,
+			$($(pub $lfield: bool,)*)?
+			pub timeout_ms: Duration,
+			pub animated: Option<bool>,
+			pub width: crate::UInt,
+			pub height: crate::UInt,
+		}
+		const _: crate::endpoint::Metadata = crate::endpoint::Metadata::new("GET", $path);
+		impl crate::endpoint::EndpointRequest for Request {
+			type Response = Response;
+			const METADATA: crate::endpoint::Metadata =
+				crate::endpoint::Metadata::new("GET", $path);
+			fn path_args(&self) -> ::alloc::vec::Vec<::alloc::string::String> {
+				::alloc::vec![
+					$(crate::endpoint::to_param(&self.$field).unwrap_or_default()),*
+				]
+			}
+			fn query(
+				&self,
+			) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)> {
+				crate::endpoint::query_pairs(::alloc::vec![
+					(
+						stringify!(method),
+						if self.method.is_none() {
+							crate::json::Value::Null
+						} else {
+							crate::codec::Serialize::to_json(&self.method)
+						}
+					),
+					$($((stringify!($lfield), crate::media_api::$lquery(self.$lfield))),*,)?
+					(
+						stringify!(timeout_ms),
+						crate::media_api::timeout_query_value(self.timeout_ms)
+					),
+					(
+						stringify!(animated),
+						if self.animated.is_none() {
+							crate::json::Value::Null
+						} else {
+							crate::codec::Serialize::to_json(&self.animated)
+						}
+					),
+					(stringify!(width), crate::codec::Serialize::to_json(&self.width)),
+					(stringify!(height), crate::codec::Serialize::to_json(&self.height)),
+				])
+			}
+			fn body(&self) -> Option<crate::json::Value> {
+				None
+			}
+			fn from_parts(
+				path: &[::alloc::string::String],
+				query: &[(::alloc::string::String, ::alloc::string::String)],
+				body: Option<&crate::json::Value>,
+			) -> Result<Self, crate::codec::DeError> {
+				let input = crate::endpoint::Input::new(path, query, body);
+				let value = Self {
+					$($field: input.path()?,)*
+					method: input
+						.query::<Option<Option<crate::media::Method>>>(stringify!(method))?
+						.unwrap_or(None),
+					$($($lfield: crate::media_api::$ldecode(&input)?,)*)?
+					timeout_ms: crate::media_api::timeout_from_input(&input)?,
+					animated: input
+						.query::<Option<Option<bool>>>(stringify!(animated))?
+						.unwrap_or(None),
+					width: input.query(stringify!(width))?,
+					height: input.query(stringify!(height))?,
+				};
+				input.finish()?;
+				Ok(value)
+			}
+		}
+	};
+}
+
+/// A downloaded media file and its response metadata headers.
+#[derive(Debug, Default)]
+pub struct FileResponse {
+	pub file: Vec<u8>,
+	pub content_type: Option<String>,
+	pub content_disposition: Option<ContentDisposition>,
+	pub cross_origin_resource_policy: Option<String>,
+	pub cache_control: Option<String>,
+}
+
+impl FileResponse {
+	#[must_use]
+	pub fn new(file: Vec<u8>, content_type: Option<String>) -> Self {
+		Self {
+			file,
+			content_type,
+			..Self::default()
+		}
+	}
+}
+
+impl crate::endpoint::IncomingResponse for FileResponse {
+	type EndpointError = Error;
+
+	fn try_from_http_response<T: AsRef<[u8]>>(
+		response: http::Response<T>,
+	) -> Result<Self, FromHttpResponseError<Error>> {
+		file_from_response(response).map(
+			|(file, content_type, content_disposition, corp, cache)| Self {
+				file,
+				content_type,
+				content_disposition,
+				cross_origin_resource_policy: corp,
+				cache_control: cache,
+			},
+		)
+	}
+}
+
+impl crate::endpoint::OutgoingResponse for FileResponse {
+	fn try_into_http_response<B: Default + BufMut>(
+		self,
+	) -> Result<http::Response<B>, IntoHttpError> {
+		file_to_response(
+			&self.file,
+			self.content_type.as_deref(),
+			self.content_disposition.as_ref(),
+			self.cross_origin_resource_policy.as_deref(),
+			self.cache_control.as_deref(),
+		)
+	}
+}
+
+/// The media config response, whose size field has a dotted name.
+#[derive(Debug)]
+pub struct MediaConfigResponse {
+	pub upload_size: crate::UInt,
+}
+
+impl crate::endpoint::EndpointResponse for MediaConfigResponse {
+	fn to_body(&self) -> crate::json::Value {
+		// One flat property whose name contains dots, not nested objects.
+		crate::json::Value::Object(crate::json::Object::from([(
+			"m.upload.size".to_owned(),
+			crate::endpoint::enc(&self.upload_size),
+		)]))
+	}
+	fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		let size = body
+			.get("m.upload.size")
+			.ok_or_else(|| crate::codec::DeError::expected("m.upload.size"))?;
+		Ok(Self {
+			upload_size: crate::codec::Deserialize::from_json(size)?,
+		})
+	}
+}
+
+/// The preview response, an arbitrary JSON document passed through.
+#[derive(Debug, Default)]
+pub struct MediaPreviewResponse {
+	pub data: crate::sswire::Raw<crate::json::Value>,
+}
+
+impl MediaPreviewResponse {
+	/// Wraps preview JSON text.
+	///
+	/// # Errors
+	///
+	/// Returns an error if `json` is not valid JSON.
+	pub fn from_json_text(json: &str) -> Result<Self, crate::codec::DeError> {
+		Ok(Self {
+			data: crate::sswire::Raw::from_json_text(json)?,
+		})
+	}
+}
+
+impl crate::endpoint::EndpointResponse for MediaPreviewResponse {
+	fn to_body(&self) -> crate::json::Value {
+		crate::codec::Serialize::to_json(&self.data)
+	}
+	fn from_body(body: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+		Ok(Self {
+			data: crate::codec::Deserialize::from_json(body)?,
+		})
+	}
+}
+
 /// Authenticated client media (`/_matrix/client/v1/media/*`).
 pub mod authenticated_client {
 	pub mod get_media_config {
@@ -112,141 +464,22 @@ pub mod authenticated_client {
 			}
 			const _: crate::endpoint::Metadata =
 				<Request as crate::endpoint::EndpointRequest>::METADATA;
-			impl crate::endpoint::EndpointRequest for Request {
-				type Response = Response;
-				const METADATA: crate::endpoint::Metadata =
-					crate::endpoint::Metadata::new("GET", "/_matrix/client/v1/media/config");
-				fn path_args(&self) -> crate::endpoint::Strs {
-					crate::endpoint::path_args_from(&mut [])
-				}
-				fn query(&self) -> crate::endpoint::Pairs {
-					crate::endpoint::query_pairs_mut(&mut [])
-				}
-				fn body(&self) -> Option<crate::json::Value> {
-					crate::endpoint::body_value(
-						<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-						&mut [],
-					)
-				}
-				fn from_parts(
-					path: &[crate::endpoint::Str],
-					query: &[crate::endpoint::Pair],
-					body: Option<&crate::json::Value>,
-				) -> crate::endpoint::Parsed<Self> {
-					let input = crate::endpoint::Input::new(path, query, body);
-					let value = Self {};
-					input.finish()?;
-					Ok(value)
-				}
+			crate::endpoint_request_impl! {
+				method: "GET",
+				path: "/_matrix/client/v1/media/config",
+				path {}
+				query {}
+				body {}
 			}
-			pub struct Response {
-				pub upload_size: crate::UInt,
-			}
-			impl ::core::fmt::Debug for Response {
-				fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
-					crate::endpoint::opaque_debug(f, "Response")
-				}
-			}
-			impl crate::endpoint::EndpointResponse for Response {
-				fn to_body(&self) -> crate::json::Value {
-					// One flat property whose name contains dots, not nested objects.
-					crate::json::Value::Object(crate::json::Object::from([(
-						"m.upload.size".to_owned(),
-						crate::endpoint::enc(&self.upload_size),
-					)]))
-				}
-				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let size = body
-						.get("m.upload.size")
-						.ok_or_else(|| crate::codec::DeError::expected("m.upload.size"))?;
-					Ok(Self {
-						upload_size: crate::codec::Deserialize::from_json(size)?,
-					})
-				}
-			}
+			pub type Response = crate::media_api::MediaConfigResponse;
 		}
 	}
 
 	pub mod get_media_preview {
 		pub mod v1 {
-			#[derive(Debug)]
-			pub struct Request {
-				pub ts: Option<crate::MilliSecondsSinceUnixEpoch>,
-				pub url: ::alloc::string::String,
-			}
-			const _: crate::endpoint::Metadata =
-				crate::endpoint::Metadata::new("GET", "/_matrix/client/v1/media/preview_url");
-			impl crate::endpoint::EndpointRequest for Request {
-				type Response = Response;
-				const METADATA: crate::endpoint::Metadata =
-					crate::endpoint::Metadata::new("GET", "/_matrix/client/v1/media/preview_url");
-				fn path_args(&self) -> ::alloc::vec::Vec<::alloc::string::String> {
-					::alloc::vec![]
-				}
-				fn query(
-					&self,
-				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)>
-				{
-					crate::endpoint::query_pairs(::alloc::vec![
-						(
-							stringify!(ts),
-							if self.ts.is_none() {
-								crate::json::Value::Null
-							} else {
-								crate::codec::Serialize::to_json(&self.ts)
-							}
-						),
-						(stringify!(url), crate::codec::Serialize::to_json(&self.url)),
-					])
-				}
-				fn body(&self) -> Option<crate::json::Value> {
-					None
-				}
-				fn from_parts(
-					path: &[::alloc::string::String],
-					query: &[(::alloc::string::String, ::alloc::string::String)],
-					body: Option<&crate::json::Value>,
-				) -> Result<Self, crate::codec::DeError> {
-					let input = crate::endpoint::Input::new(path, query, body);
-					let value = Self {
-						ts: input
-							.query::<Option<Option<crate::MilliSecondsSinceUnixEpoch>>>(
-								stringify!(ts),
-							)?
-							.unwrap_or(None),
-						url: input.query(stringify!(url))?,
-					};
-					input.finish()?;
-					Ok(value)
-				}
-			}
+			media_preview_request!("/_matrix/client/v1/media/preview_url");
 			/// The preview is arbitrary JSON (Open Graph data), passed through.
-			#[derive(Debug, Default)]
-			pub struct Response {
-				pub data: crate::sswire::Raw<crate::json::Value>,
-			}
-			impl Response {
-				/// Wraps preview JSON text.
-				///
-				/// # Errors
-				///
-				/// Returns an error if `json` is not valid JSON.
-				pub fn from_json_text(json: &str) -> Result<Self, crate::codec::DeError> {
-					Ok(Self {
-						data: crate::sswire::Raw::from_json_text(json)?,
-					})
-				}
-			}
-			impl crate::endpoint::EndpointResponse for Response {
-				fn to_body(&self) -> crate::json::Value {
-					crate::codec::Serialize::to_json(&self.data)
-				}
-				fn from_body(body: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
-					Ok(Self {
-						data: crate::codec::Deserialize::from_json(body)?,
-					})
-				}
-			}
+			pub type Response = crate::media_api::MediaPreviewResponse;
 		}
 	}
 
@@ -256,115 +489,11 @@ pub mod authenticated_client {
 
 			use crate::{OwnedServerName, media_api::DEFAULT_TIMEOUT};
 
-			#[derive(Debug, Default)]
-			pub struct Response {
-				pub file: ::alloc::vec::Vec<u8>,
-				pub content_type: Option<::alloc::string::String>,
-				pub content_disposition: Option<crate::http_headers::ContentDisposition>,
-				pub cross_origin_resource_policy: Option<::alloc::string::String>,
-				pub cache_control: Option<::alloc::string::String>,
-			}
-			impl Response {
-				#[must_use]
-				pub fn new(
-					file: ::alloc::vec::Vec<u8>,
-					content_type: Option<::alloc::string::String>,
-				) -> Self {
-					Self {
-						file,
-						content_type,
-						..Self::default()
-					}
-				}
-			}
-			impl crate::endpoint::IncomingResponse for Response {
-				type EndpointError = crate::api::client::error::Error;
-				fn try_from_http_response<T: AsRef<[u8]>>(
-					response: ::http::Response<T>,
-				) -> Result<
-					Self,
-					crate::endpoint::FromHttpResponseError<crate::api::client::error::Error>,
-				> {
-					crate::media_api::file_from_response(response).map(
-						|(file, content_type, content_disposition, corp, cache)| Self {
-							file,
-							content_type,
-							content_disposition,
-							cross_origin_resource_policy: corp,
-							cache_control: cache,
-						},
-					)
-				}
-			}
-			impl crate::endpoint::OutgoingResponse for Response {
-				fn try_into_http_response<B: Default + ::bytes::BufMut>(
-					self,
-				) -> Result<::http::Response<B>, crate::api::error::IntoHttpError>
-				{
-					crate::media_api::file_to_response(
-						&self.file,
-						self.content_type.as_deref(),
-						self.content_disposition.as_ref(),
-						self.cross_origin_resource_policy.as_deref(),
-						self.cache_control.as_deref(),
-					)
-				}
-			}
+			pub type Response = crate::media_api::FileResponse;
 
-			#[derive(Debug)]
-			pub struct Request {
-				pub server_name: OwnedServerName,
-				pub media_id: alloc::string::String,
-				pub timeout_ms: Duration,
-			}
-			const _: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"GET",
-				"/_matrix/client/v1/media/download/{server_name}/{media_id}",
-			);
-			impl crate::endpoint::EndpointRequest for Request {
-				type Response = Response;
-				const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-					"GET",
-					"/_matrix/client/v1/media/download/{server_name}/{media_id}",
-				);
-				fn path_args(&self) -> ::alloc::vec::Vec<::alloc::string::String> {
-					::alloc::vec![
-						crate::endpoint::to_param(&self.server_name).unwrap_or_default(),
-						crate::endpoint::to_param(&self.media_id).unwrap_or_default()
-					]
-				}
-				fn query(
-					&self,
-				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)>
-				{
-					crate::endpoint::query_pairs(::alloc::vec![(
-						stringify!(timeout_ms),
-						if self.timeout_ms == DEFAULT_TIMEOUT {
-							crate::json::Value::Null
-						} else {
-							crate::codec::Serialize::to_json(&self.timeout_ms)
-						}
-					),])
-				}
-				fn body(&self) -> Option<crate::json::Value> {
-					None
-				}
-				fn from_parts(
-					path: &[::alloc::string::String],
-					query: &[(::alloc::string::String, ::alloc::string::String)],
-					body: Option<&crate::json::Value>,
-				) -> Result<Self, crate::codec::DeError> {
-					let input = crate::endpoint::Input::new(path, query, body);
-					let value = Self {
-						server_name: input.path()?,
-						media_id: input.path()?,
-						timeout_ms: input
-							.query::<Option<Duration>>(stringify!(timeout_ms))?
-							.unwrap_or(DEFAULT_TIMEOUT),
-					};
-					input.finish()?;
-					Ok(value)
-				}
+			media_download_request! {
+				path: "/_matrix/client/v1/media/download/{server_name}/{media_id}",
+				path { server_name: crate::OwnedServerName, media_id: ::alloc::string::String }
 			}
 
 			impl Request {
@@ -387,120 +516,11 @@ pub mod authenticated_client {
 		pub mod v1 {
 			use core::time::Duration;
 
-			use crate::{OwnedServerName, media_api::DEFAULT_TIMEOUT};
+			pub type Response = crate::media_api::FileResponse;
 
-			#[derive(Debug, Default)]
-			pub struct Response {
-				pub file: ::alloc::vec::Vec<u8>,
-				pub content_type: Option<::alloc::string::String>,
-				pub content_disposition: Option<crate::http_headers::ContentDisposition>,
-				pub cross_origin_resource_policy: Option<::alloc::string::String>,
-				pub cache_control: Option<::alloc::string::String>,
-			}
-			impl Response {
-				#[must_use]
-				pub fn new(
-					file: ::alloc::vec::Vec<u8>,
-					content_type: Option<::alloc::string::String>,
-				) -> Self {
-					Self {
-						file,
-						content_type,
-						..Self::default()
-					}
-				}
-			}
-			impl crate::endpoint::IncomingResponse for Response {
-				type EndpointError = crate::api::client::error::Error;
-				fn try_from_http_response<T: AsRef<[u8]>>(
-					response: ::http::Response<T>,
-				) -> Result<
-					Self,
-					crate::endpoint::FromHttpResponseError<crate::api::client::error::Error>,
-				> {
-					crate::media_api::file_from_response(response).map(
-						|(file, content_type, content_disposition, corp, cache)| Self {
-							file,
-							content_type,
-							content_disposition,
-							cross_origin_resource_policy: corp,
-							cache_control: cache,
-						},
-					)
-				}
-			}
-			impl crate::endpoint::OutgoingResponse for Response {
-				fn try_into_http_response<B: Default + ::bytes::BufMut>(
-					self,
-				) -> Result<::http::Response<B>, crate::api::error::IntoHttpError>
-				{
-					crate::media_api::file_to_response(
-						&self.file,
-						self.content_type.as_deref(),
-						self.content_disposition.as_ref(),
-						self.cross_origin_resource_policy.as_deref(),
-						self.cache_control.as_deref(),
-					)
-				}
-			}
-
-			#[derive(Debug)]
-			pub struct Request {
-				pub server_name: OwnedServerName,
-				pub media_id: alloc::string::String,
-				pub filename: alloc::string::String,
-				pub timeout_ms: Duration,
-			}
-			const _: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"GET",
-				"/_matrix/client/v1/media/download/{server_name}/{media_id}/{filename}",
-			);
-			impl crate::endpoint::EndpointRequest for Request {
-				type Response = Response;
-				const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-					"GET",
-					"/_matrix/client/v1/media/download/{server_name}/{media_id}/{filename}",
-				);
-				fn path_args(&self) -> ::alloc::vec::Vec<::alloc::string::String> {
-					::alloc::vec![
-						crate::endpoint::to_param(&self.server_name).unwrap_or_default(),
-						crate::endpoint::to_param(&self.media_id).unwrap_or_default(),
-						crate::endpoint::to_param(&self.filename).unwrap_or_default()
-					]
-				}
-				fn query(
-					&self,
-				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)>
-				{
-					crate::endpoint::query_pairs(::alloc::vec![(
-						stringify!(timeout_ms),
-						if self.timeout_ms == DEFAULT_TIMEOUT {
-							crate::json::Value::Null
-						} else {
-							crate::codec::Serialize::to_json(&self.timeout_ms)
-						}
-					),])
-				}
-				fn body(&self) -> Option<crate::json::Value> {
-					None
-				}
-				fn from_parts(
-					path: &[::alloc::string::String],
-					query: &[(::alloc::string::String, ::alloc::string::String)],
-					body: Option<&crate::json::Value>,
-				) -> Result<Self, crate::codec::DeError> {
-					let input = crate::endpoint::Input::new(path, query, body);
-					let value = Self {
-						server_name: input.path()?,
-						media_id: input.path()?,
-						filename: input.path()?,
-						timeout_ms: input
-							.query::<Option<Duration>>(stringify!(timeout_ms))?
-							.unwrap_or(DEFAULT_TIMEOUT),
-					};
-					input.finish()?;
-					Ok(value)
-				}
+			media_download_request! {
+				path: "/_matrix/client/v1/media/download/{server_name}/{media_id}/{filename}",
+				path { server_name: crate::OwnedServerName, media_id: ::alloc::string::String, filename: ::alloc::string::String }
 			}
 		}
 	}
@@ -509,149 +529,11 @@ pub mod authenticated_client {
 		pub mod v1 {
 			use core::time::Duration;
 
-			use crate::{OwnedServerName, UInt, media::Method, media_api::DEFAULT_TIMEOUT};
+			pub type Response = crate::media_api::FileResponse;
 
-			#[derive(Debug, Default)]
-			pub struct Response {
-				pub file: ::alloc::vec::Vec<u8>,
-				pub content_type: Option<::alloc::string::String>,
-				pub content_disposition: Option<crate::http_headers::ContentDisposition>,
-				pub cross_origin_resource_policy: Option<::alloc::string::String>,
-				pub cache_control: Option<::alloc::string::String>,
-			}
-			impl Response {
-				#[must_use]
-				pub fn new(
-					file: ::alloc::vec::Vec<u8>,
-					content_type: Option<::alloc::string::String>,
-				) -> Self {
-					Self {
-						file,
-						content_type,
-						..Self::default()
-					}
-				}
-			}
-			impl crate::endpoint::IncomingResponse for Response {
-				type EndpointError = crate::api::client::error::Error;
-				fn try_from_http_response<T: AsRef<[u8]>>(
-					response: ::http::Response<T>,
-				) -> Result<
-					Self,
-					crate::endpoint::FromHttpResponseError<crate::api::client::error::Error>,
-				> {
-					crate::media_api::file_from_response(response).map(
-						|(file, content_type, content_disposition, corp, cache)| Self {
-							file,
-							content_type,
-							content_disposition,
-							cross_origin_resource_policy: corp,
-							cache_control: cache,
-						},
-					)
-				}
-			}
-			impl crate::endpoint::OutgoingResponse for Response {
-				fn try_into_http_response<B: Default + ::bytes::BufMut>(
-					self,
-				) -> Result<::http::Response<B>, crate::api::error::IntoHttpError>
-				{
-					crate::media_api::file_to_response(
-						&self.file,
-						self.content_type.as_deref(),
-						self.content_disposition.as_ref(),
-						self.cross_origin_resource_policy.as_deref(),
-						self.cache_control.as_deref(),
-					)
-				}
-			}
-
-			#[derive(Debug)]
-			pub struct Request {
-				pub server_name: OwnedServerName,
-				pub media_id: alloc::string::String,
-				pub method: Option<Method>,
-				pub timeout_ms: Duration,
-				pub animated: Option<bool>,
-				pub width: UInt,
-				pub height: UInt,
-			}
-			const _: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"GET",
-				"/_matrix/client/v1/media/thumbnail/{server_name}/{media_id}",
-			);
-			impl crate::endpoint::EndpointRequest for Request {
-				type Response = Response;
-				const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-					"GET",
-					"/_matrix/client/v1/media/thumbnail/{server_name}/{media_id}",
-				);
-				fn path_args(&self) -> ::alloc::vec::Vec<::alloc::string::String> {
-					::alloc::vec![
-						crate::endpoint::to_param(&self.server_name).unwrap_or_default(),
-						crate::endpoint::to_param(&self.media_id).unwrap_or_default()
-					]
-				}
-				fn query(
-					&self,
-				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)>
-				{
-					crate::endpoint::query_pairs(::alloc::vec![
-						(
-							stringify!(method),
-							if self.method.is_none() {
-								crate::json::Value::Null
-							} else {
-								crate::codec::Serialize::to_json(&self.method)
-							}
-						),
-						(
-							stringify!(timeout_ms),
-							if self.timeout_ms == DEFAULT_TIMEOUT {
-								crate::json::Value::Null
-							} else {
-								crate::codec::Serialize::to_json(&self.timeout_ms)
-							}
-						),
-						(
-							stringify!(animated),
-							if self.animated.is_none() {
-								crate::json::Value::Null
-							} else {
-								crate::codec::Serialize::to_json(&self.animated)
-							}
-						),
-						(stringify!(width), crate::codec::Serialize::to_json(&self.width)),
-						(stringify!(height), crate::codec::Serialize::to_json(&self.height)),
-					])
-				}
-				fn body(&self) -> Option<crate::json::Value> {
-					None
-				}
-				fn from_parts(
-					path: &[::alloc::string::String],
-					query: &[(::alloc::string::String, ::alloc::string::String)],
-					body: Option<&crate::json::Value>,
-				) -> Result<Self, crate::codec::DeError> {
-					let input = crate::endpoint::Input::new(path, query, body);
-					let value = Self {
-						server_name: input.path()?,
-						media_id: input.path()?,
-						method: input
-							.query::<Option<Option<Method>>>(stringify!(method))?
-							.unwrap_or(None),
-						timeout_ms: input
-							.query::<Option<Duration>>(stringify!(timeout_ms))?
-							.unwrap_or(DEFAULT_TIMEOUT),
-						animated: input
-							.query::<Option<Option<bool>>>(stringify!(animated))?
-							.unwrap_or(None),
-						width: input.query(stringify!(width))?,
-						height: input.query(stringify!(height))?,
-					};
-					input.finish()?;
-					Ok(value)
-				}
+			media_thumbnail_request! {
+				path: "/_matrix/client/v1/media/thumbnail/{server_name}/{media_id}",
+				path { server_name: crate::OwnedServerName, media_id: ::alloc::string::String }
 			}
 		}
 	}
@@ -673,141 +555,22 @@ pub mod legacy {
 			}
 			const _: crate::endpoint::Metadata =
 				<Request as crate::endpoint::EndpointRequest>::METADATA;
-			impl crate::endpoint::EndpointRequest for Request {
-				type Response = Response;
-				const METADATA: crate::endpoint::Metadata =
-					crate::endpoint::Metadata::new("GET", "/_matrix/media/v3/config");
-				fn path_args(&self) -> crate::endpoint::Strs {
-					crate::endpoint::path_args_from(&mut [])
-				}
-				fn query(&self) -> crate::endpoint::Pairs {
-					crate::endpoint::query_pairs_mut(&mut [])
-				}
-				fn body(&self) -> Option<crate::json::Value> {
-					crate::endpoint::body_value(
-						<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-						&mut [],
-					)
-				}
-				fn from_parts(
-					path: &[crate::endpoint::Str],
-					query: &[crate::endpoint::Pair],
-					body: Option<&crate::json::Value>,
-				) -> crate::endpoint::Parsed<Self> {
-					let input = crate::endpoint::Input::new(path, query, body);
-					let value = Self {};
-					input.finish()?;
-					Ok(value)
-				}
+			crate::endpoint_request_impl! {
+				method: "GET",
+				path: "/_matrix/media/v3/config",
+				path {}
+				query {}
+				body {}
 			}
-			pub struct Response {
-				pub upload_size: crate::UInt,
-			}
-			impl ::core::fmt::Debug for Response {
-				fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
-					crate::endpoint::opaque_debug(f, "Response")
-				}
-			}
-			impl crate::endpoint::EndpointResponse for Response {
-				fn to_body(&self) -> crate::json::Value {
-					// One flat property whose name contains dots, not nested objects.
-					crate::json::Value::Object(crate::json::Object::from([(
-						"m.upload.size".to_owned(),
-						crate::endpoint::enc(&self.upload_size),
-					)]))
-				}
-				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let size = body
-						.get("m.upload.size")
-						.ok_or_else(|| crate::codec::DeError::expected("m.upload.size"))?;
-					Ok(Self {
-						upload_size: crate::codec::Deserialize::from_json(size)?,
-					})
-				}
-			}
+			pub type Response = crate::media_api::MediaConfigResponse;
 		}
 	}
 
 	pub mod get_media_preview {
 		pub mod v3 {
-			#[derive(Debug)]
-			pub struct Request {
-				pub ts: Option<crate::MilliSecondsSinceUnixEpoch>,
-				pub url: ::alloc::string::String,
-			}
-			const _: crate::endpoint::Metadata =
-				crate::endpoint::Metadata::new("GET", "/_matrix/media/v3/preview_url");
-			impl crate::endpoint::EndpointRequest for Request {
-				type Response = Response;
-				const METADATA: crate::endpoint::Metadata =
-					crate::endpoint::Metadata::new("GET", "/_matrix/media/v3/preview_url");
-				fn path_args(&self) -> ::alloc::vec::Vec<::alloc::string::String> {
-					::alloc::vec![]
-				}
-				fn query(
-					&self,
-				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)>
-				{
-					crate::endpoint::query_pairs(::alloc::vec![
-						(
-							stringify!(ts),
-							if self.ts.is_none() {
-								crate::json::Value::Null
-							} else {
-								crate::codec::Serialize::to_json(&self.ts)
-							}
-						),
-						(stringify!(url), crate::codec::Serialize::to_json(&self.url)),
-					])
-				}
-				fn body(&self) -> Option<crate::json::Value> {
-					None
-				}
-				fn from_parts(
-					path: &[::alloc::string::String],
-					query: &[(::alloc::string::String, ::alloc::string::String)],
-					body: Option<&crate::json::Value>,
-				) -> Result<Self, crate::codec::DeError> {
-					let input = crate::endpoint::Input::new(path, query, body);
-					let value = Self {
-						ts: input
-							.query::<Option<Option<crate::MilliSecondsSinceUnixEpoch>>>(
-								stringify!(ts),
-							)?
-							.unwrap_or(None),
-						url: input.query(stringify!(url))?,
-					};
-					input.finish()?;
-					Ok(value)
-				}
-			}
+			media_preview_request!("/_matrix/media/v3/preview_url");
 			/// The preview is arbitrary JSON (Open Graph data), passed through.
-			#[derive(Debug, Default)]
-			pub struct Response {
-				pub data: crate::sswire::Raw<crate::json::Value>,
-			}
-			impl Response {
-				/// Wraps preview JSON text.
-				///
-				/// # Errors
-				///
-				/// Returns an error if `json` is not valid JSON.
-				pub fn from_json_text(json: &str) -> Result<Self, crate::codec::DeError> {
-					Ok(Self {
-						data: crate::sswire::Raw::from_json_text(json)?,
-					})
-				}
-			}
-			impl crate::endpoint::EndpointResponse for Response {
-				fn to_body(&self) -> crate::json::Value {
-					crate::codec::Serialize::to_json(&self.data)
-				}
-				fn from_body(body: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
-					Ok(Self {
-						data: crate::codec::Deserialize::from_json(body)?,
-					})
-				}
-			}
+			pub type Response = crate::media_api::MediaPreviewResponse;
 		}
 	}
 
@@ -817,141 +580,12 @@ pub mod legacy {
 
 			use crate::{OwnedServerName, media_api::DEFAULT_TIMEOUT};
 
-			#[derive(Debug, Default)]
-			pub struct Response {
-				pub file: ::alloc::vec::Vec<u8>,
-				pub content_type: Option<::alloc::string::String>,
-				pub content_disposition: Option<crate::http_headers::ContentDisposition>,
-				pub cross_origin_resource_policy: Option<::alloc::string::String>,
-				pub cache_control: Option<::alloc::string::String>,
-			}
-			impl Response {
-				#[must_use]
-				pub fn new(
-					file: ::alloc::vec::Vec<u8>,
-					content_type: Option<::alloc::string::String>,
-				) -> Self {
-					Self {
-						file,
-						content_type,
-						..Self::default()
-					}
-				}
-			}
-			impl crate::endpoint::IncomingResponse for Response {
-				type EndpointError = crate::api::client::error::Error;
-				fn try_from_http_response<T: AsRef<[u8]>>(
-					response: ::http::Response<T>,
-				) -> Result<
-					Self,
-					crate::endpoint::FromHttpResponseError<crate::api::client::error::Error>,
-				> {
-					crate::media_api::file_from_response(response).map(
-						|(file, content_type, content_disposition, corp, cache)| Self {
-							file,
-							content_type,
-							content_disposition,
-							cross_origin_resource_policy: corp,
-							cache_control: cache,
-						},
-					)
-				}
-			}
-			impl crate::endpoint::OutgoingResponse for Response {
-				fn try_into_http_response<B: Default + ::bytes::BufMut>(
-					self,
-				) -> Result<::http::Response<B>, crate::api::error::IntoHttpError>
-				{
-					crate::media_api::file_to_response(
-						&self.file,
-						self.content_type.as_deref(),
-						self.content_disposition.as_ref(),
-						self.cross_origin_resource_policy.as_deref(),
-						self.cache_control.as_deref(),
-					)
-				}
-			}
+			pub type Response = crate::media_api::FileResponse;
 
-			#[derive(Debug)]
-			pub struct Request {
-				pub server_name: OwnedServerName,
-				pub media_id: alloc::string::String,
-				pub allow_remote: bool,
-				pub timeout_ms: Duration,
-				pub allow_redirect: bool,
-			}
-			const _: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"GET",
-				"/_matrix/media/v3/download/{server_name}/{media_id}",
-			);
-			impl crate::endpoint::EndpointRequest for Request {
-				type Response = Response;
-				const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-					"GET",
-					"/_matrix/media/v3/download/{server_name}/{media_id}",
-				);
-				fn path_args(&self) -> ::alloc::vec::Vec<::alloc::string::String> {
-					::alloc::vec![
-						crate::endpoint::to_param(&self.server_name).unwrap_or_default(),
-						crate::endpoint::to_param(&self.media_id).unwrap_or_default()
-					]
-				}
-				fn query(
-					&self,
-				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)>
-				{
-					crate::endpoint::query_pairs(::alloc::vec![
-						(
-							stringify!(allow_remote),
-							if self.allow_remote {
-								crate::json::Value::Null
-							} else {
-								crate::codec::Serialize::to_json(&self.allow_remote)
-							}
-						),
-						(
-							stringify!(timeout_ms),
-							if self.timeout_ms == DEFAULT_TIMEOUT {
-								crate::json::Value::Null
-							} else {
-								crate::codec::Serialize::to_json(&self.timeout_ms)
-							}
-						),
-						(
-							stringify!(allow_redirect),
-							if self.allow_redirect {
-								crate::codec::Serialize::to_json(&self.allow_redirect)
-							} else {
-								crate::json::Value::Null
-							}
-						),
-					])
-				}
-				fn body(&self) -> Option<crate::json::Value> {
-					None
-				}
-				fn from_parts(
-					path: &[::alloc::string::String],
-					query: &[(::alloc::string::String, ::alloc::string::String)],
-					body: Option<&crate::json::Value>,
-				) -> Result<Self, crate::codec::DeError> {
-					let input = crate::endpoint::Input::new(path, query, body);
-					let value = Self {
-						server_name: input.path()?,
-						media_id: input.path()?,
-						allow_remote: input
-							.query::<Option<bool>>(stringify!(allow_remote))?
-							.unwrap_or(true),
-						timeout_ms: input
-							.query::<Option<Duration>>(stringify!(timeout_ms))?
-							.unwrap_or(DEFAULT_TIMEOUT),
-						allow_redirect: input
-							.query::<Option<bool>>(stringify!(allow_redirect))?
-							.unwrap_or(false),
-					};
-					input.finish()?;
-					Ok(value)
-				}
+			media_download_request! {
+				path: "/_matrix/media/v3/download/{server_name}/{media_id}",
+				path { server_name: crate::OwnedServerName, media_id: ::alloc::string::String }
+				legacy { allow_remote => (allow_remote_query_value, allow_remote_from_input), allow_redirect => (allow_redirect_query_value, allow_redirect_from_input) }
 			}
 
 			impl Request {
@@ -976,146 +610,12 @@ pub mod legacy {
 		pub mod v3 {
 			use core::time::Duration;
 
-			use crate::{OwnedServerName, media_api::DEFAULT_TIMEOUT};
+			pub type Response = crate::media_api::FileResponse;
 
-			#[derive(Debug, Default)]
-			pub struct Response {
-				pub file: ::alloc::vec::Vec<u8>,
-				pub content_type: Option<::alloc::string::String>,
-				pub content_disposition: Option<crate::http_headers::ContentDisposition>,
-				pub cross_origin_resource_policy: Option<::alloc::string::String>,
-				pub cache_control: Option<::alloc::string::String>,
-			}
-			impl Response {
-				#[must_use]
-				pub fn new(
-					file: ::alloc::vec::Vec<u8>,
-					content_type: Option<::alloc::string::String>,
-				) -> Self {
-					Self {
-						file,
-						content_type,
-						..Self::default()
-					}
-				}
-			}
-			impl crate::endpoint::IncomingResponse for Response {
-				type EndpointError = crate::api::client::error::Error;
-				fn try_from_http_response<T: AsRef<[u8]>>(
-					response: ::http::Response<T>,
-				) -> Result<
-					Self,
-					crate::endpoint::FromHttpResponseError<crate::api::client::error::Error>,
-				> {
-					crate::media_api::file_from_response(response).map(
-						|(file, content_type, content_disposition, corp, cache)| Self {
-							file,
-							content_type,
-							content_disposition,
-							cross_origin_resource_policy: corp,
-							cache_control: cache,
-						},
-					)
-				}
-			}
-			impl crate::endpoint::OutgoingResponse for Response {
-				fn try_into_http_response<B: Default + ::bytes::BufMut>(
-					self,
-				) -> Result<::http::Response<B>, crate::api::error::IntoHttpError>
-				{
-					crate::media_api::file_to_response(
-						&self.file,
-						self.content_type.as_deref(),
-						self.content_disposition.as_ref(),
-						self.cross_origin_resource_policy.as_deref(),
-						self.cache_control.as_deref(),
-					)
-				}
-			}
-
-			#[derive(Debug)]
-			pub struct Request {
-				pub server_name: OwnedServerName,
-				pub media_id: alloc::string::String,
-				pub filename: alloc::string::String,
-				pub allow_remote: bool,
-				pub timeout_ms: Duration,
-				pub allow_redirect: bool,
-			}
-			const _: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"GET",
-				"/_matrix/media/v3/download/{server_name}/{media_id}/{filename}",
-			);
-			impl crate::endpoint::EndpointRequest for Request {
-				type Response = Response;
-				const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-					"GET",
-					"/_matrix/media/v3/download/{server_name}/{media_id}/{filename}",
-				);
-				fn path_args(&self) -> ::alloc::vec::Vec<::alloc::string::String> {
-					::alloc::vec![
-						crate::endpoint::to_param(&self.server_name).unwrap_or_default(),
-						crate::endpoint::to_param(&self.media_id).unwrap_or_default(),
-						crate::endpoint::to_param(&self.filename).unwrap_or_default()
-					]
-				}
-				fn query(
-					&self,
-				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)>
-				{
-					crate::endpoint::query_pairs(::alloc::vec![
-						(
-							stringify!(allow_remote),
-							if self.allow_remote {
-								crate::json::Value::Null
-							} else {
-								crate::codec::Serialize::to_json(&self.allow_remote)
-							}
-						),
-						(
-							stringify!(timeout_ms),
-							if self.timeout_ms == DEFAULT_TIMEOUT {
-								crate::json::Value::Null
-							} else {
-								crate::codec::Serialize::to_json(&self.timeout_ms)
-							}
-						),
-						(
-							stringify!(allow_redirect),
-							if self.allow_redirect {
-								crate::codec::Serialize::to_json(&self.allow_redirect)
-							} else {
-								crate::json::Value::Null
-							}
-						),
-					])
-				}
-				fn body(&self) -> Option<crate::json::Value> {
-					None
-				}
-				fn from_parts(
-					path: &[::alloc::string::String],
-					query: &[(::alloc::string::String, ::alloc::string::String)],
-					body: Option<&crate::json::Value>,
-				) -> Result<Self, crate::codec::DeError> {
-					let input = crate::endpoint::Input::new(path, query, body);
-					let value = Self {
-						server_name: input.path()?,
-						media_id: input.path()?,
-						filename: input.path()?,
-						allow_remote: input
-							.query::<Option<bool>>(stringify!(allow_remote))?
-							.unwrap_or(true),
-						timeout_ms: input
-							.query::<Option<Duration>>(stringify!(timeout_ms))?
-							.unwrap_or(DEFAULT_TIMEOUT),
-						allow_redirect: input
-							.query::<Option<bool>>(stringify!(allow_redirect))?
-							.unwrap_or(false),
-					};
-					input.finish()?;
-					Ok(value)
-				}
+			media_download_request! {
+				path: "/_matrix/media/v3/download/{server_name}/{media_id}/{filename}",
+				path { server_name: crate::OwnedServerName, media_id: ::alloc::string::String, filename: ::alloc::string::String }
+				legacy { allow_remote => (allow_remote_query_value, allow_remote_from_input), allow_redirect => (allow_redirect_query_value, allow_redirect_from_input) }
 			}
 		}
 	}
@@ -1124,173 +624,12 @@ pub mod legacy {
 		pub mod v3 {
 			use core::time::Duration;
 
-			use crate::{OwnedServerName, UInt, media::Method, media_api::DEFAULT_TIMEOUT};
+			pub type Response = crate::media_api::FileResponse;
 
-			#[derive(Debug, Default)]
-			pub struct Response {
-				pub file: ::alloc::vec::Vec<u8>,
-				pub content_type: Option<::alloc::string::String>,
-				pub content_disposition: Option<crate::http_headers::ContentDisposition>,
-				pub cross_origin_resource_policy: Option<::alloc::string::String>,
-				pub cache_control: Option<::alloc::string::String>,
-			}
-			impl Response {
-				#[must_use]
-				pub fn new(
-					file: ::alloc::vec::Vec<u8>,
-					content_type: Option<::alloc::string::String>,
-				) -> Self {
-					Self {
-						file,
-						content_type,
-						..Self::default()
-					}
-				}
-			}
-			impl crate::endpoint::IncomingResponse for Response {
-				type EndpointError = crate::api::client::error::Error;
-				fn try_from_http_response<T: AsRef<[u8]>>(
-					response: ::http::Response<T>,
-				) -> Result<
-					Self,
-					crate::endpoint::FromHttpResponseError<crate::api::client::error::Error>,
-				> {
-					crate::media_api::file_from_response(response).map(
-						|(file, content_type, content_disposition, corp, cache)| Self {
-							file,
-							content_type,
-							content_disposition,
-							cross_origin_resource_policy: corp,
-							cache_control: cache,
-						},
-					)
-				}
-			}
-			impl crate::endpoint::OutgoingResponse for Response {
-				fn try_into_http_response<B: Default + ::bytes::BufMut>(
-					self,
-				) -> Result<::http::Response<B>, crate::api::error::IntoHttpError>
-				{
-					crate::media_api::file_to_response(
-						&self.file,
-						self.content_type.as_deref(),
-						self.content_disposition.as_ref(),
-						self.cross_origin_resource_policy.as_deref(),
-						self.cache_control.as_deref(),
-					)
-				}
-			}
-
-			#[derive(Debug)]
-			pub struct Request {
-				pub server_name: OwnedServerName,
-				pub media_id: alloc::string::String,
-				pub method: Option<Method>,
-				pub allow_remote: bool,
-				pub timeout_ms: Duration,
-				pub allow_redirect: bool,
-				pub animated: Option<bool>,
-				pub width: UInt,
-				pub height: UInt,
-			}
-			const _: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"GET",
-				"/_matrix/media/v3/thumbnail/{server_name}/{media_id}",
-			);
-			impl crate::endpoint::EndpointRequest for Request {
-				type Response = Response;
-				const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-					"GET",
-					"/_matrix/media/v3/thumbnail/{server_name}/{media_id}",
-				);
-				fn path_args(&self) -> ::alloc::vec::Vec<::alloc::string::String> {
-					::alloc::vec![
-						crate::endpoint::to_param(&self.server_name).unwrap_or_default(),
-						crate::endpoint::to_param(&self.media_id).unwrap_or_default()
-					]
-				}
-				fn query(
-					&self,
-				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)>
-				{
-					crate::endpoint::query_pairs(::alloc::vec![
-						(
-							stringify!(method),
-							if self.method.is_none() {
-								crate::json::Value::Null
-							} else {
-								crate::codec::Serialize::to_json(&self.method)
-							}
-						),
-						(
-							stringify!(allow_remote),
-							if self.allow_remote {
-								crate::json::Value::Null
-							} else {
-								crate::codec::Serialize::to_json(&self.allow_remote)
-							}
-						),
-						(
-							stringify!(timeout_ms),
-							if self.timeout_ms == DEFAULT_TIMEOUT {
-								crate::json::Value::Null
-							} else {
-								crate::codec::Serialize::to_json(&self.timeout_ms)
-							}
-						),
-						(
-							stringify!(allow_redirect),
-							if self.allow_redirect {
-								crate::codec::Serialize::to_json(&self.allow_redirect)
-							} else {
-								crate::json::Value::Null
-							}
-						),
-						(
-							stringify!(animated),
-							if self.animated.is_none() {
-								crate::json::Value::Null
-							} else {
-								crate::codec::Serialize::to_json(&self.animated)
-							}
-						),
-						(stringify!(width), crate::codec::Serialize::to_json(&self.width)),
-						(stringify!(height), crate::codec::Serialize::to_json(&self.height)),
-					])
-				}
-				fn body(&self) -> Option<crate::json::Value> {
-					None
-				}
-				fn from_parts(
-					path: &[::alloc::string::String],
-					query: &[(::alloc::string::String, ::alloc::string::String)],
-					body: Option<&crate::json::Value>,
-				) -> Result<Self, crate::codec::DeError> {
-					let input = crate::endpoint::Input::new(path, query, body);
-					let value = Self {
-						server_name: input.path()?,
-						media_id: input.path()?,
-						method: input
-							.query::<Option<Option<Method>>>(stringify!(method))?
-							.unwrap_or(None),
-						allow_remote: input
-							.query::<Option<bool>>(stringify!(allow_remote))?
-							.unwrap_or(true),
-						timeout_ms: input
-							.query::<Option<Duration>>(stringify!(timeout_ms))?
-							.unwrap_or(DEFAULT_TIMEOUT),
-						allow_redirect: input
-							.query::<Option<bool>>(stringify!(allow_redirect))?
-							.unwrap_or(false),
-						animated: input
-							.query::<Option<Option<bool>>>(stringify!(animated))?
-							.unwrap_or(None),
-						width: input.query(stringify!(width))?,
-						height: input.query(stringify!(height))?,
-					};
-					input.finish()?;
-					Ok(value)
-				}
+			media_thumbnail_request! {
+				path: "/_matrix/media/v3/thumbnail/{server_name}/{media_id}",
+				path { server_name: crate::OwnedServerName, media_id: ::alloc::string::String }
+				legacy { allow_remote => (allow_remote_query_value, allow_remote_from_input), allow_redirect => (allow_redirect_query_value, allow_redirect_from_input) }
 			}
 		}
 	}
@@ -1307,32 +646,12 @@ pub mod legacy {
 			}
 			const _: crate::endpoint::Metadata =
 				<Request as crate::endpoint::EndpointRequest>::METADATA;
-			impl crate::endpoint::EndpointRequest for Request {
-				type Response = Response;
-				const METADATA: crate::endpoint::Metadata =
-					crate::endpoint::Metadata::new("POST", "/_matrix/media/v1/create");
-				fn path_args(&self) -> crate::endpoint::Strs {
-					crate::endpoint::path_args_from(&mut [])
-				}
-				fn query(&self) -> crate::endpoint::Pairs {
-					crate::endpoint::query_pairs_mut(&mut [])
-				}
-				fn body(&self) -> Option<crate::json::Value> {
-					crate::endpoint::body_value(
-						<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-						&mut [],
-					)
-				}
-				fn from_parts(
-					path: &[crate::endpoint::Str],
-					query: &[crate::endpoint::Pair],
-					body: Option<&crate::json::Value>,
-				) -> crate::endpoint::Parsed<Self> {
-					let input = crate::endpoint::Input::new(path, query, body);
-					let value = Self {};
-					input.finish()?;
-					Ok(value)
-				}
+			crate::endpoint_request_impl! {
+				method: "POST",
+				path: "/_matrix/media/v1/create",
+				path {}
+				query {}
+				body {}
 			}
 			pub struct Response {
 				pub content_uri: OwnedMxcUri,
@@ -1343,20 +662,8 @@ pub mod legacy {
 					crate::endpoint::opaque_debug(f, "Response")
 				}
 			}
-			impl crate::endpoint::EndpointResponse for Response {
-				fn to_body(&self) -> crate::json::Value {
-					crate::endpoint::body_object(&mut [
-						("content_uri", crate::endpoint::enc(&self.content_uri)),
-						("unused_expires_at", crate::endpoint::enc(&self.unused_expires_at)),
-					])
-				}
-				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let input = crate::endpoint::Input::body_only(body);
-					Ok(Self {
-						content_uri: input.body("content_uri")?,
-						unused_expires_at: input.body("unused_expires_at")?,
-					})
-				}
+			crate::endpoint_response_impl! {
+				body { content_uri => "content_uri", unused_expires_at => "unused_expires_at" }
 			}
 
 			impl Response {
@@ -1887,91 +1194,44 @@ pub mod federation {
 		encode(content)
 	}
 
+	/// A federation media download or thumbnail response.
+	#[derive(Debug)]
+	pub struct MediaResponse {
+		pub content: FileOrLocation,
+		pub metadata: ContentMetadata,
+	}
+
+	impl crate::endpoint::IncomingResponse for MediaResponse {
+		type EndpointError = crate::api::client::error::Error;
+
+		fn try_from_http_response<T: AsRef<[u8]>>(
+			response: http::Response<T>,
+		) -> Result<Self, crate::endpoint::FromHttpResponseError<crate::api::client::error::Error>>
+		{
+			decode_response(response).map(|(content, metadata)| Self {
+				content,
+				metadata,
+			})
+		}
+	}
+
+	impl crate::endpoint::OutgoingResponse for MediaResponse {
+		fn try_into_http_response<B: Default + BufMut>(
+			self,
+		) -> Result<http::Response<B>, IntoHttpError> {
+			encode_response(&self.content)
+		}
+	}
+
 	pub mod get_content {
 		pub mod v1 {
 			use core::time::Duration;
 
-			use crate::media_api::DEFAULT_TIMEOUT;
+			pub type Response = crate::media_api::federation::MediaResponse;
 
-			#[derive(Debug)]
-			pub struct Response {
-				pub content: crate::media_api::federation::FileOrLocation,
-				pub metadata: crate::media_api::federation::ContentMetadata,
-			}
-			impl crate::endpoint::IncomingResponse for Response {
-				type EndpointError = crate::api::client::error::Error;
-				fn try_from_http_response<T: AsRef<[u8]>>(
-					response: ::http::Response<T>,
-				) -> Result<
-					Self,
-					crate::endpoint::FromHttpResponseError<crate::api::client::error::Error>,
-				> {
-					crate::media_api::federation::decode_response(response).map(
-						|(content, metadata)| Self {
-							content,
-							metadata,
-						},
-					)
-				}
-			}
-			impl crate::endpoint::OutgoingResponse for Response {
-				fn try_into_http_response<B: Default + ::bytes::BufMut>(
-					self,
-				) -> Result<::http::Response<B>, crate::api::error::IntoHttpError>
-				{
-					crate::media_api::federation::encode_response(&self.content)
-				}
-			}
-
-			#[derive(Debug)]
-			pub struct Request {
-				pub media_id: alloc::string::String,
-				pub timeout_ms: Duration,
-			}
-			const _: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"GET",
-				"/_matrix/federation/v1/media/download/{media_id}",
-			);
-			impl crate::endpoint::EndpointRequest for Request {
-				type Response = Response;
-				const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-					"GET",
-					"/_matrix/federation/v1/media/download/{media_id}",
-				);
-				fn path_args(&self) -> ::alloc::vec::Vec<::alloc::string::String> {
-					::alloc::vec![crate::endpoint::to_param(&self.media_id).unwrap_or_default()]
-				}
-				fn query(
-					&self,
-				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)>
-				{
-					crate::endpoint::query_pairs(::alloc::vec![(
-						stringify!(timeout_ms),
-						if self.timeout_ms == DEFAULT_TIMEOUT {
-							crate::json::Value::Null
-						} else {
-							crate::codec::Serialize::to_json(&self.timeout_ms)
-						}
-					),])
-				}
-				fn body(&self) -> Option<crate::json::Value> {
-					None
-				}
-				fn from_parts(
-					path: &[::alloc::string::String],
-					query: &[(::alloc::string::String, ::alloc::string::String)],
-					body: Option<&crate::json::Value>,
-				) -> Result<Self, crate::codec::DeError> {
-					let input = crate::endpoint::Input::new(path, query, body);
-					let value = Self {
-						media_id: input.path()?,
-						timeout_ms: input
-							.query::<Option<Duration>>(stringify!(timeout_ms))?
-							.unwrap_or(DEFAULT_TIMEOUT),
-					};
-					input.finish()?;
-					Ok(value)
-				}
+			media_download_request! {
+				path: "/_matrix/federation/v1/media/download/{media_id}",
+				path { media_id: ::alloc::string::String }
 			}
 		}
 	}
@@ -1980,119 +1240,11 @@ pub mod federation {
 		pub mod v1 {
 			use core::time::Duration;
 
-			use crate::{UInt, media::Method, media_api::DEFAULT_TIMEOUT};
+			pub type Response = crate::media_api::federation::MediaResponse;
 
-			#[derive(Debug)]
-			pub struct Response {
-				pub content: crate::media_api::federation::FileOrLocation,
-				pub metadata: crate::media_api::federation::ContentMetadata,
-			}
-			impl crate::endpoint::IncomingResponse for Response {
-				type EndpointError = crate::api::client::error::Error;
-				fn try_from_http_response<T: AsRef<[u8]>>(
-					response: ::http::Response<T>,
-				) -> Result<
-					Self,
-					crate::endpoint::FromHttpResponseError<crate::api::client::error::Error>,
-				> {
-					crate::media_api::federation::decode_response(response).map(
-						|(content, metadata)| Self {
-							content,
-							metadata,
-						},
-					)
-				}
-			}
-			impl crate::endpoint::OutgoingResponse for Response {
-				fn try_into_http_response<B: Default + ::bytes::BufMut>(
-					self,
-				) -> Result<::http::Response<B>, crate::api::error::IntoHttpError>
-				{
-					crate::media_api::federation::encode_response(&self.content)
-				}
-			}
-
-			#[derive(Debug)]
-			pub struct Request {
-				pub media_id: alloc::string::String,
-				pub method: Option<Method>,
-				pub timeout_ms: Duration,
-				pub animated: Option<bool>,
-				pub width: UInt,
-				pub height: UInt,
-			}
-			const _: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"GET",
-				"/_matrix/federation/v1/media/thumbnail/{media_id}",
-			);
-			impl crate::endpoint::EndpointRequest for Request {
-				type Response = Response;
-				const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-					"GET",
-					"/_matrix/federation/v1/media/thumbnail/{media_id}",
-				);
-				fn path_args(&self) -> ::alloc::vec::Vec<::alloc::string::String> {
-					::alloc::vec![crate::endpoint::to_param(&self.media_id).unwrap_or_default()]
-				}
-				fn query(
-					&self,
-				) -> ::alloc::vec::Vec<(::alloc::string::String, ::alloc::string::String)>
-				{
-					crate::endpoint::query_pairs(::alloc::vec![
-						(
-							stringify!(method),
-							if self.method.is_none() {
-								crate::json::Value::Null
-							} else {
-								crate::codec::Serialize::to_json(&self.method)
-							}
-						),
-						(
-							stringify!(timeout_ms),
-							if self.timeout_ms == DEFAULT_TIMEOUT {
-								crate::json::Value::Null
-							} else {
-								crate::codec::Serialize::to_json(&self.timeout_ms)
-							}
-						),
-						(
-							stringify!(animated),
-							if self.animated.is_none() {
-								crate::json::Value::Null
-							} else {
-								crate::codec::Serialize::to_json(&self.animated)
-							}
-						),
-						(stringify!(width), crate::codec::Serialize::to_json(&self.width)),
-						(stringify!(height), crate::codec::Serialize::to_json(&self.height)),
-					])
-				}
-				fn body(&self) -> Option<crate::json::Value> {
-					None
-				}
-				fn from_parts(
-					path: &[::alloc::string::String],
-					query: &[(::alloc::string::String, ::alloc::string::String)],
-					body: Option<&crate::json::Value>,
-				) -> Result<Self, crate::codec::DeError> {
-					let input = crate::endpoint::Input::new(path, query, body);
-					let value = Self {
-						media_id: input.path()?,
-						method: input
-							.query::<Option<Option<Method>>>(stringify!(method))?
-							.unwrap_or(None),
-						timeout_ms: input
-							.query::<Option<Duration>>(stringify!(timeout_ms))?
-							.unwrap_or(DEFAULT_TIMEOUT),
-						animated: input
-							.query::<Option<Option<bool>>>(stringify!(animated))?
-							.unwrap_or(None),
-						width: input.query(stringify!(width))?,
-						height: input.query(stringify!(height))?,
-					};
-					input.finish()?;
-					Ok(value)
-				}
+			media_thumbnail_request! {
+				path: "/_matrix/federation/v1/media/thumbnail/{media_id}",
+				path { media_id: ::alloc::string::String }
 			}
 		}
 	}

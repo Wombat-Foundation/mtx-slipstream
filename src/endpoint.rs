@@ -856,6 +856,221 @@ pub fn opaque_debug(f: &mut Fmt<'_>, name: &str) -> FmtResult {
 	f.write_str(name)
 }
 
+/// Returns `T::default()` for generated field defaults.
+#[doc(hidden)]
+#[must_use]
+pub fn default<T: Default>() -> T {
+	T::default()
+}
+
+/// Resolves a request query field, optionally with a default.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! endpoint_query_field {
+	($input:ident, $name:literal, default) => {
+		$input.query_or_default($name)?
+	};
+	($input:ident, $name:literal, $default:expr) => {
+		$input.query_or($name, $default)?
+	};
+	($input:ident, $name:literal) => {
+		$input.query($name)?
+	};
+}
+
+/// Resolves a request or response body field, optionally with a default.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! endpoint_body_field {
+	($input:ident, $name:literal, default) => {
+		$input.body_or_default($name)?
+	};
+	($input:ident, $name:literal, $default:expr) => {
+		$input.body_or($name, $default)?
+	};
+	($input:ident, $name:literal) => {
+		$input.body($name)?
+	};
+}
+
+/// Produces a request body expression from a generated field list.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! endpoint_body_expr {
+	(raw, $this:ident, body { $($body_field:ident => $body_key:literal $(= $body_default:expr)?),* $(,)? }, raw { $raw_field:ident }) => {
+		Some($crate::endpoint::enc(&$this.$raw_field))
+	};
+	(object, $this:ident, body { $($body_field:ident => $body_key:literal $(= $body_default:expr)?),* $(,)? }, raw { }) => {
+		$crate::endpoint::body_value(
+			<Self as $crate::endpoint::EndpointRequest>::METADATA.method,
+			&mut [
+				$((
+					$body_key,
+					$crate::endpoint::enc(&$this.$body_field)
+				)),*
+			],
+		)
+	};
+}
+
+/// Implements [`EndpointRequest`](crate::endpoint::EndpointRequest) for an
+/// endpoint request.
+///
+/// The `path`, `query` and either `body` or `raw` sections list the request
+/// fields encoded into each part. Query and body fields may name a different
+/// wire key and take a default, using `field => "wire-key" = crate::endpoint::default()`. A `raw`
+/// body is a single JSON value rather than an object.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! endpoint_request_impl {
+	(
+		method: $method:literal,
+		path: $path:literal,
+		$(aliases: [$($alias:literal),* $(,)?],)?
+		path { $($path_field:ident),* $(,)? }
+		query { $($query_field:ident => $query_key:literal $(= $query_default:expr)?),* $(,)? }
+		raw { $raw_field:ident }
+	) => {
+		$crate::endpoint_request_impl! {
+			@impl
+			method: $method,
+			path: $path,
+			$(aliases: [$($alias),*],)?
+			path { $($path_field),* }
+			query { $($query_field => $query_key $(= $query_default)?),* }
+			body_kind: raw,
+			body_fields: {}
+			raw_field: { $raw_field }
+		}
+	};
+	(
+		method: $method:literal,
+		path: $path:literal,
+		$(aliases: [$($alias:literal),* $(,)?],)?
+		path { $($path_field:ident),* $(,)? }
+		query { $($query_field:ident => $query_key:literal $(= $query_default:expr)?),* $(,)? }
+		body { $($body_field:ident => $body_key:literal $(= $body_default:expr)?),* $(,)? }
+	) => {
+		$crate::endpoint_request_impl! {
+			@impl
+			method: $method,
+			path: $path,
+			$(aliases: [$($alias),*],)?
+			path { $($path_field),* }
+			query { $($query_field => $query_key $(= $query_default)?),* }
+			body_kind: object,
+			body_fields: {
+				$($body_field => $body_key $(= $body_default)?),*
+			}
+			raw_field: {}
+		}
+	};
+	(
+		@impl
+		method: $method:literal,
+		path: $path:literal,
+		$(aliases: [$($alias:literal),* $(,)?],)?
+		path { $($path_field:ident),* $(,)? }
+		query { $($query_field:ident => $query_key:literal $(= $query_default:expr)?),* $(,)? }
+		body_kind: $body_kind:ident,
+		body_fields: { $($body_field:ident => $body_key:literal $(= $body_default:expr)?),* $(,)? }
+		raw_field: { $($raw_field:ident)? }
+	) => {
+		impl $crate::endpoint::EndpointRequest for Request {
+			type Response = Response;
+			const METADATA: $crate::endpoint::Metadata =
+				$crate::endpoint::Metadata::new($method, $path)
+					$(.with_aliases(&[$($alias),*]))?;
+
+			fn path_args(&self) -> $crate::endpoint::Strs {
+				$crate::endpoint::path_args_from(&mut [
+					$($crate::endpoint::path_param(&self.$path_field)),*
+				])
+			}
+
+			fn query(&self) -> $crate::endpoint::Pairs {
+				$crate::endpoint::query_pairs_mut(&mut [
+					$((
+						$query_key,
+						$crate::endpoint::enc(&self.$query_field)
+					)),*
+				])
+			}
+
+			fn body(&self) -> Option<$crate::json::Value> {
+				$crate::endpoint_body_expr! {
+					$body_kind,
+					self,
+					body { $($body_field => $body_key $(= $body_default)?),* },
+					raw { $($raw_field)? }
+				}
+			}
+
+			fn from_parts(
+				path: &[$crate::endpoint::Str],
+				query: &[$crate::endpoint::Pair],
+				body: Option<&$crate::json::Value>,
+			) -> $crate::endpoint::Parsed<Self> {
+				let input = $crate::endpoint::Input::new(path, query, body);
+				let value = Self {
+					$($path_field: input.path()?,)*
+					$($query_field: $crate::endpoint_query_field!(
+						input, $query_key $(, $query_default)?
+					),)*
+					$($body_field: $crate::endpoint_body_field!(
+						input, $body_key $(, $body_default)?
+					),)*
+					$($raw_field: $crate::codec::Deserialize::from_json(
+						body.ok_or_else(|| {
+							$crate::codec::DeError::expected("request body")
+						})?,
+					)?,)?
+				};
+				input.finish()?;
+				Ok(value)
+			}
+		}
+	};
+}
+
+/// Backwards-compatible alias for a request with a raw JSON body.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! endpoint_request_raw_impl {
+	($($tokens:tt)*) => {
+		$crate::endpoint_request_impl! { $($tokens)* }
+	};
+}
+
+/// Implements [`EndpointResponse`](crate::endpoint::EndpointResponse) for a
+/// response whose body is a JSON object.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! endpoint_response_impl {
+	(body { $($field:ident => $key:literal $(= $default:expr)?),* $(,)? }) => {
+		impl $crate::endpoint::EndpointResponse for Response {
+			fn to_body(&self) -> $crate::json::Value {
+				$crate::endpoint::body_object(&mut [
+					$((
+						$key,
+						$crate::endpoint::enc(&self.$field)
+					)),*
+				])
+			}
+
+			fn from_body(body: &$crate::json::Value) -> $crate::endpoint::Parsed<Self> {
+				#[allow(unused_variables)]
+				let input = $crate::endpoint::Input::body_only(body);
+				Ok(Self {
+					$($field: $crate::endpoint_body_field!(
+						input, $key $(, $default)?
+					),)*
+				})
+			}
+		}
+	};
+}
+
 // Short names keep the generated impls small.
 #[doc(hidden)]
 pub type Str = String;
@@ -946,6 +1161,15 @@ impl<'a> Input<'a> {
 		} else {
 			Ok(default)
 		}
+	}
+
+	/// The named query parameter, or its `Default` when it is not present.
+	///
+	/// # Errors
+	///
+	/// Returns an error if the parameter is present but malformed.
+	pub fn query_or_default<T: Deserialize + Default>(&self, name: &str) -> Result<T, DeError> {
+		self.query_or(name, T::default())
 	}
 
 	/// The named field of the JSON body.
@@ -1230,8 +1454,8 @@ mod auth_tests {
 	#[test]
 	fn spec_cross_check() {
 		let mut mismatches = Vec::new();
-		for &(method, path, expected) in super::auth_spec::SPEC_AUTH {
-			let Some(declared) = lookup_auth(method, path) else {
+		for (method, path, expected) in super::auth_spec::spec_auth() {
+			let Some(declared) = lookup_auth(&method, &path) else {
 				continue;
 			};
 			let known = SPEC_DIFFERENCES.iter().any(|d| d.0 == method && d.1 == path);

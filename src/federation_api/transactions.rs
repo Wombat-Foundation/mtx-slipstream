@@ -450,47 +450,12 @@ pub mod send_transaction_message {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"PUT",
-				"/_matrix/federation/v1/send/{transaction_id}",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(
-					&self.transaction_id,
-				)])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [
-						("origin", crate::endpoint::enc(&self.origin)),
-						("origin_server_ts", crate::endpoint::enc(&self.origin_server_ts)),
-						("pdus", crate::endpoint::enc(&self.pdus)),
-						("edus", crate::endpoint::enc(&self.edus)),
-					],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					transaction_id: input.path()?,
-					origin: input.body("origin")?,
-					origin_server_ts: input.body("origin_server_ts")?,
-					pdus: input.body("pdus")?,
-					edus: input.body_or("edus", Vec::new())?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "PUT",
+			path: "/_matrix/federation/v1/send/{transaction_id}",
+			path { transaction_id }
+			query {}
+			body { origin => "origin", origin_server_ts => "origin_server_ts", pdus => "pdus", edus => "edus" = Vec::new() }
 		}
 		pub struct Response {
 			pub pdus: BTreeMap<OwnedEventId, PduResult>,
@@ -500,16 +465,8 @@ pub mod send_transaction_message {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [("pdus", crate::endpoint::enc(&self.pdus))])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					pdus: input.body("pdus")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { pdus => "pdus" }
 		}
 	}
 }

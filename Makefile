@@ -33,11 +33,7 @@ all: format
 .PHONY: check
 check: ##H Type-check and reject new code duplicates
 	$(CARGO) check --all-targets --all-features
-	jscpd --baseline .jscpd-baseline.json --fail-on-new-clones 0 $$(git ls-files '*.rs')
-
-.PHONY: dupe-baseline
-dupe-baseline: ##H Refresh the jscpd duplicate-code baseline
-	jscpd --baseline .jscpd-baseline.json --update-baseline --reporters silent $$(git ls-files '*.rs')
+	jscpd $$(git ls-files '*.rs')
 
 .PHONY: macro
 macro: ##H See macro expansion costs

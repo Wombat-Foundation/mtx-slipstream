@@ -250,6 +250,174 @@ impl Deserialize for CompatListFilters {
 	}
 }
 
+/// Generates the shared sliding-sync `Extensions` codec and helpers.
+macro_rules! sync_extensions_impl {
+	($ty:ident) => {
+		impl crate::sync_events::SyncEmpty for $ty {
+			fn sync_empty(&self) -> bool {
+				crate::sync_events::SyncEmpty::sync_empty(&self.to_device)
+					&& crate::sync_events::SyncEmpty::sync_empty(&self.e2ee)
+					&& crate::sync_events::SyncEmpty::sync_empty(&self.account_data)
+					&& crate::sync_events::SyncEmpty::sync_empty(&self.receipts)
+					&& crate::sync_events::SyncEmpty::sync_empty(&self.typing)
+			}
+		}
+		impl crate::codec::Serialize for $ty {
+			fn to_json(&self) -> crate::json::Value {
+				let mut object = crate::json::Object::new();
+				if !crate::sync_events::SyncEmpty::sync_empty(&self.to_device) {
+					object.insert(
+						"to_device".into(),
+						crate::codec::Serialize::to_json(&self.to_device),
+					);
+				}
+				crate::sync_events::put_skip(&mut object, "e2ee", &self.e2ee);
+				if !crate::sync_events::SyncEmpty::sync_empty(&self.account_data) {
+					object.insert(
+						"account_data".into(),
+						crate::codec::Serialize::to_json(&self.account_data),
+					);
+				}
+				if !crate::sync_events::SyncEmpty::sync_empty(&self.receipts) {
+					object.insert(
+						"receipts".into(),
+						crate::codec::Serialize::to_json(&self.receipts),
+					);
+				}
+				if !crate::sync_events::SyncEmpty::sync_empty(&self.typing) {
+					object
+						.insert("typing".into(), crate::codec::Serialize::to_json(&self.typing));
+				}
+				crate::json::Value::Object(object)
+			}
+		}
+		impl crate::codec::Deserialize for $ty {
+			fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+				let object =
+					value.as_object().ok_or_else(|| crate::codec::DeError::expected("object"))?;
+				Ok(Self {
+					to_device: crate::sync_events::get(object, "to_device")?,
+					e2ee: crate::sync_events::get(object, "e2ee")?,
+					account_data: crate::sync_events::get(object, "account_data")?,
+					receipts: crate::sync_events::get(object, "receipts")?,
+					typing: crate::sync_events::get(object, "typing")?,
+				})
+			}
+		}
+		impl $ty {
+			#[must_use]
+			pub fn new() -> Self {
+				Self::default()
+			}
+			#[must_use]
+			pub fn is_empty(&self) -> bool {
+				crate::sync_events::SyncEmpty::sync_empty(self)
+			}
+		}
+	};
+}
+
+/// Generates the shared sliding-sync endpoint request implementation.
+macro_rules! sync_endpoint_request {
+	($path:literal) => {
+		const _: crate::endpoint::Metadata = crate::endpoint::Metadata::new("POST", $path);
+		impl crate::endpoint::EndpointRequest for Request {
+			type Response = Response;
+			const METADATA: crate::endpoint::Metadata =
+				crate::endpoint::Metadata::new("POST", $path);
+			fn path_args(&self) -> crate::endpoint::Strs {
+				crate::endpoint::path_args_from(&mut [])
+			}
+			fn query(&self) -> crate::endpoint::Pairs {
+				crate::endpoint::query_pairs(::alloc::vec![
+					("pos", crate::codec::Serialize::to_json(&self.pos)),
+					("timeout", crate::codec::Serialize::to_json(&self.timeout)),
+				])
+			}
+			fn body(&self) -> Option<crate::json::Value> {
+				let mut body = crate::codec::Serialize::to_json(self);
+				if let crate::json::Value::Object(object) = &mut body {
+					object.remove("pos");
+					object.remove("timeout");
+				}
+				Some(body)
+			}
+			fn from_parts(
+				path: &[crate::endpoint::Str],
+				query: &[crate::endpoint::Pair],
+				body: Option<&crate::json::Value>,
+			) -> crate::endpoint::Parsed<Self> {
+				let input = crate::endpoint::Input::new(path, query, body);
+				let empty = crate::json::Value::Object(crate::json::Object::new());
+				let mut request =
+					<Self as crate::codec::Deserialize>::from_json(body.unwrap_or(&empty))?;
+				request.pos = input.query("pos")?;
+				request.timeout = input.query("timeout")?;
+				input.finish()?;
+				Ok(request)
+			}
+		}
+	};
+}
+
+/// Whether a field is always written, even when empty.
+fn always<T>(_: &T) -> bool {
+	true
+}
+
+/// Whether a field is written only when it is non-empty.
+fn not_empty<T: SyncEmpty>(value: &T) -> bool {
+	!SyncEmpty::sync_empty(value)
+}
+
+/// Generates the shared `RoomSubscription` codec.
+macro_rules! room_subscription_codec {
+	($ty:ident, $timeline:ident) => {
+		impl crate::sync_events::SyncEmpty for $ty {
+			fn sync_empty(&self) -> bool {
+				crate::sync_events::SyncEmpty::sync_empty(&self.required_state)
+					&& crate::sync_events::SyncEmpty::sync_empty(&self.timeline_limit)
+					&& crate::sync_events::SyncEmpty::sync_empty(&self.include_heroes)
+			}
+		}
+		impl crate::codec::Serialize for $ty {
+			fn to_json(&self) -> crate::json::Value {
+				let mut object = crate::json::Object::new();
+				if !crate::sync_events::SyncEmpty::sync_empty(&self.required_state) {
+					object.insert(
+						"required_state".into(),
+						crate::codec::Serialize::to_json(&self.required_state),
+					);
+				}
+				if crate::sync_events::$timeline(&self.timeline_limit) {
+					object.insert(
+						"timeline_limit".into(),
+						crate::codec::Serialize::to_json(&self.timeline_limit),
+					);
+				}
+				if !crate::sync_events::SyncEmpty::sync_empty(&self.include_heroes) {
+					object.insert(
+						"include_heroes".into(),
+						crate::codec::Serialize::to_json(&self.include_heroes),
+					);
+				}
+				crate::json::Value::Object(object)
+			}
+		}
+		impl crate::codec::Deserialize for $ty {
+			fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+				let object =
+					value.as_object().ok_or_else(|| crate::codec::DeError::expected("object"))?;
+				Ok(Self {
+					required_state: crate::sync_events::get(object, "required_state")?,
+					timeline_limit: crate::sync_events::get(object, "timeline_limit")?,
+					include_heroes: crate::sync_events::get(object, "include_heroes")?,
+				})
+			}
+		}
+	};
+}
+
 pub mod v3 {
 	use alloc::{collections::BTreeMap, string::String, vec::Vec};
 	use core::time::Duration;
@@ -1188,15 +1356,15 @@ pub mod v3 {
 }
 
 pub mod v5 {
-	use alloc::{collections::BTreeMap, string::String, vec::Vec};
+	use alloc::{collections::BTreeMap, string::String};
 	use core::time::Duration;
 
 	use super::{DeviceLists, UnreadNotificationsCount};
 	use crate::{
 		OwnedRoomId,
 		codec::{DeError, Deserialize, Serialize},
-		endpoint::{EndpointRequest, EndpointResponse, Input, Metadata},
-		json::{Object, Value},
+		endpoint::EndpointResponse,
+		json::Value,
 	};
 
 	pub mod request {
@@ -1308,46 +1476,7 @@ pub mod v5 {
 			pub timeline_limit: UInt,
 			pub include_heroes: Option<bool>,
 		}
-		impl crate::sync_events::SyncEmpty for RoomSubscription {
-			fn sync_empty(&self) -> bool {
-				crate::sync_events::SyncEmpty::sync_empty(&self.required_state)
-					&& crate::sync_events::SyncEmpty::sync_empty(&self.timeline_limit)
-					&& crate::sync_events::SyncEmpty::sync_empty(&self.include_heroes)
-			}
-		}
-		impl crate::codec::Serialize for RoomSubscription {
-			fn to_json(&self) -> crate::json::Value {
-				let mut object = crate::json::Object::new();
-				if !crate::sync_events::SyncEmpty::sync_empty(&self.required_state) {
-					object.insert(
-						"required_state".into(),
-						crate::codec::Serialize::to_json(&self.required_state),
-					);
-				}
-				object.insert(
-					"timeline_limit".into(),
-					crate::codec::Serialize::to_json(&self.timeline_limit),
-				);
-				if !crate::sync_events::SyncEmpty::sync_empty(&self.include_heroes) {
-					object.insert(
-						"include_heroes".into(),
-						crate::codec::Serialize::to_json(&self.include_heroes),
-					);
-				}
-				crate::json::Value::Object(object)
-			}
-		}
-		impl crate::codec::Deserialize for RoomSubscription {
-			fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
-				let object =
-					value.as_object().ok_or_else(|| crate::codec::DeError::expected("object"))?;
-				Ok(Self {
-					required_state: crate::sync_events::get(object, "required_state")?,
-					timeline_limit: crate::sync_events::get(object, "timeline_limit")?,
-					include_heroes: crate::sync_events::get(object, "include_heroes")?,
-				})
-			}
-		}
+		room_subscription_codec!(RoomSubscription, always);
 
 		#[derive(Clone, Debug, Default)]
 		pub struct RoomDetails {
@@ -1395,67 +1524,7 @@ pub mod v5 {
 			pub receipts: Receipts,
 			pub typing: Typing,
 		}
-		impl crate::sync_events::SyncEmpty for Extensions {
-			fn sync_empty(&self) -> bool {
-				crate::sync_events::SyncEmpty::sync_empty(&self.to_device)
-					&& crate::sync_events::SyncEmpty::sync_empty(&self.e2ee)
-					&& crate::sync_events::SyncEmpty::sync_empty(&self.account_data)
-					&& crate::sync_events::SyncEmpty::sync_empty(&self.receipts)
-					&& crate::sync_events::SyncEmpty::sync_empty(&self.typing)
-			}
-		}
-		impl crate::codec::Serialize for Extensions {
-			fn to_json(&self) -> crate::json::Value {
-				let mut object = crate::json::Object::new();
-				if !crate::sync_events::SyncEmpty::sync_empty(&self.to_device) {
-					object.insert(
-						"to_device".into(),
-						crate::codec::Serialize::to_json(&self.to_device),
-					);
-				}
-				crate::sync_events::put_skip(&mut object, "e2ee", &self.e2ee);
-				if !crate::sync_events::SyncEmpty::sync_empty(&self.account_data) {
-					object.insert(
-						"account_data".into(),
-						crate::codec::Serialize::to_json(&self.account_data),
-					);
-				}
-				if !crate::sync_events::SyncEmpty::sync_empty(&self.receipts) {
-					object.insert(
-						"receipts".into(),
-						crate::codec::Serialize::to_json(&self.receipts),
-					);
-				}
-				if !crate::sync_events::SyncEmpty::sync_empty(&self.typing) {
-					object
-						.insert("typing".into(), crate::codec::Serialize::to_json(&self.typing));
-				}
-				crate::json::Value::Object(object)
-			}
-		}
-		impl crate::codec::Deserialize for Extensions {
-			fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
-				let object =
-					value.as_object().ok_or_else(|| crate::codec::DeError::expected("object"))?;
-				Ok(Self {
-					to_device: crate::sync_events::get(object, "to_device")?,
-					e2ee: crate::sync_events::get(object, "e2ee")?,
-					account_data: crate::sync_events::get(object, "account_data")?,
-					receipts: crate::sync_events::get(object, "receipts")?,
-					typing: crate::sync_events::get(object, "typing")?,
-				})
-			}
-		}
-		impl Extensions {
-			#[must_use]
-			pub fn new() -> Self {
-				Self::default()
-			}
-			#[must_use]
-			pub fn is_empty(&self) -> bool {
-				crate::sync_events::SyncEmpty::sync_empty(self)
-			}
-		}
+		sync_extensions_impl!(Extensions);
 
 		#[derive(PartialEq, Clone, Debug, Default)]
 		pub struct ToDevice {
@@ -1800,50 +1869,7 @@ pub mod v5 {
 		}
 	}
 
-	const _: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-		"POST",
-		"/_matrix/client/unstable/org.matrix.simplified_msc3575/sync",
-	);
-	impl EndpointRequest for Request {
-		type Response = Response;
-
-		const METADATA: Metadata =
-			Metadata::new("POST", "/_matrix/client/unstable/org.matrix.simplified_msc3575/sync");
-
-		fn path_args(&self) -> Vec<String> {
-			Vec::new()
-		}
-
-		fn query(&self) -> Vec<(String, String)> {
-			crate::endpoint::query_pairs(alloc::vec![
-				("pos", self.pos.to_json()),
-				("timeout", self.timeout.to_json()),
-			])
-		}
-
-		fn body(&self) -> Option<Value> {
-			let mut body = self.to_json();
-			if let Value::Object(object) = &mut body {
-				object.remove("pos");
-				object.remove("timeout");
-			}
-			Some(body)
-		}
-
-		fn from_parts(
-			path: &[String],
-			query: &[(String, String)],
-			body: Option<&Value>,
-		) -> Result<Self, DeError> {
-			let input = Input::new(path, query, body);
-			let empty = Value::Object(Object::new());
-			let mut request = Self::from_json(body.unwrap_or(&empty))?;
-			request.pos = input.query("pos")?;
-			request.timeout = input.query("timeout")?;
-			input.finish()?;
-			Ok(request)
-		}
-	}
+	sync_endpoint_request!("/_matrix/client/unstable/org.matrix.simplified_msc3575/sync");
 
 	#[derive(Clone, Debug, Default)]
 	pub struct Response {
@@ -2169,67 +2195,7 @@ pub mod v5 {
 			pub receipts: Receipts,
 			pub typing: Typing,
 		}
-		impl crate::sync_events::SyncEmpty for Extensions {
-			fn sync_empty(&self) -> bool {
-				crate::sync_events::SyncEmpty::sync_empty(&self.to_device)
-					&& crate::sync_events::SyncEmpty::sync_empty(&self.e2ee)
-					&& crate::sync_events::SyncEmpty::sync_empty(&self.account_data)
-					&& crate::sync_events::SyncEmpty::sync_empty(&self.receipts)
-					&& crate::sync_events::SyncEmpty::sync_empty(&self.typing)
-			}
-		}
-		impl crate::codec::Serialize for Extensions {
-			fn to_json(&self) -> crate::json::Value {
-				let mut object = crate::json::Object::new();
-				if !crate::sync_events::SyncEmpty::sync_empty(&self.to_device) {
-					object.insert(
-						"to_device".into(),
-						crate::codec::Serialize::to_json(&self.to_device),
-					);
-				}
-				crate::sync_events::put_skip(&mut object, "e2ee", &self.e2ee);
-				if !crate::sync_events::SyncEmpty::sync_empty(&self.account_data) {
-					object.insert(
-						"account_data".into(),
-						crate::codec::Serialize::to_json(&self.account_data),
-					);
-				}
-				if !crate::sync_events::SyncEmpty::sync_empty(&self.receipts) {
-					object.insert(
-						"receipts".into(),
-						crate::codec::Serialize::to_json(&self.receipts),
-					);
-				}
-				if !crate::sync_events::SyncEmpty::sync_empty(&self.typing) {
-					object
-						.insert("typing".into(), crate::codec::Serialize::to_json(&self.typing));
-				}
-				crate::json::Value::Object(object)
-			}
-		}
-		impl crate::codec::Deserialize for Extensions {
-			fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
-				let object =
-					value.as_object().ok_or_else(|| crate::codec::DeError::expected("object"))?;
-				Ok(Self {
-					to_device: crate::sync_events::get(object, "to_device")?,
-					e2ee: crate::sync_events::get(object, "e2ee")?,
-					account_data: crate::sync_events::get(object, "account_data")?,
-					receipts: crate::sync_events::get(object, "receipts")?,
-					typing: crate::sync_events::get(object, "typing")?,
-				})
-			}
-		}
-		impl Extensions {
-			#[must_use]
-			pub fn new() -> Self {
-				Self::default()
-			}
-			#[must_use]
-			pub fn is_empty(&self) -> bool {
-				crate::sync_events::SyncEmpty::sync_empty(self)
-			}
-		}
+		sync_extensions_impl!(Extensions);
 
 		#[derive(Clone, Debug, Default)]
 		pub struct ToDevice {
@@ -2460,9 +2426,9 @@ pub mod v4 {
 	use super::v5::request::ReceiptsRoom;
 	use crate::{
 		OwnedRoomId, UInt,
-		codec::{DeError, Deserialize, Serialize},
+		codec::DeError,
 		directory::RoomTypeFilter,
-		endpoint::{EndpointRequest, EndpointResponse, Input, Metadata},
+		endpoint::EndpointResponse,
 		events::{StateEventType, TimelineEventType},
 		json::{Object, Value},
 	};
@@ -2726,48 +2692,7 @@ pub mod v4 {
 		pub timeline_limit: Option<UInt>,
 		pub include_heroes: Option<bool>,
 	}
-	impl crate::sync_events::SyncEmpty for RoomSubscription {
-		fn sync_empty(&self) -> bool {
-			crate::sync_events::SyncEmpty::sync_empty(&self.required_state)
-				&& crate::sync_events::SyncEmpty::sync_empty(&self.timeline_limit)
-				&& crate::sync_events::SyncEmpty::sync_empty(&self.include_heroes)
-		}
-	}
-	impl crate::codec::Serialize for RoomSubscription {
-		fn to_json(&self) -> crate::json::Value {
-			let mut object = crate::json::Object::new();
-			if !crate::sync_events::SyncEmpty::sync_empty(&self.required_state) {
-				object.insert(
-					"required_state".into(),
-					crate::codec::Serialize::to_json(&self.required_state),
-				);
-			}
-			if !crate::sync_events::SyncEmpty::sync_empty(&self.timeline_limit) {
-				object.insert(
-					"timeline_limit".into(),
-					crate::codec::Serialize::to_json(&self.timeline_limit),
-				);
-			}
-			if !crate::sync_events::SyncEmpty::sync_empty(&self.include_heroes) {
-				object.insert(
-					"include_heroes".into(),
-					crate::codec::Serialize::to_json(&self.include_heroes),
-				);
-			}
-			crate::json::Value::Object(object)
-		}
-	}
-	impl crate::codec::Deserialize for RoomSubscription {
-		fn from_json(value: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
-			let object =
-				value.as_object().ok_or_else(|| crate::codec::DeError::expected("object"))?;
-			Ok(Self {
-				required_state: crate::sync_events::get(object, "required_state")?,
-				timeline_limit: crate::sync_events::get(object, "timeline_limit")?,
-				include_heroes: crate::sync_events::get(object, "include_heroes")?,
-			})
-		}
-	}
+	room_subscription_codec!(RoomSubscription, not_empty);
 
 	#[derive(PartialEq, Clone, Debug, Default)]
 	pub struct ToDeviceConfig {
@@ -3192,50 +3117,7 @@ pub mod v4 {
 		}
 	}
 
-	const _: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-		"POST",
-		"/_matrix/client/unstable/org.matrix.msc3575/sync",
-	);
-	impl EndpointRequest for Request {
-		type Response = Response;
-
-		const METADATA: Metadata =
-			Metadata::new("POST", "/_matrix/client/unstable/org.matrix.msc3575/sync");
-
-		fn path_args(&self) -> Vec<String> {
-			Vec::new()
-		}
-
-		fn query(&self) -> Vec<(String, String)> {
-			crate::endpoint::query_pairs(alloc::vec![
-				("pos", self.pos.to_json()),
-				("timeout", self.timeout.to_json()),
-			])
-		}
-
-		fn body(&self) -> Option<Value> {
-			let mut body = self.to_json();
-			if let Value::Object(object) = &mut body {
-				object.remove("pos");
-				object.remove("timeout");
-			}
-			Some(body)
-		}
-
-		fn from_parts(
-			path: &[String],
-			query: &[(String, String)],
-			body: Option<&Value>,
-		) -> Result<Self, DeError> {
-			let input = Input::new(path, query, body);
-			let empty = Value::Object(Object::new());
-			let mut request = Self::from_json(body.unwrap_or(&empty))?;
-			request.pos = input.query("pos")?;
-			request.timeout = input.query("timeout")?;
-			input.finish()?;
-			Ok(request)
-		}
-	}
+	sync_endpoint_request!("/_matrix/client/unstable/org.matrix.msc3575/sync");
 
 	/// Sliding-sync v4 responses are not produced by this server.
 	#[derive(Debug, Default)]
