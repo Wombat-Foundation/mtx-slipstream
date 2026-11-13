@@ -46,7 +46,9 @@ pub fn try_from_json_map(map: JsonMap) -> Result<Object, crate::CanonicalJsonErr
 pub fn to_canonical_value<T: crate::codec::Serialize>(
 	value: T,
 ) -> Result<Value, crate::CanonicalJsonError> {
-	let value = crate::codec::to_value(&value);
+	let value = value
+		.to_json_checked()
+		.map_err(|error| crate::CanonicalJsonError::SerDe(error.to_string()))?;
 	// Validate only; the value itself is already sorted by `Object`'s BTreeMap.
 	rezzy::json::to_canonical_string(&value)
 		.map_err(|error| crate::CanonicalJsonError::SerDe(error.to_string()))?;
@@ -64,8 +66,9 @@ pub fn redact_content_in_place(
 	event_type: impl AsRef<str>,
 ) -> Result<(), RedactionError> {
 	// `rezzy` owns the per-room-version rule table, including the MSC3389
-	// relation-preserving variant. Only reject custom versions Rezzy does not
-	// know about; do not special-case any version here.
+	// relation-preserving variant. Custom room versions are accepted only
+	// when they are one of the versions allowlisted here; Rezzy does not
+	// decide the allowlist for this crate.
 	if matches!(version, crate::RoomVersionId::Custom(_))
 		&& version.as_str() != MSC3389_ROOM_VERSION
 	{
@@ -161,6 +164,8 @@ mod tests {
 		assert!(to_canonical_value(Value::parse(r#"{"ok":1}"#).unwrap()).is_ok());
 		assert!(to_canonical_value(Value::parse(r#"{"ratio":0.5}"#).unwrap()).is_err());
 		assert!(to_canonical_value(Value::parse(r#"{"n":9007199254740992}"#).unwrap()).is_err());
+		assert!(to_canonical_value(f64::NAN).is_err());
+		assert!(to_canonical_value(f64::INFINITY).is_err());
 	}
 
 	#[test]

@@ -572,6 +572,20 @@ mod tests {
 	}
 
 	#[test]
+	fn federation_request_rejects_duplicate_keys() {
+		use super::transactions::send_transaction_message::v1::Request;
+
+		let body =
+			r#"{"origin":"example.org","origin_server_ts":1,"pdus":[{"a":1,"a":2}],"edus":[]}"#;
+		let http = http::Request::builder()
+			.method("PUT")
+			.uri("/_matrix/federation/v1/send/txn1")
+			.body(body.as_bytes().to_vec())
+			.unwrap();
+		assert!(Request::try_from_http_request(http, &["txn1"]).is_err());
+	}
+
+	#[test]
 	fn get_event_response_decodes_and_encodes() {
 		let body =
 			r#"{"origin":"example.org","origin_server_ts":5,"pdus":[{"type":"m.room.message"}]}"#;

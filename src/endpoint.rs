@@ -509,6 +509,13 @@ pub trait EndpointRequest: Sized {
 		let bytes = request.body().as_ref();
 		let body = if bytes.is_empty() {
 			None
+		} else if Self::METADATA.path.starts_with("/_matrix/federation/") {
+			// Federation bodies can carry PDUs that are later hashed and
+			// verified. Reject ambiguous duplicate keys at ingress.
+			Some(
+				crate::federation::raw_pdu::parse_pdu_json(bytes)
+					.map_err(|e| DeError(e.to_string()))?,
+			)
 		} else {
 			let text = core::str::from_utf8(bytes).map_err(|e| DeError(e.to_string()))?;
 			Some(Value::parse(text).map_err(|e| DeError(e.to_string()))?)

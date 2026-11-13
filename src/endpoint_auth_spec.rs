@@ -1,8 +1,9 @@
-// @generated from matrix-org/matrix-spec `data/api` (client-server and server-server).
-// Used only by the cross-check test; placeholders are `{}`.
-//
-// The entries live in `endpoint_auth_spec.json` so the spec oracle is data, not a
-// second Rust table that jscpd sees as duplicated from `endpoint_auth.rs`.
+//! Test-only oracle generated from matrix-org/matrix-spec `data/api`
+//! (client-server and server-server) by `scripts/endpoint_auth/gen_spec_table.py`.
+//!
+//! The entries live in `endpoint_auth_spec.json` so the spec oracle is data, not a
+//! second Rust table that jscpd sees as duplicated from `endpoint_auth.rs`.
+//! This loader is hand-written; regenerate only the JSON.
 use super::AuthScheme;
 
 const SPEC_AUTH_JSON: &str = include_str!("endpoint_auth_spec.json");

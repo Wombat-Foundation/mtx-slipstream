@@ -33,6 +33,19 @@ impl core::error::Error for DeError {}
 
 pub trait Serialize {
 	fn to_json(&self) -> Value;
+
+	/// Serializes for canonical output, rejecting values that cannot be
+	/// represented faithfully.
+	///
+	/// The default defers to [`Self::to_json`]. Implementations that can lose
+	/// data, such as non-finite `f64` values, override this.
+	///
+	/// # Errors
+	///
+	/// Returns [`DeError`] when `self` cannot be represented as canonical JSON.
+	fn to_json_checked(&self) -> Result<Value, DeError> {
+		Ok(self.to_json())
+	}
 }
 
 pub trait Deserialize: Sized {
@@ -236,6 +249,14 @@ impl Deserialize for usize {
 impl Serialize for f64 {
 	fn to_json(&self) -> Value {
 		crate::json::Number::from_f64(*self).map_or(Value::Null, Value::Number)
+	}
+
+	fn to_json_checked(&self) -> Result<Value, DeError> {
+		if self.is_finite() {
+			Ok(self.to_json())
+		} else {
+			Err(DeError("non-finite float cannot be canonical JSON".into()))
+		}
 	}
 }
 

@@ -3,12 +3,17 @@ use alloc::{string::String, vec::Vec};
 use crate::{UInt, sswire::Raw};
 
 /// The shared response of the room-relations pagination endpoints.
-#[derive(Debug)]
 pub struct RelatingEventsResponse {
 	pub chunk: Vec<Raw<crate::events::AnyTimelineEvent>>,
 	pub next_batch: Option<String>,
 	pub prev_batch: Option<String>,
 	pub recursion_depth: Option<UInt>,
+}
+
+impl ::core::fmt::Debug for RelatingEventsResponse {
+	fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+		crate::endpoint::opaque_debug(f, "Response")
+	}
 }
 
 impl crate::endpoint::EndpointResponse for RelatingEventsResponse {

@@ -4,7 +4,7 @@
 //! serializing, this module provides a `PduStreamWriter` that serializes
 //! PDUs incrementally into a growing byte buffer.
 
-use crate::federation::raw_pdu::canonical_to_bytes;
+use crate::federation::raw_pdu::{parse_pdu_json, write_canonical_into};
 use crate::slipstream_json as sjson;
 use bytes::{BufMut, BytesMut};
 
@@ -32,34 +32,46 @@ impl PduStreamWriter {
 		}
 	}
 
-	/// Write a single pre-serialized PDU (raw JSON bytes).
+	/// Write a PDU from raw JSON text.
 	///
-	/// A comma separator is inserted before the PDU if the stream is not
-	/// empty.
-	#[inline]
-	pub fn write_raw_pdu(&mut self, pdu_json: &str) {
-		if self.count > 0 {
-			self.buf.put_u8(b',');
-		}
-		self.buf.put_slice(pdu_json.as_bytes());
-		self.count = self.count.saturating_add(1);
+	/// The input is parsed strictly (rejecting duplicate keys) and serialized
+	/// through the canonical writer, so floats and out-of-range integers in
+	/// the signed portion are rejected instead of being emitted non-canonically.
+	/// A comma separator is inserted before the PDU if the stream is not empty.
+	///
+	/// # Errors
+	///
+	/// Returns `io::Error` if the input is malformed, contains a duplicate
+	/// key, or has a float or out-of-range integer in the signed portion.
+	pub fn write_raw_pdu(&mut self, pdu_json: &str) -> std::io::Result<()> {
+		let pdu = parse_pdu_json(pdu_json.as_bytes())
+			.map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()))?;
+		self.write_pdu(&pdu)
 	}
 
 	/// Serialize an `OwnedValue` PDU into the stream.
 	///
-	/// The value is serialized by the strict canonical writer
-	/// and a comma separator is inserted before the PDU if the stream is not
-	/// empty.
+	/// The value is serialized by the canonical writer and a comma separator
+	/// is inserted before the PDU if the stream is not empty. The stream is
+	/// unchanged when serialization fails.
 	///
 	/// # Errors
 	///
-	/// Returns `io::Error` if the value cannot be serialized.
+	/// Returns `io::Error` if a number in the signed portion is a float or an
+	/// integer outside the canonical safe range.
 	pub fn write_pdu(&mut self, pdu: &sjson::OwnedValue) -> std::io::Result<()> {
-		let bytes = canonical_to_bytes(pdu)?;
+		self.write_canonical(pdu)
+	}
+
+	fn write_canonical(&mut self, pdu: &sjson::OwnedValue) -> std::io::Result<()> {
+		let start = self.buf.len();
 		if self.count > 0 {
 			self.buf.put_u8(b',');
 		}
-		self.buf.extend_from_slice(&bytes);
+		if let Err(error) = write_canonical_into(pdu, &mut self.buf) {
+			self.buf.truncate(start);
+			return Err(error);
+		}
 		self.count = self.count.saturating_add(1);
 		Ok(())
 	}
@@ -130,36 +142,52 @@ impl FederationResponseWriter {
 		}
 	}
 
-	/// Write a pre-serialized state PDU (raw JSON bytes).
+	/// Write a state PDU from raw JSON text.
+	///
+	/// The input is parsed strictly and canonicalized; see
+	/// [`PduStreamWriter::write_raw_pdu`] for the rejection rules.
+	///
+	/// # Errors
+	///
+	/// Returns `io::Error` if the input is malformed, contains a duplicate
+	/// key, or has a float or out-of-range integer in the signed portion.
 	///
 	/// # Panics
 	///
 	/// Panics if called after [`Self::begin_auth_chain`].
-	pub fn write_raw_state_pdu(&mut self, pdu_json: &str) {
+	pub fn write_raw_state_pdu(&mut self, pdu_json: &str) -> std::io::Result<()> {
 		debug_assert_eq!(self.phase, ResponsePhase::State);
-		if self.state_count > 0 {
-			self.buf.put_u8(b',');
-		}
-		self.buf.put_slice(pdu_json.as_bytes());
-		self.state_count = self.state_count.saturating_add(1);
+		let pdu = parse_pdu_json(pdu_json.as_bytes())
+			.map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()))?;
+		self.write_state_pdu(&pdu)
 	}
 
 	/// Serialize an `OwnedValue` state PDU into the stream.
 	///
+	/// The stream is unchanged when serialization fails.
+	///
 	/// # Errors
 	///
-	/// Returns `io::Error` if the value cannot be serialized.
+	/// Returns `io::Error` if a number in the signed portion is a float or an
+	/// integer outside the canonical safe range.
 	///
 	/// # Panics
 	///
 	/// Panics if called after [`Self::begin_auth_chain`].
 	pub fn write_state_pdu(&mut self, pdu: &sjson::OwnedValue) -> std::io::Result<()> {
 		debug_assert_eq!(self.phase, ResponsePhase::State);
-		let bytes = canonical_to_bytes(pdu)?;
+		self.write_state_canonical(pdu)
+	}
+
+	fn write_state_canonical(&mut self, pdu: &sjson::OwnedValue) -> std::io::Result<()> {
+		let start = self.buf.len();
 		if self.state_count > 0 {
 			self.buf.put_u8(b',');
 		}
-		self.buf.extend_from_slice(&bytes);
+		if let Err(error) = write_canonical_into(pdu, &mut self.buf) {
+			self.buf.truncate(start);
+			return Err(error);
+		}
 		self.state_count = self.state_count.saturating_add(1);
 		Ok(())
 	}
@@ -176,36 +204,52 @@ impl FederationResponseWriter {
 		self.phase = ResponsePhase::AuthChain;
 	}
 
-	/// Write a pre-serialized `auth_chain` PDU (raw JSON bytes).
+	/// Write an `auth_chain` PDU from raw JSON text.
+	///
+	/// The input is parsed strictly and canonicalized; see
+	/// [`PduStreamWriter::write_raw_pdu`] for the rejection rules.
+	///
+	/// # Errors
+	///
+	/// Returns `io::Error` if the input is malformed, contains a duplicate
+	/// key, or has a float or out-of-range integer in the signed portion.
 	///
 	/// # Panics
 	///
 	/// Panics if called before [`Self::begin_auth_chain`].
-	pub fn write_raw_auth_chain_pdu(&mut self, pdu_json: &str) {
+	pub fn write_raw_auth_chain_pdu(&mut self, pdu_json: &str) -> std::io::Result<()> {
 		debug_assert_eq!(self.phase, ResponsePhase::AuthChain);
-		if self.auth_chain_count > 0 {
-			self.buf.put_u8(b',');
-		}
-		self.buf.put_slice(pdu_json.as_bytes());
-		self.auth_chain_count = self.auth_chain_count.saturating_add(1);
+		let pdu = parse_pdu_json(pdu_json.as_bytes())
+			.map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()))?;
+		self.write_auth_chain_pdu(&pdu)
 	}
 
 	/// Serialize an `OwnedValue` `auth_chain` PDU into the stream.
 	///
+	/// The stream is unchanged when serialization fails.
+	///
 	/// # Errors
 	///
-	/// Returns `io::Error` if the value cannot be serialized.
+	/// Returns `io::Error` if a number in the signed portion is a float or an
+	/// integer outside the canonical safe range.
 	///
 	/// # Panics
 	///
 	/// Panics if called before [`Self::begin_auth_chain`].
 	pub fn write_auth_chain_pdu(&mut self, pdu: &sjson::OwnedValue) -> std::io::Result<()> {
 		debug_assert_eq!(self.phase, ResponsePhase::AuthChain);
-		let bytes = canonical_to_bytes(pdu)?;
+		self.write_auth_chain_canonical(pdu)
+	}
+
+	fn write_auth_chain_canonical(&mut self, pdu: &sjson::OwnedValue) -> std::io::Result<()> {
+		let start = self.buf.len();
 		if self.auth_chain_count > 0 {
 			self.buf.put_u8(b',');
 		}
-		self.buf.extend_from_slice(&bytes);
+		if let Err(error) = write_canonical_into(pdu, &mut self.buf) {
+			self.buf.truncate(start);
+			return Err(error);
+		}
 		self.auth_chain_count = self.auth_chain_count.saturating_add(1);
 		Ok(())
 	}
@@ -243,9 +287,9 @@ mod tests {
 	#[test]
 	fn test_pdu_stream_writer() {
 		let mut stream = PduStreamWriter::with_capacity(3);
-		stream.write_raw_pdu(r#"{"event_id":"$a","type":"m.room.create"}"#);
-		stream.write_raw_pdu(r#"{"event_id":"$b","type":"m.room.member"}"#);
-		stream.write_raw_pdu(r#"{"event_id":"$c","type":"m.room.message"}"#);
+		stream.write_raw_pdu(r#"{"event_id":"$a","type":"m.room.create"}"#).unwrap();
+		stream.write_raw_pdu(r#"{"event_id":"$b","type":"m.room.member"}"#).unwrap();
+		stream.write_raw_pdu(r#"{"event_id":"$c","type":"m.room.message"}"#).unwrap();
 		let bytes = stream.finish();
 		let input = bytes.to_vec();
 		let parsed: sjson::OwnedValue = sjson::to_owned_value(&input).unwrap();
@@ -267,12 +311,57 @@ mod tests {
 	}
 
 	#[test]
+	fn write_pdu_rejects_non_canonical_numbers_without_changing_stream() {
+		let float: sjson::OwnedValue =
+			sjson::to_owned_value(br#"{"content":{"ratio":1.5}}"#).unwrap();
+		let big: sjson::OwnedValue =
+			sjson::to_owned_value(br#"{"depth":9007199254740992}"#).unwrap();
+
+		let mut stream = PduStreamWriter::with_capacity(1);
+		assert!(stream.write_pdu(&float).is_err());
+		assert!(stream.write_pdu(&big).is_err());
+		assert!(stream.is_empty());
+		stream.write_pdu(&json!({"event_id":"$ok"})).unwrap();
+		assert_eq!(stream.len(), 1);
+
+		let mut writer = FederationResponseWriter::with_capacity(1, 1);
+		assert!(writer.write_state_pdu(&float).is_err());
+		assert_eq!(writer.state_len(), 0);
+		writer.begin_auth_chain();
+		assert!(writer.write_auth_chain_pdu(&big).is_err());
+		assert_eq!(writer.auth_chain_len(), 0);
+	}
+
+	#[test]
+	fn raw_pdu_rejects_duplicate_keys_and_canonicalizes() {
+		let mut stream = PduStreamWriter::with_capacity(1);
+		assert!(stream.write_raw_pdu(r#"{"a":1,"a":2}"#).is_err());
+		assert!(stream.is_empty());
+		assert!(stream.write_raw_pdu(r#"{"z":1,"a":{"b":2}}"#).is_ok());
+		let bytes = stream.finish();
+		assert_eq!(bytes.as_ref(), br#"[{"a":{"b":2},"z":1}]"#);
+	}
+
+	#[test]
+	fn unsigned_numbers_are_not_subject_to_signed_rules() {
+		let pdu: sjson::OwnedValue =
+			sjson::to_owned_value(br#"{"content":{"x":1},"unsigned":{"age":1.5}}"#).unwrap();
+		let mut stream = PduStreamWriter::with_capacity(1);
+		stream.write_pdu(&pdu).unwrap();
+		let bytes = stream.finish();
+		let input = bytes.to_vec();
+		let parsed: sjson::OwnedValue = sjson::to_owned_value(&input).unwrap();
+		let items = parsed.as_array().unwrap();
+		assert_eq!(items[0]["unsigned"]["age"].as_f64(), Some(1.5));
+	}
+
+	#[test]
 	fn test_federation_response_writer() {
 		let mut writer = FederationResponseWriter::with_capacity(2, 1);
-		writer.write_raw_state_pdu(r#"{"event_id":"$s1"}"#);
-		writer.write_raw_state_pdu(r#"{"event_id":"$s2"}"#);
+		writer.write_raw_state_pdu(r#"{"event_id":"$s1"}"#).unwrap();
+		writer.write_raw_state_pdu(r#"{"event_id":"$s2"}"#).unwrap();
 		writer.begin_auth_chain();
-		writer.write_raw_auth_chain_pdu(r#"{"event_id":"$a1"}"#);
+		writer.write_raw_auth_chain_pdu(r#"{"event_id":"$a1"}"#).unwrap();
 		let bytes = writer.finish();
 		let input = bytes.to_vec();
 		let parsed: sjson::OwnedValue = sjson::to_owned_value(&input).unwrap();

@@ -1,7 +1,8 @@
 # Endpoint authentication tables
 
 `src/endpoint_auth.rs` (the table `Metadata::new` consults) and
-`src/endpoint_auth_spec.rs` (test-only, for the cross-check) are generated.
+`src/endpoint_auth_spec.json` (test-only data, for the cross-check) are generated.
+`src/endpoint_auth_spec.rs` is a hand-written loader for that JSON.
 
 - `gen_ruma_table.py` reads `authentication:` out of each `metadata!` block of the
   pinned ruwuma checkout (extracted to `ruwuma_rev/crates/`); this is the contract
@@ -9,8 +10,8 @@
 - `gen_spec_table.py` reads `security:` from matrix-spec `data/api/` and applies
   `spec_overrides.json`. Any endpoint with no `security` block or an unmappable scheme must
   be resolved there (scheme plus reason) or excluded; otherwise the script exits non-zero
-  and writes nothing. Regenerating `src/endpoint_auth_spec.rs` is therefore reproducible
-  (apart from rustfmt wrapping). Pass `--root <matrix-spec>/data/api`.
+  and writes nothing. Regenerating `src/endpoint_auth_spec.json` is therefore reproducible.
+  Pass `--root <matrix-spec>/data/api`; the default `--out` is that JSON file.
 
 Decisions that differ from the spec, or where the spec is silent, are recorded with
 their winning source in `endpoint.rs` (`SPEC_DIFFERENCES`, `REVIEWED_NO_SECURITY`).

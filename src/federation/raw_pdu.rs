@@ -59,18 +59,41 @@ pub fn parse_pdu_json(buf: &[u8]) -> Result<sjson::OwnedValue, sjson::Error> {
 	sjson::OwnedValue::parse_strict(text)
 }
 
+/// Appends `pdu` to `out` as canonical JSON.
+///
+/// The signed portion is validated with the strict Matrix number rules
+/// (compact output, sorted keys, no floats, integers within ±(2^53 - 1)).
+/// `unsigned` is excluded from signing, so it is not number-validated and is
+/// re-emitted unchanged.
+///
+/// Validation happens before anything is appended, so `out` is unchanged when
+/// this returns an error.
+///
+/// # Errors
+///
+/// Returns `io::Error` if a number in the signed portion is a float or an
+/// integer outside the canonical safe range.
+pub fn write_canonical_into(pdu: &sjson::OwnedValue, out: &mut BytesMut) -> io::Result<()> {
+	// Validate only; the permissive writer below re-emits every field,
+	// including `unsigned`, in canonical key order.
+	rezzy::json::to_canonical_string_filtered(pdu, |key| key == "unsigned")
+		.map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))?;
+	let text = rezzy::json::write_string_value(pdu)
+		.map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))?;
+	out.extend_from_slice(text.as_bytes());
+	Ok(())
+}
+
 /// Serialize an `OwnedValue` directly to a `BytesMut` buffer.
 ///
 /// # Errors
 ///
-/// Returns `io::Error` if serialization fails.
+/// Returns `io::Error` if a number in the signed portion is a float or an
+/// integer outside the canonical safe range.
 pub fn canonical_to_bytes(pdu: &sjson::OwnedValue) -> io::Result<BytesMut> {
-	// Canonicalization re-emits compact output, so input whitespace is
-	// irrelevant here. The strict canonical writer (sorted keys, no floats, integers within
-	// ±(2^53 - 1)) lives in `rezzy-json`; do not reimplement it here.
-	let bytes = rezzy::json::to_canonical_bytes(pdu)
-		.map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))?;
-	Ok(BytesMut::from(bytes.as_slice()))
+	let mut bytes = BytesMut::new();
+	write_canonical_into(pdu, &mut bytes)?;
+	Ok(bytes)
 }
 
 /// Serialize an `OwnedValue` to a `String`.

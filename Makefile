@@ -31,9 +31,13 @@ all: format
 
 
 .PHONY: check
-check: ##H Type-check and reject new code duplicates
+check: check-jscpd ##H Type-check and reject code duplicates
 	$(CARGO) check --all-targets --all-features
-	jscpd $$(git ls-files '*.rs')
+	jscpd --exit-code=1 $$(git ls-files '*.rs')
+
+.PHONY: check-jscpd
+check-jscpd:
+	@command -v jscpd >/dev/null || { echo "jscpd is required; install it with: npm install -g jscpd" >&2; exit 1; }
 
 .PHONY: macro
 macro: ##H See macro expansion costs

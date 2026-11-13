@@ -261,14 +261,16 @@ fn public_rooms_filter_from_input(
 	(Option<crate::UInt>, Option<alloc::string::String>, Filter, RoomNetwork),
 	crate::codec::DeError,
 > {
+	let include_all = input.body_or_default("include_all_networks")?;
+	let third_party: Option<alloc::string::String> = input.body("third_party_instance_id")?;
+	if include_all && third_party.is_some() {
+		return Err(crate::codec::DeError::expected("exclusive room network"));
+	}
 	Ok((
 		input.body("limit")?,
 		input.body("since")?,
 		input.body_or_default("filter")?,
-		RoomNetwork::from_fields(
-			input.body_or_default("include_all_networks")?,
-			input.body("third_party_instance_id")?,
-		),
+		RoomNetwork::from_fields(include_all, third_party),
 	))
 }
 
@@ -522,6 +524,17 @@ mod tests {
 			get_public_rooms_filtered::v3::Request::from_parts(&[], &[], Some(&body)).unwrap();
 		assert_eq!(back.room_network, RoomNetwork::All);
 		assert_eq!(back.limit, Some(5));
+	}
+
+	#[test]
+	fn filtered_request_rejects_both_network_fields() {
+		let body = crate::json::Value::parse(
+			r#"{"include_all_networks":true,"third_party_instance_id":"example.org"}"#,
+		)
+		.unwrap();
+		assert!(
+			get_public_rooms_filtered::v3::Request::from_parts(&[], &[], Some(&body)).is_err()
+		);
 	}
 
 	#[test]
