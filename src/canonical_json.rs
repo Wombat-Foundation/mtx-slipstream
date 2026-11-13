@@ -165,6 +165,13 @@ mod tests {
 		assert!(to_canonical_value(Value::parse(r#"{"ratio":0.5}"#).unwrap()).is_err());
 		assert!(to_canonical_value(Value::parse(r#"{"n":9007199254740992}"#).unwrap()).is_err());
 		assert!(to_canonical_value(f64::NAN).is_err());
+		assert!(
+			to_canonical_value(alloc::collections::BTreeMap::from([(
+				alloc::string::String::from("n"),
+				f64::NAN
+			)]))
+			.is_err()
+		);
 		assert!(to_canonical_value(f64::INFINITY).is_err());
 	}
 
