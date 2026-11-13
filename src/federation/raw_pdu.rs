@@ -63,8 +63,9 @@ pub fn parse_pdu_json(buf: &[u8]) -> Result<sjson::OwnedValue, sjson::Error> {
 ///
 /// The signed portion is validated with the strict Matrix number rules
 /// (compact output, sorted keys, no floats, integers within ±(2^53 - 1)).
-/// `unsigned` is excluded from signing, so it is not number-validated and is
-/// re-emitted unchanged.
+/// Only the PDU's top-level `unsigned` field is excluded from signing, so it
+/// is not number-validated and is re-emitted unchanged; nested fields are
+/// validated as usual.
 ///
 /// Validation happens before anything is appended, so `out` is unchanged when
 /// this returns an error.
@@ -74,14 +75,42 @@ pub fn parse_pdu_json(buf: &[u8]) -> Result<sjson::OwnedValue, sjson::Error> {
 /// Returns `io::Error` if a number in the signed portion is a float or an
 /// integer outside the canonical safe range.
 pub fn write_canonical_into(pdu: &sjson::OwnedValue, out: &mut BytesMut) -> io::Result<()> {
-	// Validate only; the permissive writer below re-emits every field,
-	// including `unsigned`, in canonical key order.
-	rezzy::json::to_canonical_string_filtered(pdu, |key| key == "unsigned")
-		.map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))?;
+	validate_signed_numbers(pdu)?;
 	let text = rezzy::json::write_string_value(pdu)
 		.map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))?;
 	out.extend_from_slice(text.as_bytes());
 	Ok(())
+}
+
+/// Validates the numbers in a PDU's signed portion without serializing it.
+///
+/// The signature covers everything except the top-level `unsigned` key, so
+/// that key alone is skipped; any `unsigned` nested further down is still
+/// part of the signed data and is validated.
+fn validate_signed_numbers(pdu: &sjson::OwnedValue) -> io::Result<()> {
+	if let sjson::OwnedValue::Object(object) = pdu {
+		for (key, value) in object {
+			if key != "unsigned" {
+				validate_numbers(value)?;
+			}
+		}
+		return Ok(());
+	}
+	validate_numbers(pdu)
+}
+
+fn validate_numbers(value: &sjson::OwnedValue) -> io::Result<()> {
+	match value {
+		sjson::OwnedValue::Number(number) if number.is_canonical_integer() => Ok(()),
+		sjson::OwnedValue::Number(_) => {
+			Err(io::Error::new(io::ErrorKind::InvalidData, "non-canonical number in signed PDU"))
+		}
+		sjson::OwnedValue::Array(items) => items.iter().try_for_each(validate_numbers),
+		sjson::OwnedValue::Object(object) => object.values().try_for_each(validate_numbers),
+		sjson::OwnedValue::Null | sjson::OwnedValue::Bool(_) | sjson::OwnedValue::String(_) => {
+			Ok(())
+		}
+	}
 }
 
 /// Serialize an `OwnedValue` directly to a `BytesMut` buffer.
@@ -383,6 +412,18 @@ mod tests {
 	#[test]
 	fn test_canonical_rejects_float_nested_in_object() {
 		let value = json!({"content": {"ratio": 0.5}});
+		assert!(canonical_to_bytes(&value).is_err());
+	}
+
+	#[test]
+	fn test_canonical_allows_float_in_top_level_unsigned() {
+		let value = json!({"content": {"x": 1}, "unsigned": {"age": 1.5}});
+		assert!(canonical_to_bytes(&value).is_ok());
+	}
+
+	#[test]
+	fn test_canonical_rejects_float_in_nested_unsigned() {
+		let value = json!({"content": {"unsigned": {"age": 1.5}}});
 		assert!(canonical_to_bytes(&value).is_err());
 	}
 

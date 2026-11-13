@@ -105,6 +105,10 @@ impl<T: Serialize + ?Sized> Serialize for &T {
 	fn to_json(&self) -> Value {
 		(**self).to_json()
 	}
+
+	fn to_json_checked(&self) -> Result<Value, DeError> {
+		(**self).to_json_checked()
+	}
 }
 
 impl Serialize for Value {
@@ -270,6 +274,10 @@ impl<T: Serialize> Serialize for Option<T> {
 	fn to_json(&self) -> Value {
 		self.as_ref().map_or(Value::Null, T::to_json)
 	}
+
+	fn to_json_checked(&self) -> Result<Value, DeError> {
+		self.as_ref().map_or(Ok(Value::Null), T::to_json_checked)
+	}
 }
 impl<T: Deserialize> Deserialize for Option<T> {
 	fn from_json(value: &Value) -> Result<Self, DeError> {
@@ -284,6 +292,10 @@ impl<T: Deserialize> Deserialize for Option<T> {
 impl<T: Serialize> Serialize for Vec<T> {
 	fn to_json(&self) -> Value {
 		Value::Array(self.iter().map(T::to_json).collect())
+	}
+
+	fn to_json_checked(&self) -> Result<Value, DeError> {
+		self.iter().map(T::to_json_checked).collect::<Result<_, _>>().map(Value::Array)
 	}
 }
 impl<T: Deserialize> Deserialize for Vec<T> {
@@ -418,5 +430,16 @@ mod tests {
 		if usize::BITS == 64 {
 			assert_eq!(from_value::<usize>(&to_value(&u64::MAX)).unwrap(), usize::MAX);
 		}
+	}
+
+	#[test]
+	fn checked_serialization_propagates_nested_non_finite_floats() {
+		use super::Serialize;
+
+		assert!(f64::NAN.to_json_checked().is_err());
+		assert!(Some(f64::INFINITY).to_json_checked().is_err());
+		assert!(alloc::vec![1.0_f64, f64::NAN].to_json_checked().is_err());
+		assert_eq!(None::<f64>.to_json_checked().unwrap(), crate::json::Value::Null);
+		assert!(alloc::vec![1.0_f64, 2.0].to_json_checked().is_ok());
 	}
 }
