@@ -341,10 +341,12 @@ impl<K: Serialize, V: Serialize> Serialize for BTreeMap<K, V> {
 	fn to_json_checked(&self) -> Result<Value, DeError> {
 		self.iter()
 			.map(|(k, v)| {
-				Ok((
-					k.to_json_checked()?.as_str().unwrap_or_default().to_string(),
-					v.to_json_checked()?,
-				))
+				let key = k.to_json_checked()?;
+				let key = key
+					.as_str()
+					.ok_or_else(|| DeError("map key must serialize to a string".into()))?
+					.to_string();
+				Ok((key, v.to_json_checked()?))
 			})
 			.collect::<Result<_, DeError>>()
 			.map(Value::Object)
@@ -488,6 +490,9 @@ mod tests {
 		let mut map = alloc::collections::BTreeMap::new();
 		map.insert(alloc::string::String::from("k"), f64::NAN);
 		assert!(map.to_json_checked().is_err());
+		let mut numeric_keys = alloc::collections::BTreeMap::new();
+		numeric_keys.insert(1_u8, 1_u8);
+		assert!(numeric_keys.to_json_checked().is_err());
 		assert!((1_u8, f64::NAN).to_json_checked().is_err());
 		assert!((1_u8, 2_u8, f64::INFINITY).to_json_checked().is_err());
 		assert!((1_u8, 2.0_f64).to_json_checked().is_ok());
