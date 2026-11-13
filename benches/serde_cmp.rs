@@ -307,9 +307,10 @@ fn bench_simd_tape_peek_field_huge(b: &mut Bencher) {
 	});
 }
 
-// ── Raw passthrough benchmarks ───────────────────────────────────────
-// The actual hot path for PDUs that don't need patching: just shove the
-// raw JSON bytes through the stream writer. Zero parse, zero serialize.
+// ── Raw input benchmarks ─────────────────────────────────────────────
+// The raw-input path parses the JSON strictly (rejecting duplicate keys)
+// and re-serializes it canonically before appending, so these measure
+// parse + canonicalize, not a zero-copy passthrough.
 
 #[bench]
 fn bench_raw_passthrough_small(b: &mut Bencher) {
@@ -319,7 +320,7 @@ fn bench_raw_passthrough_small(b: &mut Bencher) {
 
 	b.iter(|| {
 		let mut stream = PduStreamWriter::with_capacity(1);
-		stream.write_raw_pdu(&json_str);
+		stream.write_raw_pdu(&json_str).unwrap();
 		stream.finish()
 	});
 }
@@ -332,7 +333,7 @@ fn bench_raw_passthrough_huge(b: &mut Bencher) {
 
 	b.iter(|| {
 		let mut stream = PduStreamWriter::with_capacity(1);
-		stream.write_raw_pdu(&json_str);
+		stream.write_raw_pdu(&json_str).unwrap();
 		stream.finish()
 	});
 }

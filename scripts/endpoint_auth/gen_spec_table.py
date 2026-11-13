@@ -1,7 +1,8 @@
 """Generate the spec-derived endpoint authentication table.
 
-Reads the matrix-spec OpenAPI files (``data/api``) and writes a Rust table of
-``(method, path, AuthScheme)`` used by slipstream's spec cross-check test.
+Reads the matrix-spec OpenAPI files (``data/api``) and writes a JSON array of
+``[method, path, AuthScheme]`` entries used by slipstream's spec cross-check
+test.
 Endpoints with no ``security`` block (``NONE_DECLARED``) or a scheme this script cannot map
 (``UNKNOWN``) are never defaulted: each must be resolved in ``spec_overrides.json``
 (with a reason) or excluded there, otherwise the script exits non-zero.
@@ -106,18 +107,9 @@ def resolve(rows, overrides):
 
 
 def render(final):
-    """Render the Rust source for the table."""
-    out = [
-        "// @generated from matrix-org/matrix-spec `data/api` (client-server and server-server).",
-        "// Used only by the cross-check test; placeholders are `{}`.",
-        "use super::AuthScheme;",
-        "",
-        "pub(super) const SPEC_AUTH: &[(&str, &str, AuthScheme)] = &[",
-    ]
-    for (method, path), found in final.items():
-        out.append(f'\t("{method}", "{path}", AuthScheme::{found}),')
-    out.append("];")
-    return "\n".join(out) + "\n"
+    """Render the JSON oracle used by the spec cross-check test."""
+    entries = [[method, path, found] for (method, path), found in final.items()]
+    return json.dumps(entries, indent="\t") + "\n"
 
 
 def main():
@@ -126,7 +118,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", default=str(DEFAULT_ROOT), help="data/api")
     parser.add_argument("--overrides", default=str(here / "spec_overrides.json"))
-    parser.add_argument("--out", default=str(here.parents[1] / "src/endpoint_auth_spec.rs"))
+    parser.add_argument(
+        "--out",
+        default=str(here.parents[1] / "src/endpoint_auth_spec.json"),
+    )
     args = parser.parse_args()
     rows = collect(args.root)
     if not rows:

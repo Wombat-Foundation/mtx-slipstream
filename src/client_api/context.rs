@@ -14,45 +14,12 @@ pub mod get_context {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"GET",
-				"/_matrix/client/v3/rooms/{roomId}/context/{eventId}",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [
-					crate::endpoint::path_param(&self.room_id),
-					crate::endpoint::path_param(&self.event_id),
-				])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [
-					("limit", crate::endpoint::enc(&self.limit)),
-					("filter", crate::endpoint::enc(&self.filter)),
-				])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					room_id: input.path()?,
-					event_id: input.path()?,
-					limit: input.query_or("limit", 10)?,
-					filter: input.query("filter")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/v3/rooms/{roomId}/context/{eventId}",
+			path { room_id, event_id }
+			query { limit => "limit" = 10, filter => "filter" }
+			body {}
 		}
 		pub struct Response {
 			pub start: Option<String>,
@@ -67,28 +34,8 @@ pub mod get_context {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [
-					("start", crate::endpoint::enc(&self.start)),
-					("end", crate::endpoint::enc(&self.end)),
-					("events_before", crate::endpoint::enc(&self.events_before)),
-					("event", crate::endpoint::enc(&self.event)),
-					("events_after", crate::endpoint::enc(&self.events_after)),
-					("state", crate::endpoint::enc(&self.state)),
-				])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					start: input.body("start")?,
-					end: input.body("end")?,
-					events_before: input.body("events_before")?,
-					event: input.body("event")?,
-					events_after: input.body("events_after")?,
-					state: input.body("state")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { start => "start", end => "end", events_before => "events_before", event => "event", events_after => "events_after", state => "state" }
 		}
 	}
 }

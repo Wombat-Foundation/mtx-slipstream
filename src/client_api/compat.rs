@@ -16,45 +16,12 @@ pub mod read_marker {
 			}
 			const _: crate::endpoint::Metadata =
 				<Request as crate::endpoint::EndpointRequest>::METADATA;
-			impl crate::endpoint::EndpointRequest for Request {
-				type Response = Response;
-				const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-					"POST",
-					"/_matrix/client/v3/rooms/{roomId}/read_markers",
-				);
-				fn path_args(&self) -> crate::endpoint::Strs {
-					crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(
-						&self.room_id,
-					)])
-				}
-				fn query(&self) -> crate::endpoint::Pairs {
-					crate::endpoint::query_pairs_mut(&mut [])
-				}
-				fn body(&self) -> Option<crate::json::Value> {
-					crate::endpoint::body_value(
-						<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-						&mut [
-							("m.fully_read", crate::endpoint::enc(&self.fully_read)),
-							("m.read", crate::endpoint::enc(&self.read_receipt)),
-							("m.read.private", crate::endpoint::enc(&self.private_read_receipt)),
-						],
-					)
-				}
-				fn from_parts(
-					path: &[crate::endpoint::Str],
-					query: &[crate::endpoint::Pair],
-					body: Option<&crate::json::Value>,
-				) -> crate::endpoint::Parsed<Self> {
-					let input = crate::endpoint::Input::new(path, query, body);
-					let value = Self {
-						room_id: input.path()?,
-						fully_read: input.body_or_default("m.fully_read")?,
-						read_receipt: input.body_or_default("m.read")?,
-						private_read_receipt: input.body_or_default("m.read.private")?,
-					};
-					input.finish()?;
-					Ok(value)
-				}
+			crate::endpoint_request_impl! {
+				method: "POST",
+				path: "/_matrix/client/v3/rooms/{roomId}/read_markers",
+				path { room_id }
+				query {}
+				body { fully_read => "m.fully_read" = crate::endpoint::default(), read_receipt => "m.read" = crate::endpoint::default(), private_read_receipt => "m.read.private" = crate::endpoint::default() }
 			}
 			pub struct Response {}
 			impl ::core::fmt::Debug for Response {
@@ -62,13 +29,8 @@ pub mod read_marker {
 					crate::endpoint::opaque_debug(f, "Response")
 				}
 			}
-			impl crate::endpoint::EndpointResponse for Response {
-				fn to_body(&self) -> crate::json::Value {
-					crate::endpoint::body_object(&mut [])
-				}
-				fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					Ok(Self {})
-				}
+			crate::endpoint_response_impl! {
+				body {}
 			}
 		}
 	}
@@ -91,43 +53,12 @@ pub mod receipt {
 			}
 			const _: crate::endpoint::Metadata =
 				<Request as crate::endpoint::EndpointRequest>::METADATA;
-			impl crate::endpoint::EndpointRequest for Request {
-				type Response = Response;
-				const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-					"POST",
-					"/_matrix/client/v3/rooms/{roomId}/receipt/{receiptType}/{eventId}",
-				);
-				fn path_args(&self) -> crate::endpoint::Strs {
-					crate::endpoint::path_args_from(&mut [
-						crate::endpoint::path_param(&self.room_id),
-						crate::endpoint::path_param(&self.receipt_type),
-						crate::endpoint::path_param(&self.event_id),
-					])
-				}
-				fn query(&self) -> crate::endpoint::Pairs {
-					crate::endpoint::query_pairs_mut(&mut [])
-				}
-				fn body(&self) -> Option<crate::json::Value> {
-					crate::endpoint::body_value(
-						<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-						&mut [("thread_id", crate::endpoint::enc(&self.thread))],
-					)
-				}
-				fn from_parts(
-					path: &[crate::endpoint::Str],
-					query: &[crate::endpoint::Pair],
-					body: Option<&crate::json::Value>,
-				) -> crate::endpoint::Parsed<Self> {
-					let input = crate::endpoint::Input::new(path, query, body);
-					let value = Self {
-						room_id: input.path()?,
-						receipt_type: input.path()?,
-						event_id: input.path()?,
-						thread: input.body_or_default("thread_id")?,
-					};
-					input.finish()?;
-					Ok(value)
-				}
+			crate::endpoint_request_impl! {
+				method: "POST",
+				path: "/_matrix/client/v3/rooms/{roomId}/receipt/{receiptType}/{eventId}",
+				path { room_id, receipt_type, event_id }
+				query {}
+				body { thread => "thread_id" = crate::endpoint::default() }
 			}
 			pub struct Response {}
 			impl ::core::fmt::Debug for Response {
@@ -135,13 +66,8 @@ pub mod receipt {
 					crate::endpoint::opaque_debug(f, "Response")
 				}
 			}
-			impl crate::endpoint::EndpointResponse for Response {
-				fn to_body(&self) -> crate::json::Value {
-					crate::endpoint::body_object(&mut [])
-				}
-				fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					Ok(Self {})
-				}
+			crate::endpoint_response_impl! {
+				body {}
 			}
 		}
 	}
@@ -158,34 +84,12 @@ pub mod thirdparty {
 			}
 			const _: crate::endpoint::Metadata =
 				<Request as crate::endpoint::EndpointRequest>::METADATA;
-			impl crate::endpoint::EndpointRequest for Request {
-				type Response = Response;
-				const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-					"GET",
-					"/_matrix/client/v3/thirdparty/protocols",
-				);
-				fn path_args(&self) -> crate::endpoint::Strs {
-					crate::endpoint::path_args_from(&mut [])
-				}
-				fn query(&self) -> crate::endpoint::Pairs {
-					crate::endpoint::query_pairs_mut(&mut [])
-				}
-				fn body(&self) -> Option<crate::json::Value> {
-					crate::endpoint::body_value(
-						<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-						&mut [],
-					)
-				}
-				fn from_parts(
-					path: &[crate::endpoint::Str],
-					query: &[crate::endpoint::Pair],
-					body: Option<&crate::json::Value>,
-				) -> crate::endpoint::Parsed<Self> {
-					let input = crate::endpoint::Input::new(path, query, body);
-					let value = Self {};
-					input.finish()?;
-					Ok(value)
-				}
+			crate::endpoint_request_impl! {
+				method: "GET",
+				path: "/_matrix/client/v3/thirdparty/protocols",
+				path {}
+				query {}
+				body {}
 			}
 			pub struct Response {
 				pub protocols: std::collections::BTreeMap<String, crate::json::Value>,
@@ -195,19 +99,8 @@ pub mod thirdparty {
 					crate::endpoint::opaque_debug(f, "Response")
 				}
 			}
-			impl crate::endpoint::EndpointResponse for Response {
-				fn to_body(&self) -> crate::json::Value {
-					crate::endpoint::body_object(&mut [(
-						"protocols",
-						crate::endpoint::enc(&self.protocols),
-					)])
-				}
-				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let input = crate::endpoint::Input::body_only(body);
-					Ok(Self {
-						protocols: input.body("protocols")?,
-					})
-				}
+			crate::endpoint_response_impl! {
+				body { protocols => "protocols" }
 			}
 		}
 	}

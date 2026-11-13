@@ -31,8 +31,13 @@ all: format
 
 
 .PHONY: check
-check: ##H Type-check without building
+check: check-jscpd ##H Type-check and reject code duplicates
 	$(CARGO) check --all-targets --all-features
+	jscpd --exit-code=1 $$(git ls-files '*.rs')
+
+.PHONY: check-jscpd
+check-jscpd:
+	@command -v jscpd >/dev/null || { echo "jscpd is required; install it with: npm install -g jscpd" >&2; exit 1; }
 
 .PHONY: macro
 macro: ##H See macro expansion costs
@@ -55,6 +60,17 @@ doc: ##H Build docs
 	echo '<meta http-equiv="refresh" content="0;url=mtx_slipstream/index.html">' > target/doc/index.html
 
 
+
+.PHONY: publish
+publish: ##H Preview package and simulate dry-run publish
+	@echo "Note: the dry-run requires every dependency to be publishable."
+	@echo "Previewing packaged files..."
+	@echo "-----------------------------------"
+	$(CARGO) +nightly package --list
+	@echo ""
+	@echo "Simulating publish (--dry-run)"
+	@echo "-----------------------------------"
+	$(CARGO) +nightly publish --dry-run
 
 .PHONY: test
 test: ##H Run tests

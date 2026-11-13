@@ -1708,32 +1708,12 @@ pub mod get_pushrules_all {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata =
-				crate::endpoint::Metadata::new("GET", "/_matrix/client/v3/pushrules/");
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/v3/pushrules/",
+			path {}
+			query {}
+			body {}
 		}
 		pub struct Response {
 			pub global: crate::push_rules::Ruleset,
@@ -1743,19 +1723,8 @@ pub mod get_pushrules_all {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [(
-					"global",
-					crate::endpoint::enc(&self.global),
-				)])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					global: input.body("global")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { global => "global" }
 		}
 	}
 }
@@ -1770,32 +1739,12 @@ pub mod get_pushrules_global_scope {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata =
-				crate::endpoint::Metadata::new("GET", "/_matrix/client/v3/pushrules/global/");
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/v3/pushrules/global/",
+			path {}
+			query {}
+			body {}
 		}
 		pub struct Response {
 			pub global: crate::push_rules::Ruleset,
@@ -1832,42 +1781,12 @@ pub mod get_pushrule {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"GET",
-				"/_matrix/client/v3/pushrules/{scope}/{kind}/{rule_id}",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [
-					crate::endpoint::path_param(&self.scope),
-					crate::endpoint::path_param(&self.kind),
-					crate::endpoint::path_param(&self.rule_id),
-				])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					scope: input.path()?,
-					kind: input.path()?,
-					rule_id: input.path()?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/v3/pushrules/{scope}/{kind}/{rule_id}",
+			path { scope, kind, rule_id }
+			query {}
+			body {}
 		}
 		pub struct Response {
 			pub rule: crate::push_rules::PushRule,
@@ -1919,42 +1838,12 @@ pub mod delete_pushrule {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"DELETE",
-				"/_matrix/client/v3/pushrules/{scope}/{kind}/{rule_id}",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [
-					crate::endpoint::path_param(&self.scope),
-					crate::endpoint::path_param(&self.kind),
-					crate::endpoint::path_param(&self.rule_id),
-				])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					scope: input.path()?,
-					kind: input.path()?,
-					rule_id: input.path()?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "DELETE",
+			path: "/_matrix/client/v3/pushrules/{scope}/{kind}/{rule_id}",
+			path { scope, kind, rule_id }
+			query {}
+			body {}
 		}
 		pub struct Response {}
 		impl ::core::fmt::Debug for Response {
@@ -1962,13 +1851,8 @@ pub mod delete_pushrule {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [])
-			}
-			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				Ok(Self {})
-			}
+		crate::endpoint_response_impl! {
+			body {}
 		}
 	}
 }
@@ -1987,42 +1871,12 @@ pub mod get_pushrule_actions {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"GET",
-				"/_matrix/client/v3/pushrules/{scope}/{kind}/{rule_id}/actions",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [
-					crate::endpoint::path_param(&self.scope),
-					crate::endpoint::path_param(&self.kind),
-					crate::endpoint::path_param(&self.rule_id),
-				])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					scope: input.path()?,
-					kind: input.path()?,
-					rule_id: input.path()?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/v3/pushrules/{scope}/{kind}/{rule_id}/actions",
+			path { scope, kind, rule_id }
+			query {}
+			body {}
 		}
 		pub struct Response {
 			pub actions: alloc::vec::Vec<crate::push::Action>,
@@ -2032,19 +1886,8 @@ pub mod get_pushrule_actions {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [(
-					"actions",
-					crate::endpoint::enc(&self.actions),
-				)])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					actions: input.body("actions")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { actions => "actions" }
 		}
 	}
 }
@@ -2064,43 +1907,12 @@ pub mod set_pushrule_actions {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"PUT",
-				"/_matrix/client/v3/pushrules/{scope}/{kind}/{rule_id}/actions",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [
-					crate::endpoint::path_param(&self.scope),
-					crate::endpoint::path_param(&self.kind),
-					crate::endpoint::path_param(&self.rule_id),
-				])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [("actions", crate::endpoint::enc(&self.actions))],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					scope: input.path()?,
-					kind: input.path()?,
-					rule_id: input.path()?,
-					actions: input.body("actions")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "PUT",
+			path: "/_matrix/client/v3/pushrules/{scope}/{kind}/{rule_id}/actions",
+			path { scope, kind, rule_id }
+			query {}
+			body { actions => "actions" }
 		}
 		pub struct Response {}
 		impl ::core::fmt::Debug for Response {
@@ -2108,13 +1920,8 @@ pub mod set_pushrule_actions {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [])
-			}
-			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				Ok(Self {})
-			}
+		crate::endpoint_response_impl! {
+			body {}
 		}
 	}
 }
@@ -2133,42 +1940,12 @@ pub mod get_pushrule_enabled {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"GET",
-				"/_matrix/client/v3/pushrules/{scope}/{kind}/{rule_id}/enabled",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [
-					crate::endpoint::path_param(&self.scope),
-					crate::endpoint::path_param(&self.kind),
-					crate::endpoint::path_param(&self.rule_id),
-				])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					scope: input.path()?,
-					kind: input.path()?,
-					rule_id: input.path()?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/v3/pushrules/{scope}/{kind}/{rule_id}/enabled",
+			path { scope, kind, rule_id }
+			query {}
+			body {}
 		}
 		pub struct Response {
 			pub enabled: bool,
@@ -2178,19 +1955,8 @@ pub mod get_pushrule_enabled {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [(
-					"enabled",
-					crate::endpoint::enc(&self.enabled),
-				)])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					enabled: input.body("enabled")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { enabled => "enabled" }
 		}
 	}
 }
@@ -2210,43 +1976,12 @@ pub mod set_pushrule_enabled {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"PUT",
-				"/_matrix/client/v3/pushrules/{scope}/{kind}/{rule_id}/enabled",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [
-					crate::endpoint::path_param(&self.scope),
-					crate::endpoint::path_param(&self.kind),
-					crate::endpoint::path_param(&self.rule_id),
-				])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [("enabled", crate::endpoint::enc(&self.enabled))],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					scope: input.path()?,
-					kind: input.path()?,
-					rule_id: input.path()?,
-					enabled: input.body("enabled")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "PUT",
+			path: "/_matrix/client/v3/pushrules/{scope}/{kind}/{rule_id}/enabled",
+			path { scope, kind, rule_id }
+			query {}
+			body { enabled => "enabled" }
 		}
 		pub struct Response {}
 		impl ::core::fmt::Debug for Response {
@@ -2254,13 +1989,8 @@ pub mod set_pushrule_enabled {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [])
-			}
-			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				Ok(Self {})
-			}
+		crate::endpoint_response_impl! {
+			body {}
 		}
 	}
 }

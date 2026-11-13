@@ -116,36 +116,12 @@ pub mod get_profile {
 			}
 		}
 
-		impl endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: endpoint::Metadata =
-				endpoint::Metadata::new("GET", "/_matrix/client/v3/profile/{userId}");
-
-			fn path_args(&self) -> Vec<String> {
-				alloc::vec![self.user_id.to_string()]
-			}
-
-			fn query(&self) -> Vec<(String, String)> {
-				Vec::new()
-			}
-
-			fn body(&self) -> Option<Value> {
-				None
-			}
-
-			fn from_parts(
-				path: &[String],
-				query: &[(String, String)],
-				body: Option<&Value>,
-			) -> Result<Self, DeError> {
-				let input = endpoint::Input::new(path, query, body);
-				let value = Self {
-					user_id: input.path()?,
-				};
-				input.finish()?;
-
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/v3/profile/{userId}",
+			path { user_id }
+			query {}
+			body {}
 		}
 	}
 }
@@ -164,36 +140,12 @@ pub mod get_display_name {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"GET",
-				"/_matrix/client/v3/profile/{userId}/displayname",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(&self.user_id)])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					user_id: input.path()?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/v3/profile/{userId}/displayname",
+			path { user_id }
+			query {}
+			body {}
 		}
 		pub struct Response {
 			pub displayname: Option<String>,
@@ -203,19 +155,8 @@ pub mod get_display_name {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [(
-					"displayname",
-					crate::endpoint::enc(&self.displayname),
-				)])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					displayname: input.body("displayname")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { displayname => "displayname" }
 		}
 	}
 }
@@ -235,37 +176,12 @@ pub mod set_display_name {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"PUT",
-				"/_matrix/client/v3/profile/{userId}/displayname",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(&self.user_id)])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [("displayname", crate::endpoint::enc(&self.displayname))],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					user_id: input.path()?,
-					displayname: input.body("displayname")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "PUT",
+			path: "/_matrix/client/v3/profile/{userId}/displayname",
+			path { user_id }
+			query {}
+			body { displayname => "displayname" }
 		}
 		pub struct Response {}
 		impl ::core::fmt::Debug for Response {
@@ -273,13 +189,8 @@ pub mod set_display_name {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [])
-			}
-			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				Ok(Self {})
-			}
+		crate::endpoint_response_impl! {
+			body {}
 		}
 	}
 }
@@ -363,36 +274,12 @@ pub mod get_avatar_url {
 			}
 		}
 
-		impl endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: endpoint::Metadata =
-				endpoint::Metadata::new("GET", "/_matrix/client/v3/profile/{userId}/avatar_url");
-
-			fn path_args(&self) -> Vec<String> {
-				alloc::vec![self.user_id.to_string()]
-			}
-
-			fn query(&self) -> Vec<(String, String)> {
-				Vec::new()
-			}
-
-			fn body(&self) -> Option<Value> {
-				None
-			}
-
-			fn from_parts(
-				path: &[String],
-				query: &[(String, String)],
-				body: Option<&Value>,
-			) -> Result<Self, DeError> {
-				let input = endpoint::Input::new(path, query, body);
-				let value = Self {
-					user_id: input.path()?,
-				};
-				input.finish()?;
-
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/v3/profile/{userId}/avatar_url",
+			path { user_id }
+			query {}
+			body {}
 		}
 	}
 }
@@ -413,41 +300,12 @@ pub mod set_avatar_url {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"PUT",
-				"/_matrix/client/v3/profile/{userId}/avatar_url",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(&self.user_id)])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [
-						("avatar_url", crate::endpoint::enc(&self.avatar_url)),
-						("blurhash", crate::endpoint::enc(&self.blurhash)),
-					],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					user_id: input.path()?,
-					avatar_url: input.body("avatar_url")?,
-					blurhash: input.body("blurhash")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "PUT",
+			path: "/_matrix/client/v3/profile/{userId}/avatar_url",
+			path { user_id }
+			query {}
+			body { avatar_url => "avatar_url", blurhash => "blurhash" }
 		}
 		pub struct Response {}
 		impl ::core::fmt::Debug for Response {
@@ -455,13 +313,8 @@ pub mod set_avatar_url {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [])
-			}
-			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				Ok(Self {})
-			}
+		crate::endpoint_response_impl! {
+			body {}
 		}
 	}
 }

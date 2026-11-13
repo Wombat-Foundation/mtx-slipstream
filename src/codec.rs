@@ -33,6 +33,19 @@ impl core::error::Error for DeError {}
 
 pub trait Serialize {
 	fn to_json(&self) -> Value;
+
+	/// Serializes for canonical output, rejecting values that cannot be
+	/// represented faithfully.
+	///
+	/// The default defers to [`Self::to_json`]. Implementations that can lose
+	/// data, such as non-finite `f64` values, override this.
+	///
+	/// # Errors
+	///
+	/// Returns [`DeError`] when `self` cannot be represented as canonical JSON.
+	fn to_json_checked(&self) -> Result<Value, DeError> {
+		Ok(self.to_json())
+	}
 }
 
 pub trait Deserialize: Sized {
@@ -91,6 +104,10 @@ pub fn from_slice<T: Deserialize>(input: &[u8]) -> Result<T, DeError> {
 impl<T: Serialize + ?Sized> Serialize for &T {
 	fn to_json(&self) -> Value {
 		(**self).to_json()
+	}
+
+	fn to_json_checked(&self) -> Result<Value, DeError> {
+		(**self).to_json_checked()
 	}
 }
 
@@ -237,6 +254,14 @@ impl Serialize for f64 {
 	fn to_json(&self) -> Value {
 		crate::json::Number::from_f64(*self).map_or(Value::Null, Value::Number)
 	}
+
+	fn to_json_checked(&self) -> Result<Value, DeError> {
+		if self.is_finite() {
+			Ok(self.to_json())
+		} else {
+			Err(DeError("non-finite float cannot be canonical JSON".into()))
+		}
+	}
 }
 
 impl Deserialize for f64 {
@@ -248,6 +273,10 @@ impl Deserialize for f64 {
 impl<T: Serialize> Serialize for Option<T> {
 	fn to_json(&self) -> Value {
 		self.as_ref().map_or(Value::Null, T::to_json)
+	}
+
+	fn to_json_checked(&self) -> Result<Value, DeError> {
+		self.as_ref().map_or(Ok(Value::Null), T::to_json_checked)
 	}
 }
 impl<T: Deserialize> Deserialize for Option<T> {
@@ -264,6 +293,10 @@ impl<T: Serialize> Serialize for Vec<T> {
 	fn to_json(&self) -> Value {
 		Value::Array(self.iter().map(T::to_json).collect())
 	}
+
+	fn to_json_checked(&self) -> Result<Value, DeError> {
+		self.iter().map(T::to_json_checked).collect::<Result<_, _>>().map(Value::Array)
+	}
 }
 impl<T: Deserialize> Deserialize for Vec<T> {
 	fn from_json(value: &Value) -> Result<Self, DeError> {
@@ -279,6 +312,10 @@ impl<T: Deserialize> Deserialize for Vec<T> {
 impl<T: Serialize> Serialize for alloc::collections::BTreeSet<T> {
 	fn to_json(&self) -> Value {
 		Value::Array(self.iter().map(T::to_json).collect())
+	}
+
+	fn to_json_checked(&self) -> Result<Value, DeError> {
+		self.iter().map(T::to_json_checked).collect::<Result<_, _>>().map(Value::Array)
 	}
 }
 impl<T: Deserialize + Ord> Deserialize for alloc::collections::BTreeSet<T> {
@@ -299,6 +336,20 @@ impl<K: Serialize, V: Serialize> Serialize for BTreeMap<K, V> {
 				.map(|(k, v)| (k.to_json().as_str().unwrap_or_default().to_string(), v.to_json()))
 				.collect(),
 		)
+	}
+
+	fn to_json_checked(&self) -> Result<Value, DeError> {
+		self.iter()
+			.map(|(k, v)| {
+				let key = k.to_json_checked()?;
+				let key = key
+					.as_str()
+					.ok_or_else(|| DeError("map key must serialize to a string".into()))?
+					.to_string();
+				Ok((key, v.to_json_checked()?))
+			})
+			.collect::<Result<_, DeError>>()
+			.map(Value::Object)
 	}
 }
 impl<K: Deserialize + Ord, V: Deserialize> Deserialize for BTreeMap<K, V> {
@@ -334,6 +385,12 @@ macro_rules! codec_struct {
 				$($crate::codec_struct!(@put object, &self.$field, $spec);)*
 				$crate::json::Value::Object(object)
 			}
+
+			fn to_json_checked(&self) -> Result<$crate::json::Value, $crate::codec::DeError> {
+				let mut object = $crate::json::Object::new();
+				$($crate::codec_struct!(@put_checked object, &self.$field, $spec);)*
+				Ok($crate::json::Value::Object(object))
+			}
 		}
 		impl $crate::codec::Deserialize for $t {
 			fn from_json(value: &$crate::json::Value) -> Result<Self, $crate::codec::DeError> {
@@ -353,6 +410,15 @@ macro_rules! codec_struct {
 			$object.insert($crate::alloc_string($key), encoded);
 		}
 	};
+	(@put_checked $object:ident, $value:expr, ($key:literal)) => {
+		$object.insert($crate::alloc_string($key), $crate::codec::Serialize::to_json_checked($value)?);
+	};
+	(@put_checked $object:ident, $value:expr, ($key:literal, omit)) => {
+		let encoded = $crate::codec::Serialize::to_json_checked($value)?;
+		if !encoded.is_null() {
+			$object.insert($crate::alloc_string($key), encoded);
+		}
+	};
 	(@get $input:ident, $ty:ty, ($key:literal)) => { $input.body::<$ty>($key)? };
 	(@get $input:ident, $ty:ty, ($key:literal, omit)) => { $input.body_or_default::<$ty>($key)? };
 }
@@ -360,6 +426,14 @@ macro_rules! codec_struct {
 impl<A: Serialize, B: Serialize, C: Serialize> Serialize for (A, B, C) {
 	fn to_json(&self) -> Value {
 		Value::Array(alloc::vec![self.0.to_json(), self.1.to_json(), self.2.to_json()])
+	}
+
+	fn to_json_checked(&self) -> Result<Value, DeError> {
+		Ok(Value::Array(alloc::vec![
+			self.0.to_json_checked()?,
+			self.1.to_json_checked()?,
+			self.2.to_json_checked()?
+		]))
 	}
 }
 impl<A: Deserialize, B: Deserialize, C: Deserialize> Deserialize for (A, B, C) {
@@ -374,6 +448,10 @@ impl<A: Deserialize, B: Deserialize, C: Deserialize> Deserialize for (A, B, C) {
 impl<A: Serialize, B: Serialize> Serialize for (A, B) {
 	fn to_json(&self) -> Value {
 		Value::Array(alloc::vec![self.0.to_json(), self.1.to_json()])
+	}
+
+	fn to_json_checked(&self) -> Result<Value, DeError> {
+		Ok(Value::Array(alloc::vec![self.0.to_json_checked()?, self.1.to_json_checked()?]))
 	}
 }
 impl<A: Deserialize, B: Deserialize> Deserialize for (A, B) {
@@ -397,5 +475,65 @@ mod tests {
 		if usize::BITS == 64 {
 			assert_eq!(from_value::<usize>(&to_value(&u64::MAX)).unwrap(), usize::MAX);
 		}
+	}
+
+	#[test]
+	fn checked_serialization_propagates_nested_non_finite_floats() {
+		use super::Serialize;
+
+		assert!(f64::NAN.to_json_checked().is_err());
+		assert!(Some(f64::INFINITY).to_json_checked().is_err());
+		assert!(alloc::vec![1.0_f64, f64::NAN].to_json_checked().is_err());
+		assert_eq!(None::<f64>.to_json_checked().unwrap(), crate::json::Value::Null);
+		assert!(alloc::vec![1.0_f64, 2.0].to_json_checked().is_ok());
+
+		let mut map = alloc::collections::BTreeMap::new();
+		map.insert(alloc::string::String::from("k"), f64::NAN);
+		assert!(map.to_json_checked().is_err());
+		let mut numeric_keys = alloc::collections::BTreeMap::new();
+		numeric_keys.insert(1_u8, 1_u8);
+		assert!(numeric_keys.to_json_checked().is_err());
+		assert!((1_u8, f64::NAN).to_json_checked().is_err());
+		assert!((1_u8, 2_u8, f64::INFINITY).to_json_checked().is_err());
+		assert!((1_u8, 2.0_f64).to_json_checked().is_ok());
+	}
+
+	#[test]
+	fn checked_serialization_propagates_through_codec_struct() {
+		use super::Serialize;
+
+		struct S {
+			a: f64,
+			b: Option<f64>,
+		}
+		crate::codec_struct!(S {
+			a: f64 = ("a"),
+			b: Option<f64> = ("b", omit),
+		});
+
+		assert!(
+			S {
+				a: f64::NAN,
+				b: None
+			}
+			.to_json_checked()
+			.is_err()
+		);
+		assert!(
+			S {
+				a: 1.0,
+				b: Some(f64::INFINITY)
+			}
+			.to_json_checked()
+			.is_err()
+		);
+		assert!(
+			S {
+				a: 1.0,
+				b: None
+			}
+			.to_json_checked()
+			.is_ok()
+		);
 	}
 }

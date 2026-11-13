@@ -11,36 +11,12 @@ pub mod get_presence {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"GET",
-				"/_matrix/client/v3/presence/{userId}/status",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(&self.user_id)])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					user_id: input.path()?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/v3/presence/{userId}/status",
+			path { user_id }
+			query {}
+			body {}
 		}
 		pub struct Response {
 			pub presence: PresenceState,
@@ -53,24 +29,8 @@ pub mod get_presence {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [
-					("presence", crate::endpoint::enc(&self.presence)),
-					("last_active_ago", crate::endpoint::enc(&self.last_active_ago)),
-					("status_msg", crate::endpoint::enc(&self.status_msg)),
-					("currently_active", crate::endpoint::enc(&self.currently_active)),
-				])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					presence: input.body("presence")?,
-					last_active_ago: input.body("last_active_ago")?,
-					status_msg: input.body("status_msg")?,
-					currently_active: input.body("currently_active")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { presence => "presence", last_active_ago => "last_active_ago", status_msg => "status_msg", currently_active => "currently_active" }
 		}
 	}
 }
@@ -90,41 +50,12 @@ pub mod set_presence {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"PUT",
-				"/_matrix/client/v3/presence/{userId}/status",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(&self.user_id)])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [
-						("presence", crate::endpoint::enc(&self.presence)),
-						("status_msg", crate::endpoint::enc(&self.status_msg)),
-					],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					user_id: input.path()?,
-					presence: input.body("presence")?,
-					status_msg: input.body("status_msg")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "PUT",
+			path: "/_matrix/client/v3/presence/{userId}/status",
+			path { user_id }
+			query {}
+			body { presence => "presence", status_msg => "status_msg" }
 		}
 		pub struct Response {}
 		impl ::core::fmt::Debug for Response {
@@ -132,13 +63,8 @@ pub mod set_presence {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [])
-			}
-			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				Ok(Self {})
-			}
+		crate::endpoint_response_impl! {
+			body {}
 		}
 	}
 }

@@ -108,33 +108,12 @@ pub mod create_backup_version {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata =
-				crate::endpoint::Metadata::new("POST", "/_matrix/client/v3/room_keys/version");
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				Some(crate::endpoint::enc(&self.algorithm))
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					algorithm: crate::codec::Deserialize::from_json(
-						body.ok_or_else(|| crate::codec::DeError::expected("request body"))?,
-					)?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_raw_impl! {
+			method: "POST",
+			path: "/_matrix/client/v3/room_keys/version",
+			path {}
+			query {}
+			raw { algorithm }
 		}
 		pub struct Response {
 			pub version: alloc::string::String,
@@ -144,19 +123,8 @@ pub mod create_backup_version {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [(
-					"version",
-					crate::endpoint::enc(&self.version),
-				)])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					version: input.body("version")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { version => "version" }
 		}
 	}
 }
@@ -174,36 +142,12 @@ pub mod update_backup_version {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"PUT",
-				"/_matrix/client/v3/room_keys/version/{version}",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(&self.version)])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				Some(crate::endpoint::enc(&self.algorithm))
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					version: input.path()?,
-					algorithm: crate::codec::Deserialize::from_json(
-						body.ok_or_else(|| crate::codec::DeError::expected("request body"))?,
-					)?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_raw_impl! {
+			method: "PUT",
+			path: "/_matrix/client/v3/room_keys/version/{version}",
+			path { version }
+			query {}
+			raw { algorithm }
 		}
 		pub struct Response {}
 		impl ::core::fmt::Debug for Response {
@@ -211,14 +155,42 @@ pub mod update_backup_version {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [])
-			}
-			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				Ok(Self {})
-			}
+		crate::endpoint_response_impl! {
+			body {}
 		}
+	}
+}
+
+/// The shared response of the two room-key backup version endpoints.
+#[derive(Debug)]
+pub struct BackupInfoResponse {
+	pub algorithm: Raw<BackupAlgorithm>,
+	pub count: UInt,
+	pub etag: String,
+	pub version: String,
+}
+
+impl crate::endpoint::EndpointResponse for BackupInfoResponse {
+	fn to_body(&self) -> crate::json::Value {
+		let mut object = match crate::codec::Serialize::to_json(&self.algorithm) {
+			crate::json::Value::Object(object) => object,
+			_ => crate::json::Object::new(),
+		};
+		object.extend(crate::endpoint::object_from(::alloc::vec![
+			("count", crate::codec::Serialize::to_json(&self.count)),
+			("etag", crate::codec::Serialize::to_json(&self.etag)),
+			("version", crate::codec::Serialize::to_json(&self.version)),
+		]));
+		crate::json::Value::Object(object)
+	}
+	fn from_body(body: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
+		let input = crate::endpoint::Input::new(&[], &[], Some(body));
+		Ok(Self {
+			algorithm: crate::codec::Deserialize::from_json(body)?,
+			count: input.body("count")?,
+			etag: input.body("etag")?,
+			version: input.body("version")?,
+		})
 	}
 }
 
@@ -232,63 +204,14 @@ pub mod get_latest_backup_info {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata =
-				crate::endpoint::Metadata::new("GET", "/_matrix/client/v3/room_keys/version");
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/v3/room_keys/version",
+			path {}
+			query {}
+			body {}
 		}
-		#[derive(Debug)]
-		pub struct Response {
-			pub algorithm: crate::sswire::Raw<crate::backup::BackupAlgorithm>,
-			pub count: crate::UInt,
-			pub etag: ::alloc::string::String,
-			pub version: ::alloc::string::String,
-		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				let mut object = match crate::codec::Serialize::to_json(&self.algorithm) {
-					crate::json::Value::Object(object) => object,
-					_ => crate::json::Object::new(),
-				};
-				object.extend(crate::endpoint::object_from(::alloc::vec![
-					("count", crate::codec::Serialize::to_json(&self.count)),
-					("etag", crate::codec::Serialize::to_json(&self.etag)),
-					("version", crate::codec::Serialize::to_json(&self.version)),
-				]));
-				crate::json::Value::Object(object)
-			}
-			fn from_body(body: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
-				let input = crate::endpoint::Input::new(&[], &[], Some(body));
-				Ok(Self {
-					algorithm: crate::codec::Deserialize::from_json(body)?,
-					count: input.body("count")?,
-					etag: input.body("etag")?,
-					version: input.body("version")?,
-				})
-			}
-		}
+		pub type Response = crate::backup::BackupInfoResponse;
 	}
 }
 
@@ -304,67 +227,14 @@ pub mod get_backup_info {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"GET",
-				"/_matrix/client/v3/room_keys/version/{version}",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(&self.version)])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					version: input.path()?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/v3/room_keys/version/{version}",
+			path { version }
+			query {}
+			body {}
 		}
-		#[derive(Debug)]
-		pub struct Response {
-			pub algorithm: crate::sswire::Raw<crate::backup::BackupAlgorithm>,
-			pub count: crate::UInt,
-			pub etag: ::alloc::string::String,
-			pub version: ::alloc::string::String,
-		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				let mut object = match crate::codec::Serialize::to_json(&self.algorithm) {
-					crate::json::Value::Object(object) => object,
-					_ => crate::json::Object::new(),
-				};
-				object.extend(crate::endpoint::object_from(::alloc::vec![
-					("count", crate::codec::Serialize::to_json(&self.count)),
-					("etag", crate::codec::Serialize::to_json(&self.etag)),
-					("version", crate::codec::Serialize::to_json(&self.version)),
-				]));
-				crate::json::Value::Object(object)
-			}
-			fn from_body(body: &crate::json::Value) -> Result<Self, crate::codec::DeError> {
-				let input = crate::endpoint::Input::new(&[], &[], Some(body));
-				Ok(Self {
-					algorithm: crate::codec::Deserialize::from_json(body)?,
-					count: input.body("count")?,
-					etag: input.body("etag")?,
-					version: input.body("version")?,
-				})
-			}
-		}
+		pub type Response = crate::backup::BackupInfoResponse;
 	}
 }
 
@@ -380,36 +250,12 @@ pub mod delete_backup_version {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"DELETE",
-				"/_matrix/client/v3/room_keys/version/{version}",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(&self.version)])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					version: input.path()?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "DELETE",
+			path: "/_matrix/client/v3/room_keys/version/{version}",
+			path { version }
+			query {}
+			body {}
 		}
 		pub struct Response {}
 		impl ::core::fmt::Debug for Response {
@@ -417,13 +263,8 @@ pub mod delete_backup_version {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [])
-			}
-			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				Ok(Self {})
-			}
+		crate::endpoint_response_impl! {
+			body {}
 		}
 	}
 }
@@ -442,38 +283,12 @@ pub mod add_backup_keys {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata =
-				crate::endpoint::Metadata::new("PUT", "/_matrix/client/v3/room_keys/keys");
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [(
-					"version",
-					crate::endpoint::enc(&self.version),
-				)])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [("rooms", crate::endpoint::enc(&self.rooms))],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					version: input.query("version")?,
-					rooms: input.body("rooms")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "PUT",
+			path: "/_matrix/client/v3/room_keys/keys",
+			path {}
+			query { version => "version" }
+			body { rooms => "rooms" }
 		}
 		pub struct Response {
 			pub count: crate::UInt,
@@ -484,20 +299,8 @@ pub mod add_backup_keys {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [
-					("count", crate::endpoint::enc(&self.count)),
-					("etag", crate::endpoint::enc(&self.etag)),
-				])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					count: input.body("count")?,
-					etag: input.body("etag")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { count => "count", etag => "etag" }
 		}
 	}
 }
@@ -519,41 +322,12 @@ pub mod add_backup_keys_for_room {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"PUT",
-				"/_matrix/client/v3/room_keys/keys/{room_id}",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(&self.room_id)])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [(
-					"version",
-					crate::endpoint::enc(&self.version),
-				)])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [("sessions", crate::endpoint::enc(&self.sessions))],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					room_id: input.path()?,
-					version: input.query("version")?,
-					sessions: input.body("sessions")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "PUT",
+			path: "/_matrix/client/v3/room_keys/keys/{room_id}",
+			path { room_id }
+			query { version => "version" }
+			body { sessions => "sessions" }
 		}
 		pub struct Response {
 			pub count: crate::UInt,
@@ -564,20 +338,8 @@ pub mod add_backup_keys_for_room {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [
-					("count", crate::endpoint::enc(&self.count)),
-					("etag", crate::endpoint::enc(&self.etag)),
-				])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					count: input.body("count")?,
-					etag: input.body("etag")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { count => "count", etag => "etag" }
 		}
 	}
 }
@@ -597,44 +359,12 @@ pub mod add_backup_keys_for_session {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"PUT",
-				"/_matrix/client/v3/room_keys/keys/{room_id}/{session_id}",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [
-					crate::endpoint::path_param(&self.room_id),
-					crate::endpoint::path_param(&self.session_id),
-				])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [(
-					"version",
-					crate::endpoint::enc(&self.version),
-				)])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				Some(crate::endpoint::enc(&self.session_data))
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					room_id: input.path()?,
-					session_id: input.path()?,
-					version: input.query("version")?,
-					session_data: crate::codec::Deserialize::from_json(
-						body.ok_or_else(|| crate::codec::DeError::expected("request body"))?,
-					)?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_raw_impl! {
+			method: "PUT",
+			path: "/_matrix/client/v3/room_keys/keys/{room_id}/{session_id}",
+			path { room_id, session_id }
+			query { version => "version" }
+			raw { session_data }
 		}
 		pub struct Response {
 			pub count: crate::UInt,
@@ -645,20 +375,8 @@ pub mod add_backup_keys_for_session {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [
-					("count", crate::endpoint::enc(&self.count)),
-					("etag", crate::endpoint::enc(&self.etag)),
-				])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					count: input.body("count")?,
-					etag: input.body("etag")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { count => "count", etag => "etag" }
 		}
 	}
 }
@@ -675,37 +393,12 @@ pub mod get_backup_keys {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata =
-				crate::endpoint::Metadata::new("GET", "/_matrix/client/v3/room_keys/keys");
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [(
-					"version",
-					crate::endpoint::enc(&self.version),
-				)])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					version: input.query("version")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/v3/room_keys/keys",
+			path {}
+			query { version => "version" }
+			body {}
 		}
 		pub struct Response {
 			pub rooms:
@@ -716,16 +409,8 @@ pub mod get_backup_keys {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [("rooms", crate::endpoint::enc(&self.rooms))])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					rooms: input.body("rooms")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { rooms => "rooms" }
 		}
 	}
 }
@@ -743,40 +428,12 @@ pub mod get_backup_keys_for_room {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"GET",
-				"/_matrix/client/v3/room_keys/keys/{room_id}",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(&self.room_id)])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [(
-					"version",
-					crate::endpoint::enc(&self.version),
-				)])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					room_id: input.path()?,
-					version: input.query("version")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/v3/room_keys/keys/{room_id}",
+			path { room_id }
+			query { version => "version" }
+			body {}
 		}
 		pub struct Response {
 			pub sessions: alloc::collections::BTreeMap<
@@ -789,19 +446,8 @@ pub mod get_backup_keys_for_room {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [(
-					"sessions",
-					crate::endpoint::enc(&self.sessions),
-				)])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					sessions: input.body("sessions")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { sessions => "sessions" }
 		}
 	}
 }
@@ -820,44 +466,12 @@ pub mod get_backup_keys_for_session {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"GET",
-				"/_matrix/client/v3/room_keys/keys/{room_id}/{session_id}",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [
-					crate::endpoint::path_param(&self.room_id),
-					crate::endpoint::path_param(&self.session_id),
-				])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [(
-					"version",
-					crate::endpoint::enc(&self.version),
-				)])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					room_id: input.path()?,
-					session_id: input.path()?,
-					version: input.query("version")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/v3/room_keys/keys/{room_id}/{session_id}",
+			path { room_id, session_id }
+			query { version => "version" }
+			body {}
 		}
 		pub struct Response {
 			pub key_data: crate::sswire::Raw<crate::backup::KeyBackupData>,
@@ -892,37 +506,12 @@ pub mod delete_backup_keys {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata =
-				crate::endpoint::Metadata::new("DELETE", "/_matrix/client/v3/room_keys/keys");
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [(
-					"version",
-					crate::endpoint::enc(&self.version),
-				)])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					version: input.query("version")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "DELETE",
+			path: "/_matrix/client/v3/room_keys/keys",
+			path {}
+			query { version => "version" }
+			body {}
 		}
 		pub struct Response {
 			pub count: crate::UInt,
@@ -933,20 +522,8 @@ pub mod delete_backup_keys {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [
-					("count", crate::endpoint::enc(&self.count)),
-					("etag", crate::endpoint::enc(&self.etag)),
-				])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					count: input.body("count")?,
-					etag: input.body("etag")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { count => "count", etag => "etag" }
 		}
 	}
 }
@@ -964,40 +541,12 @@ pub mod delete_backup_keys_for_room {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"DELETE",
-				"/_matrix/client/v3/room_keys/keys/{room_id}",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(&self.room_id)])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [(
-					"version",
-					crate::endpoint::enc(&self.version),
-				)])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					room_id: input.path()?,
-					version: input.query("version")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "DELETE",
+			path: "/_matrix/client/v3/room_keys/keys/{room_id}",
+			path { room_id }
+			query { version => "version" }
+			body {}
 		}
 		pub struct Response {
 			pub count: crate::UInt,
@@ -1008,20 +557,8 @@ pub mod delete_backup_keys_for_room {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [
-					("count", crate::endpoint::enc(&self.count)),
-					("etag", crate::endpoint::enc(&self.etag)),
-				])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					count: input.body("count")?,
-					etag: input.body("etag")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { count => "count", etag => "etag" }
 		}
 	}
 }
@@ -1040,44 +577,12 @@ pub mod delete_backup_keys_for_session {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"DELETE",
-				"/_matrix/client/v3/room_keys/keys/{room_id}/{session_id}",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [
-					crate::endpoint::path_param(&self.room_id),
-					crate::endpoint::path_param(&self.session_id),
-				])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [(
-					"version",
-					crate::endpoint::enc(&self.version),
-				)])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					room_id: input.path()?,
-					session_id: input.path()?,
-					version: input.query("version")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "DELETE",
+			path: "/_matrix/client/v3/room_keys/keys/{room_id}/{session_id}",
+			path { room_id, session_id }
+			query { version => "version" }
+			body {}
 		}
 		pub struct Response {
 			pub count: crate::UInt,
@@ -1088,20 +593,8 @@ pub mod delete_backup_keys_for_session {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [
-					("count", crate::endpoint::enc(&self.count)),
-					("etag", crate::endpoint::enc(&self.etag)),
-				])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					count: input.body("count")?,
-					etag: input.body("etag")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { count => "count", etag => "etag" }
 		}
 	}
 }

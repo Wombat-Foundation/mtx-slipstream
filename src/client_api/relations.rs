@@ -1,6 +1,44 @@
+use alloc::{string::String, vec::Vec};
+
+use crate::{UInt, sswire::Raw};
+
+/// The shared response of the room-relations pagination endpoints.
+pub struct RelatingEventsResponse {
+	pub chunk: Vec<Raw<crate::events::AnyTimelineEvent>>,
+	pub next_batch: Option<String>,
+	pub prev_batch: Option<String>,
+	pub recursion_depth: Option<UInt>,
+}
+
+impl ::core::fmt::Debug for RelatingEventsResponse {
+	fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
+		crate::endpoint::opaque_debug(f, "Response")
+	}
+}
+
+impl crate::endpoint::EndpointResponse for RelatingEventsResponse {
+	fn to_body(&self) -> crate::json::Value {
+		crate::endpoint::body_object(&mut [
+			("chunk", crate::endpoint::enc(&self.chunk)),
+			("next_batch", crate::endpoint::enc(&self.next_batch)),
+			("prev_batch", crate::endpoint::enc(&self.prev_batch)),
+			("recursion_depth", crate::endpoint::enc(&self.recursion_depth)),
+		])
+	}
+	fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
+		let input = crate::endpoint::Input::body_only(body);
+		Ok(Self {
+			chunk: input.body("chunk")?,
+			next_batch: input.body("next_batch")?,
+			prev_batch: input.body("prev_batch")?,
+			recursion_depth: input.body("recursion_depth")?,
+		})
+	}
+}
+
 pub mod get_relating_events {
 	pub mod v1 {
-		use crate::{OwnedEventId, OwnedRoomId, UInt, api::Direction, sswire::Raw};
+		use crate::{OwnedEventId, OwnedRoomId, UInt, api::Direction};
 		pub struct Request {
 			pub room_id: OwnedRoomId,
 			pub event_id: OwnedEventId,
@@ -17,89 +55,20 @@ pub mod get_relating_events {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"GET",
-				"/_matrix/client/v1/rooms/{roomId}/relations/{eventId}",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [
-					crate::endpoint::path_param(&self.room_id),
-					crate::endpoint::path_param(&self.event_id),
-				])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [
-					("from", crate::endpoint::enc(&self.from)),
-					("to", crate::endpoint::enc(&self.to)),
-					("limit", crate::endpoint::enc(&self.limit)),
-					("dir", crate::endpoint::enc(&self.dir)),
-					("recurse", crate::endpoint::enc(&self.recurse)),
-				])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					room_id: input.path()?,
-					event_id: input.path()?,
-					from: input.query("from")?,
-					to: input.query("to")?,
-					limit: input.query("limit")?,
-					dir: input.query_or("dir", Direction::Backward)?,
-					recurse: input.query_or("recurse", false)?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/v1/rooms/{roomId}/relations/{eventId}",
+			path { room_id, event_id }
+			query { from => "from", to => "to", limit => "limit", dir => "dir" = Direction::Backward, recurse => "recurse" = false }
+			body {}
 		}
-		pub struct Response {
-			pub chunk: Vec<Raw<crate::events::AnyTimelineEvent>>,
-			pub next_batch: Option<String>,
-			pub prev_batch: Option<String>,
-			pub recursion_depth: Option<UInt>,
-		}
-		impl ::core::fmt::Debug for Response {
-			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
-				crate::endpoint::opaque_debug(f, "Response")
-			}
-		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [
-					("chunk", crate::endpoint::enc(&self.chunk)),
-					("next_batch", crate::endpoint::enc(&self.next_batch)),
-					("prev_batch", crate::endpoint::enc(&self.prev_batch)),
-					("recursion_depth", crate::endpoint::enc(&self.recursion_depth)),
-				])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					chunk: input.body("chunk")?,
-					next_batch: input.body("next_batch")?,
-					prev_batch: input.body("prev_batch")?,
-					recursion_depth: input.body("recursion_depth")?,
-				})
-			}
-		}
+		pub type Response = crate::client_api::relations::RelatingEventsResponse;
 	}
 }
 pub mod get_relating_events_with_rel_type {
 	pub mod v1 {
 		use crate::{
 			OwnedEventId, OwnedRoomId, UInt, api::Direction, events::relation::RelationType,
-			sswire::Raw,
 		};
 		pub struct Request {
 			pub room_id: OwnedRoomId,
@@ -118,84 +87,14 @@ pub mod get_relating_events_with_rel_type {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"GET",
-				"/_matrix/client/v1/rooms/{roomId}/relations/{eventId}/{relType}",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [
-					crate::endpoint::path_param(&self.room_id),
-					crate::endpoint::path_param(&self.event_id),
-					crate::endpoint::path_param(&self.rel_type),
-				])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [
-					("from", crate::endpoint::enc(&self.from)),
-					("to", crate::endpoint::enc(&self.to)),
-					("limit", crate::endpoint::enc(&self.limit)),
-					("dir", crate::endpoint::enc(&self.dir)),
-					("recurse", crate::endpoint::enc(&self.recurse)),
-				])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					room_id: input.path()?,
-					event_id: input.path()?,
-					rel_type: input.path()?,
-					from: input.query("from")?,
-					to: input.query("to")?,
-					limit: input.query_or("limit", 10)?,
-					dir: input.query_or("dir", Direction::Backward)?,
-					recurse: input.query("recurse")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/v1/rooms/{roomId}/relations/{eventId}/{relType}",
+			path { room_id, event_id, rel_type }
+			query { from => "from", to => "to", limit => "limit" = 10, dir => "dir" = Direction::Backward, recurse => "recurse" }
+			body {}
 		}
-		pub struct Response {
-			pub chunk: Vec<Raw<crate::events::AnyTimelineEvent>>,
-			pub next_batch: Option<String>,
-			pub prev_batch: Option<String>,
-			pub recursion_depth: Option<UInt>,
-		}
-		impl ::core::fmt::Debug for Response {
-			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
-				crate::endpoint::opaque_debug(f, "Response")
-			}
-		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [
-					("chunk", crate::endpoint::enc(&self.chunk)),
-					("next_batch", crate::endpoint::enc(&self.next_batch)),
-					("prev_batch", crate::endpoint::enc(&self.prev_batch)),
-					("recursion_depth", crate::endpoint::enc(&self.recursion_depth)),
-				])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					chunk: input.body("chunk")?,
-					next_batch: input.body("next_batch")?,
-					prev_batch: input.body("prev_batch")?,
-					recursion_depth: input.body("recursion_depth")?,
-				})
-			}
-		}
+		pub type Response = crate::client_api::relations::RelatingEventsResponse;
 	}
 }
 pub mod get_relating_events_with_rel_type_and_event_type {
@@ -204,7 +103,6 @@ pub mod get_relating_events_with_rel_type_and_event_type {
 			OwnedEventId, OwnedRoomId, UInt,
 			api::Direction,
 			events::{TimelineEventType, relation::RelationType},
-			sswire::Raw,
 		};
 		pub struct Request {
 			pub room_id: OwnedRoomId,
@@ -224,96 +122,27 @@ pub mod get_relating_events_with_rel_type_and_event_type {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"GET",
-				"/_matrix/client/v1/rooms/{roomId}/relations/{eventId}/{relType}/{eventType}",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [
-					crate::endpoint::path_param(&self.room_id),
-					crate::endpoint::path_param(&self.event_id),
-					crate::endpoint::path_param(&self.rel_type),
-					crate::endpoint::path_param(&self.event_type),
-				])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [
-					("from", crate::endpoint::enc(&self.from)),
-					("to", crate::endpoint::enc(&self.to)),
-					("limit", crate::endpoint::enc(&self.limit)),
-					("dir", crate::endpoint::enc(&self.dir)),
-					("recurse", crate::endpoint::enc(&self.recurse)),
-				])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					room_id: input.path()?,
-					event_id: input.path()?,
-					rel_type: input.path()?,
-					event_type: input.path()?,
-					from: input.query("from")?,
-					to: input.query("to")?,
-					limit: input.query_or("limit", 10)?,
-					dir: input.query_or("dir", Direction::Backward)?,
-					recurse: input.query("recurse")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/v1/rooms/{roomId}/relations/{eventId}/{relType}/{eventType}",
+			path { room_id, event_id, rel_type, event_type }
+			query { from => "from", to => "to", limit => "limit" = 10, dir => "dir" = Direction::Backward, recurse => "recurse" }
+			body {}
 		}
-		pub struct Response {
-			pub chunk: Vec<Raw<crate::events::AnyTimelineEvent>>,
-			pub next_batch: Option<String>,
-			pub prev_batch: Option<String>,
-			pub recursion_depth: Option<UInt>,
-		}
-		impl ::core::fmt::Debug for Response {
-			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
-				crate::endpoint::opaque_debug(f, "Response")
-			}
-		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [
-					("chunk", crate::endpoint::enc(&self.chunk)),
-					("next_batch", crate::endpoint::enc(&self.next_batch)),
-					("prev_batch", crate::endpoint::enc(&self.prev_batch)),
-					("recursion_depth", crate::endpoint::enc(&self.recursion_depth)),
-				])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					chunk: input.body("chunk")?,
-					next_batch: input.body("next_batch")?,
-					prev_batch: input.body("prev_batch")?,
-					recursion_depth: input.body("recursion_depth")?,
-				})
-			}
-		}
+		pub type Response = crate::client_api::relations::RelatingEventsResponse;
 	}
 }
 
-pub mod event_relationships {
-	pub mod unstable {
-		use crate::{OwnedEventId, OwnedRoomId, sswire::Raw};
-
+/// Declares the shared MSC2836 event-relationships request.
+///
+/// Client and federation variants differ only in their method, path and response.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! event_relationships_request {
+	($method:literal, $path:literal) => {
 		pub struct Request {
-			pub event_id: OwnedEventId,
-			pub room_id: Option<OwnedRoomId>,
+			pub event_id: $crate::OwnedEventId,
+			pub room_id: Option<$crate::OwnedRoomId>,
 			pub max_depth: Option<i64>,
 			pub max_breadth: Option<i64>,
 			pub limit: Option<i64>,
@@ -321,69 +150,39 @@ pub mod event_relationships {
 			pub recent_first: Option<bool>,
 			pub include_parent: Option<bool>,
 			pub include_children: Option<bool>,
-			pub direction: Option<String>,
-			pub batch: Option<String>,
+			pub direction: Option<::alloc::string::String>,
+			pub batch: Option<::alloc::string::String>,
 		}
 		impl ::core::fmt::Debug for Request {
-			fn fmt(&self, f: &mut crate::endpoint::Fmt<'_>) -> crate::endpoint::FmtResult {
-				crate::endpoint::opaque_debug(f, "Request")
+			fn fmt(&self, f: &mut $crate::endpoint::Fmt<'_>) -> $crate::endpoint::FmtResult {
+				$crate::endpoint::opaque_debug(f, "Request")
 			}
 		}
-		const _: crate::endpoint::Metadata =
-			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"POST",
-				"/_matrix/client/unstable/event_relationships",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [
-						("event_id", crate::endpoint::enc(&self.event_id)),
-						("room_id", crate::endpoint::enc(&self.room_id)),
-						("max_depth", crate::endpoint::enc(&self.max_depth)),
-						("max_breadth", crate::endpoint::enc(&self.max_breadth)),
-						("limit", crate::endpoint::enc(&self.limit)),
-						("depth_first", crate::endpoint::enc(&self.depth_first)),
-						("recent_first", crate::endpoint::enc(&self.recent_first)),
-						("include_parent", crate::endpoint::enc(&self.include_parent)),
-						("include_children", crate::endpoint::enc(&self.include_children)),
-						("direction", crate::endpoint::enc(&self.direction)),
-						("batch", crate::endpoint::enc(&self.batch)),
-					],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					event_id: input.body("event_id")?,
-					room_id: input.body("room_id")?,
-					max_depth: input.body("max_depth")?,
-					max_breadth: input.body("max_breadth")?,
-					limit: input.body("limit")?,
-					depth_first: input.body("depth_first")?,
-					recent_first: input.body("recent_first")?,
-					include_parent: input.body("include_parent")?,
-					include_children: input.body("include_children")?,
-					direction: input.body("direction")?,
-					batch: input.body("batch")?,
-				};
-				input.finish()?;
-				Ok(value)
+		const _: $crate::endpoint::Metadata =
+			<Request as $crate::endpoint::EndpointRequest>::METADATA;
+		$crate::endpoint_request_impl! {
+			method: $method,
+			path: $path,
+			path {}
+			query {}
+			body {
+				event_id => "event_id", room_id => "room_id", max_depth => "max_depth",
+				max_breadth => "max_breadth", limit => "limit", depth_first => "depth_first",
+				recent_first => "recent_first", include_parent => "include_parent",
+				include_children => "include_children", direction => "direction", batch => "batch"
 			}
 		}
+	};
+}
+
+pub mod event_relationships {
+	pub mod unstable {
+		use crate::sswire::Raw;
+
+		crate::event_relationships_request!(
+			"POST",
+			"/_matrix/client/unstable/event_relationships"
+		);
 		pub struct Response {
 			pub events: Vec<Raw<crate::json::Value>>,
 			pub next_batch: Option<String>,
@@ -394,22 +193,8 @@ pub mod event_relationships {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [
-					("events", crate::endpoint::enc(&self.events)),
-					("next_batch", crate::endpoint::enc(&self.next_batch)),
-					("limited", crate::endpoint::enc(&self.limited)),
-				])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					events: input.body("events")?,
-					next_batch: input.body("next_batch")?,
-					limited: input.body("limited")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { events => "events", next_batch => "next_batch", limited => "limited" }
 		}
 	}
 }

@@ -16,32 +16,12 @@ pub mod discover_homeserver {
 		}
 	}
 	const _: crate::endpoint::Metadata = <Request as crate::endpoint::EndpointRequest>::METADATA;
-	impl crate::endpoint::EndpointRequest for Request {
-		type Response = Response;
-		const METADATA: crate::endpoint::Metadata =
-			crate::endpoint::Metadata::new("GET", "/.well-known/matrix/server");
-		fn path_args(&self) -> crate::endpoint::Strs {
-			crate::endpoint::path_args_from(&mut [])
-		}
-		fn query(&self) -> crate::endpoint::Pairs {
-			crate::endpoint::query_pairs_mut(&mut [])
-		}
-		fn body(&self) -> Option<crate::json::Value> {
-			crate::endpoint::body_value(
-				<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-				&mut [],
-			)
-		}
-		fn from_parts(
-			path: &[crate::endpoint::Str],
-			query: &[crate::endpoint::Pair],
-			body: Option<&crate::json::Value>,
-		) -> crate::endpoint::Parsed<Self> {
-			let input = crate::endpoint::Input::new(path, query, body);
-			let value = Self {};
-			input.finish()?;
-			Ok(value)
-		}
+	crate::endpoint_request_impl! {
+		method: "GET",
+		path: "/.well-known/matrix/server",
+		path {}
+		query {}
+		body {}
 	}
 	pub struct Response {
 		pub server: OwnedServerName,
@@ -51,16 +31,8 @@ pub mod discover_homeserver {
 			crate::endpoint::opaque_debug(f, "Response")
 		}
 	}
-	impl crate::endpoint::EndpointResponse for Response {
-		fn to_body(&self) -> crate::json::Value {
-			crate::endpoint::body_object(&mut [("server", crate::endpoint::enc(&self.server))])
-		}
-		fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-			let input = crate::endpoint::Input::body_only(body);
-			Ok(Self {
-				server: input.body("server")?,
-			})
-		}
+	crate::endpoint_response_impl! {
+		body { server => "server" }
 	}
 }
 
@@ -228,32 +200,12 @@ pub mod get_server_version {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata =
-				crate::endpoint::Metadata::new("GET", "/_matrix/federation/v1/version");
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/federation/v1/version",
+			path {}
+			query {}
+			body {}
 		}
 		pub struct Response {
 			pub server: Option<Server>,
@@ -264,20 +216,8 @@ pub mod get_server_version {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [
-					("server", crate::endpoint::enc(&self.server)),
-					("unstable_features", crate::endpoint::enc(&self.unstable_features)),
-				])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					server: input.body("server")?,
-					unstable_features: input.body("unstable_features")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { server => "server", unstable_features => "unstable_features" }
 		}
 	}
 }
@@ -375,40 +315,12 @@ pub mod get_remote_server_keys {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata =
-				crate::endpoint::Metadata::new("GET", "/_matrix/key/v2/query/{server_name}");
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(
-					&self.server_name,
-				)])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [(
-					"minimum_valid_until_ts",
-					crate::endpoint::enc(&self.minimum_valid_until_ts),
-				)])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					server_name: input.path()?,
-					minimum_valid_until_ts: input.query("minimum_valid_until_ts")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/key/v2/query/{server_name}",
+			path { server_name }
+			query { minimum_valid_until_ts => "minimum_valid_until_ts" }
+			body {}
 		}
 		pub struct Response {
 			pub server_keys: Vec<Raw<ServerSigningKeys>>,
@@ -418,19 +330,8 @@ pub mod get_remote_server_keys {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [(
-					"server_keys",
-					crate::endpoint::enc(&self.server_keys),
-				)])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					server_keys: input.body("server_keys")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { server_keys => "server_keys" }
 		}
 	}
 }
@@ -482,34 +383,12 @@ pub mod get_remote_server_keys_batch {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata =
-				crate::endpoint::Metadata::new("POST", "/_matrix/key/v2/query");
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [("server_keys", crate::endpoint::enc(&self.server_keys))],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					server_keys: input.body("server_keys")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "POST",
+			path: "/_matrix/key/v2/query",
+			path {}
+			query {}
+			body { server_keys => "server_keys" }
 		}
 		pub struct Response {
 			pub server_keys: Vec<Raw<ServerSigningKeys>>,
@@ -519,19 +398,8 @@ pub mod get_remote_server_keys_batch {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [(
-					"server_keys",
-					crate::endpoint::enc(&self.server_keys),
-				)])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					server_keys: input.body("server_keys")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { server_keys => "server_keys" }
 		}
 	}
 }

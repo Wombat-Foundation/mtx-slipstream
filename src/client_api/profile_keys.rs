@@ -1,3 +1,42 @@
+/// Implements the shared request shape of the two profile-key write endpoints.
+macro_rules! profile_key_request {
+	($method:literal, $path:literal) => {
+		impl EndpointRequest for Request {
+			type Response = Response;
+			const METADATA: endpoint::Metadata = endpoint::Metadata::new($method, $path)
+				.with_aliases(&["/_matrix/client/v3/profile/{userId}/{keyName}"]);
+
+			fn path_args(&self) -> Vec<String> {
+				vec![self.user_id.to_string(), self.key_name.clone()]
+			}
+
+			fn query(&self) -> Vec<(String, String)> {
+				Vec::new()
+			}
+
+			fn body(&self) -> Option<Value> {
+				Some(Value::Object(self.kv_pair.clone()))
+			}
+
+			fn from_parts(
+				path: &[String],
+				query: &[(String, String)],
+				body: Option<&Value>,
+			) -> Result<Self, DeError> {
+				let input = endpoint::Input::new(path, query, body);
+				let kv_pair = body.map(BTreeMap::from_json).transpose()?.unwrap_or_default();
+				let request = Self {
+					user_id: input.path()?,
+					key_name: input.path()?,
+					kv_pair,
+				};
+				input.finish()?;
+				Ok(request)
+			}
+		}
+	};
+}
+
 pub mod get_profile_key {
 	pub mod unstable {
 		use crate::{
@@ -123,42 +162,10 @@ pub mod set_profile_key {
 			}
 		}
 
-		impl EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: endpoint::Metadata = endpoint::Metadata::new(
-				"PUT",
-				"/_matrix/client/unstable/uk.tcpip.msc4133/profile/{userId}/{keyName}",
-			)
-			.with_aliases(&["/_matrix/client/v3/profile/{userId}/{keyName}"]);
-
-			fn path_args(&self) -> Vec<String> {
-				vec![self.user_id.to_string(), self.key_name.clone()]
-			}
-
-			fn query(&self) -> Vec<(String, String)> {
-				Vec::new()
-			}
-
-			fn body(&self) -> Option<Value> {
-				Some(Value::Object(self.kv_pair.clone()))
-			}
-
-			fn from_parts(
-				path: &[String],
-				query: &[(String, String)],
-				body: Option<&Value>,
-			) -> Result<Self, DeError> {
-				let input = endpoint::Input::new(path, query, body);
-				let kv_pair = body.map(BTreeMap::from_json).transpose()?.unwrap_or_default();
-				let request = Self {
-					user_id: input.path()?,
-					key_name: input.path()?,
-					kv_pair,
-				};
-				input.finish()?;
-				Ok(request)
-			}
-		}
+		profile_key_request!(
+			"PUT",
+			"/_matrix/client/unstable/uk.tcpip.msc4133/profile/{userId}/{keyName}"
+		);
 
 		pub struct Response {}
 		impl ::core::fmt::Debug for Response {
@@ -166,13 +173,8 @@ pub mod set_profile_key {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [])
-			}
-			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				Ok(Self {})
-			}
+		crate::endpoint_response_impl! {
+			body {}
 		}
 	}
 }
@@ -208,42 +210,10 @@ pub mod delete_profile_key {
 			}
 		}
 
-		impl EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: endpoint::Metadata = endpoint::Metadata::new(
-				"DELETE",
-				"/_matrix/client/unstable/uk.tcpip.msc4133/profile/{userId}/{keyName}",
-			)
-			.with_aliases(&["/_matrix/client/v3/profile/{userId}/{keyName}"]);
-
-			fn path_args(&self) -> Vec<String> {
-				vec![self.user_id.to_string(), self.key_name.clone()]
-			}
-
-			fn query(&self) -> Vec<(String, String)> {
-				Vec::new()
-			}
-
-			fn body(&self) -> Option<Value> {
-				Some(Value::Object(self.kv_pair.clone()))
-			}
-
-			fn from_parts(
-				path: &[String],
-				query: &[(String, String)],
-				body: Option<&Value>,
-			) -> Result<Self, DeError> {
-				let input = endpoint::Input::new(path, query, body);
-				let kv_pair = body.map(BTreeMap::from_json).transpose()?.unwrap_or_default();
-				let request = Self {
-					user_id: input.path()?,
-					key_name: input.path()?,
-					kv_pair,
-				};
-				input.finish()?;
-				Ok(request)
-			}
-		}
+		profile_key_request!(
+			"DELETE",
+			"/_matrix/client/unstable/uk.tcpip.msc4133/profile/{userId}/{keyName}"
+		);
 
 		pub struct Response {}
 		impl ::core::fmt::Debug for Response {
@@ -251,13 +221,8 @@ pub mod delete_profile_key {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [])
-			}
-			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				Ok(Self {})
-			}
+		crate::endpoint_response_impl! {
+			body {}
 		}
 	}
 }

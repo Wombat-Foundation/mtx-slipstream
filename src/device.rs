@@ -65,32 +65,12 @@ pub mod get_devices {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata =
-				crate::endpoint::Metadata::new("GET", "/_matrix/client/v3/devices");
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/v3/devices",
+			path {}
+			query {}
+			body {}
 		}
 		pub struct Response {
 			pub devices: alloc::vec::Vec<crate::device::Device>,
@@ -100,19 +80,8 @@ pub mod get_devices {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [(
-					"devices",
-					crate::endpoint::enc(&self.devices),
-				)])
-			}
-			fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::body_only(body);
-				Ok(Self {
-					devices: input.body("devices")?,
-				})
-			}
+		crate::endpoint_response_impl! {
+			body { devices => "devices" }
 		}
 	}
 }
@@ -129,36 +98,12 @@ pub mod get_device {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata =
-				crate::endpoint::Metadata::new("GET", "/_matrix/client/v3/devices/{device_id}");
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(
-					&self.device_id,
-				)])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					device_id: input.path()?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "GET",
+			path: "/_matrix/client/v3/devices/{device_id}",
+			path { device_id }
+			query {}
+			body {}
 		}
 		pub struct Response {
 			pub device: crate::device::Device,
@@ -194,37 +139,12 @@ pub mod update_device {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata =
-				crate::endpoint::Metadata::new("PUT", "/_matrix/client/v3/devices/{device_id}");
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(
-					&self.device_id,
-				)])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [("display_name", crate::endpoint::enc(&self.display_name))],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					device_id: input.path()?,
-					display_name: input.body("display_name")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "PUT",
+			path: "/_matrix/client/v3/devices/{device_id}",
+			path { device_id }
+			query {}
+			body { display_name => "display_name" }
 		}
 		pub struct Response {}
 		impl ::core::fmt::Debug for Response {
@@ -232,13 +152,8 @@ pub mod update_device {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [])
-			}
-			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				Ok(Self {})
-			}
+		crate::endpoint_response_impl! {
+			body {}
 		}
 	}
 }
@@ -256,39 +171,12 @@ pub mod delete_device {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-				"DELETE",
-				"/_matrix/client/v3/devices/{device_id}",
-			);
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(
-					&self.device_id,
-				)])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [("auth", crate::endpoint::enc(&self.auth))],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					device_id: input.path()?,
-					auth: input.body("auth")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "DELETE",
+			path: "/_matrix/client/v3/devices/{device_id}",
+			path { device_id }
+			query {}
+			body { auth => "auth" }
 		}
 		pub struct Response {}
 		impl ::core::fmt::Debug for Response {
@@ -296,13 +184,8 @@ pub mod delete_device {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [])
-			}
-			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				Ok(Self {})
-			}
+		crate::endpoint_response_impl! {
+			body {}
 		}
 	}
 }
@@ -320,38 +203,12 @@ pub mod delete_devices {
 		}
 		const _: crate::endpoint::Metadata =
 			<Request as crate::endpoint::EndpointRequest>::METADATA;
-		impl crate::endpoint::EndpointRequest for Request {
-			type Response = Response;
-			const METADATA: crate::endpoint::Metadata =
-				crate::endpoint::Metadata::new("POST", "/_matrix/client/v3/delete_devices");
-			fn path_args(&self) -> crate::endpoint::Strs {
-				crate::endpoint::path_args_from(&mut [])
-			}
-			fn query(&self) -> crate::endpoint::Pairs {
-				crate::endpoint::query_pairs_mut(&mut [])
-			}
-			fn body(&self) -> Option<crate::json::Value> {
-				crate::endpoint::body_value(
-					<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-					&mut [
-						("devices", crate::endpoint::enc(&self.devices)),
-						("auth", crate::endpoint::enc(&self.auth)),
-					],
-				)
-			}
-			fn from_parts(
-				path: &[crate::endpoint::Str],
-				query: &[crate::endpoint::Pair],
-				body: Option<&crate::json::Value>,
-			) -> crate::endpoint::Parsed<Self> {
-				let input = crate::endpoint::Input::new(path, query, body);
-				let value = Self {
-					devices: input.body("devices")?,
-					auth: input.body("auth")?,
-				};
-				input.finish()?;
-				Ok(value)
-			}
+		crate::endpoint_request_impl! {
+			method: "POST",
+			path: "/_matrix/client/v3/delete_devices",
+			path {}
+			query {}
+			body { devices => "devices", auth => "auth" }
 		}
 		pub struct Response {}
 		impl ::core::fmt::Debug for Response {
@@ -359,13 +216,8 @@ pub mod delete_devices {
 				crate::endpoint::opaque_debug(f, "Response")
 			}
 		}
-		impl crate::endpoint::EndpointResponse for Response {
-			fn to_body(&self) -> crate::json::Value {
-				crate::endpoint::body_object(&mut [])
-			}
-			fn from_body(_body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-				Ok(Self {})
-			}
+		crate::endpoint_response_impl! {
+			body {}
 		}
 	}
 }
@@ -415,51 +267,12 @@ pub mod dehydrated_device {
 			}
 			const _: crate::endpoint::Metadata =
 				<Request as crate::endpoint::EndpointRequest>::METADATA;
-			impl crate::endpoint::EndpointRequest for Request {
-				type Response = Response;
-				const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-					"PUT",
-					"/_matrix/client/unstable/org.matrix.msc3814.v1/dehydrated_device",
-				);
-				fn path_args(&self) -> crate::endpoint::Strs {
-					crate::endpoint::path_args_from(&mut [])
-				}
-				fn query(&self) -> crate::endpoint::Pairs {
-					crate::endpoint::query_pairs_mut(&mut [])
-				}
-				fn body(&self) -> Option<crate::json::Value> {
-					crate::endpoint::body_value(
-						<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-						&mut [
-							("device_id", crate::endpoint::enc(&self.device_id)),
-							("device_data", crate::endpoint::enc(&self.device_data)),
-							("device_keys", crate::endpoint::enc(&self.device_keys)),
-							("one_time_keys", crate::endpoint::enc(&self.one_time_keys)),
-							("fallback_keys", crate::endpoint::enc(&self.fallback_keys)),
-							(
-								"initial_device_display_name",
-								crate::endpoint::enc(&self.initial_device_display_name),
-							),
-						],
-					)
-				}
-				fn from_parts(
-					path: &[crate::endpoint::Str],
-					query: &[crate::endpoint::Pair],
-					body: Option<&crate::json::Value>,
-				) -> crate::endpoint::Parsed<Self> {
-					let input = crate::endpoint::Input::new(path, query, body);
-					let value = Self {
-						device_id: input.body("device_id")?,
-						device_data: input.body("device_data")?,
-						device_keys: input.body("device_keys")?,
-						one_time_keys: input.body("one_time_keys")?,
-						fallback_keys: input.body("fallback_keys")?,
-						initial_device_display_name: input.body("initial_device_display_name")?,
-					};
-					input.finish()?;
-					Ok(value)
-				}
+			crate::endpoint_request_impl! {
+				method: "PUT",
+				path: "/_matrix/client/unstable/org.matrix.msc3814.v1/dehydrated_device",
+				path {}
+				query {}
+				body { device_id => "device_id", device_data => "device_data", device_keys => "device_keys", one_time_keys => "one_time_keys", fallback_keys => "fallback_keys", initial_device_display_name => "initial_device_display_name" }
 			}
 			pub struct Response {
 				pub device_id: OwnedDeviceId,
@@ -469,19 +282,8 @@ pub mod dehydrated_device {
 					crate::endpoint::opaque_debug(f, "Response")
 				}
 			}
-			impl crate::endpoint::EndpointResponse for Response {
-				fn to_body(&self) -> crate::json::Value {
-					crate::endpoint::body_object(&mut [(
-						"device_id",
-						crate::endpoint::enc(&self.device_id),
-					)])
-				}
-				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let input = crate::endpoint::Input::body_only(body);
-					Ok(Self {
-						device_id: input.body("device_id")?,
-					})
-				}
+			crate::endpoint_response_impl! {
+				body { device_id => "device_id" }
 			}
 		}
 	}
@@ -498,34 +300,12 @@ pub mod dehydrated_device {
 			}
 			const _: crate::endpoint::Metadata =
 				<Request as crate::endpoint::EndpointRequest>::METADATA;
-			impl crate::endpoint::EndpointRequest for Request {
-				type Response = Response;
-				const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-					"GET",
-					"/_matrix/client/unstable/org.matrix.msc3814.v1/dehydrated_device",
-				);
-				fn path_args(&self) -> crate::endpoint::Strs {
-					crate::endpoint::path_args_from(&mut [])
-				}
-				fn query(&self) -> crate::endpoint::Pairs {
-					crate::endpoint::query_pairs_mut(&mut [])
-				}
-				fn body(&self) -> Option<crate::json::Value> {
-					crate::endpoint::body_value(
-						<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-						&mut [],
-					)
-				}
-				fn from_parts(
-					path: &[crate::endpoint::Str],
-					query: &[crate::endpoint::Pair],
-					body: Option<&crate::json::Value>,
-				) -> crate::endpoint::Parsed<Self> {
-					let input = crate::endpoint::Input::new(path, query, body);
-					let value = Self {};
-					input.finish()?;
-					Ok(value)
-				}
+			crate::endpoint_request_impl! {
+				method: "GET",
+				path: "/_matrix/client/unstable/org.matrix.msc3814.v1/dehydrated_device",
+				path {}
+				query {}
+				body {}
 			}
 			pub struct Response {
 				pub device_id: OwnedDeviceId,
@@ -536,20 +316,8 @@ pub mod dehydrated_device {
 					crate::endpoint::opaque_debug(f, "Response")
 				}
 			}
-			impl crate::endpoint::EndpointResponse for Response {
-				fn to_body(&self) -> crate::json::Value {
-					crate::endpoint::body_object(&mut [
-						("device_id", crate::endpoint::enc(&self.device_id)),
-						("device_data", crate::endpoint::enc(&self.device_data)),
-					])
-				}
-				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let input = crate::endpoint::Input::body_only(body);
-					Ok(Self {
-						device_id: input.body("device_id")?,
-						device_data: input.body("device_data")?,
-					})
-				}
+			crate::endpoint_response_impl! {
+				body { device_id => "device_id", device_data => "device_data" }
 			}
 		}
 	}
@@ -564,34 +332,12 @@ pub mod dehydrated_device {
 			}
 			const _: crate::endpoint::Metadata =
 				<Request as crate::endpoint::EndpointRequest>::METADATA;
-			impl crate::endpoint::EndpointRequest for Request {
-				type Response = Response;
-				const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-					"DELETE",
-					"/_matrix/client/unstable/org.matrix.msc3814.v1/dehydrated_device",
-				);
-				fn path_args(&self) -> crate::endpoint::Strs {
-					crate::endpoint::path_args_from(&mut [])
-				}
-				fn query(&self) -> crate::endpoint::Pairs {
-					crate::endpoint::query_pairs_mut(&mut [])
-				}
-				fn body(&self) -> Option<crate::json::Value> {
-					crate::endpoint::body_value(
-						<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-						&mut [],
-					)
-				}
-				fn from_parts(
-					path: &[crate::endpoint::Str],
-					query: &[crate::endpoint::Pair],
-					body: Option<&crate::json::Value>,
-				) -> crate::endpoint::Parsed<Self> {
-					let input = crate::endpoint::Input::new(path, query, body);
-					let value = Self {};
-					input.finish()?;
-					Ok(value)
-				}
+			crate::endpoint_request_impl! {
+				method: "DELETE",
+				path: "/_matrix/client/unstable/org.matrix.msc3814.v1/dehydrated_device",
+				path {}
+				query {}
+				body {}
 			}
 			pub struct Response {
 				pub device_id: crate::OwnedDeviceId,
@@ -601,19 +347,8 @@ pub mod dehydrated_device {
 					crate::endpoint::opaque_debug(f, "Response")
 				}
 			}
-			impl crate::endpoint::EndpointResponse for Response {
-				fn to_body(&self) -> crate::json::Value {
-					crate::endpoint::body_object(&mut [(
-						"device_id",
-						crate::endpoint::enc(&self.device_id),
-					)])
-				}
-				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let input = crate::endpoint::Input::body_only(body);
-					Ok(Self {
-						device_id: input.body("device_id")?,
-					})
-				}
+			crate::endpoint_response_impl! {
+				body { device_id => "device_id" }
 			}
 		}
 	}
@@ -635,39 +370,12 @@ pub mod dehydrated_device {
 			}
 			const _: crate::endpoint::Metadata =
 				<Request as crate::endpoint::EndpointRequest>::METADATA;
-			impl crate::endpoint::EndpointRequest for Request {
-				type Response = Response;
-				const METADATA: crate::endpoint::Metadata = crate::endpoint::Metadata::new(
-					"POST",
-					"/_matrix/client/unstable/org.matrix.msc3814.v1/dehydrated_device/{device_id}/events",
-				);
-				fn path_args(&self) -> crate::endpoint::Strs {
-					crate::endpoint::path_args_from(&mut [crate::endpoint::path_param(
-						&self.device_id,
-					)])
-				}
-				fn query(&self) -> crate::endpoint::Pairs {
-					crate::endpoint::query_pairs_mut(&mut [])
-				}
-				fn body(&self) -> Option<crate::json::Value> {
-					crate::endpoint::body_value(
-						<Self as crate::endpoint::EndpointRequest>::METADATA.method,
-						&mut [("next_batch", crate::endpoint::enc(&self.next_batch))],
-					)
-				}
-				fn from_parts(
-					path: &[crate::endpoint::Str],
-					query: &[crate::endpoint::Pair],
-					body: Option<&crate::json::Value>,
-				) -> crate::endpoint::Parsed<Self> {
-					let input = crate::endpoint::Input::new(path, query, body);
-					let value = Self {
-						device_id: input.path()?,
-						next_batch: input.body("next_batch")?,
-					};
-					input.finish()?;
-					Ok(value)
-				}
+			crate::endpoint_request_impl! {
+				method: "POST",
+				path: "/_matrix/client/unstable/org.matrix.msc3814.v1/dehydrated_device/{device_id}/events",
+				path { device_id }
+				query {}
+				body { next_batch => "next_batch" }
 			}
 			pub struct Response {
 				pub events: Vec<Raw<AnyToDeviceEvent>>,
@@ -678,20 +386,8 @@ pub mod dehydrated_device {
 					crate::endpoint::opaque_debug(f, "Response")
 				}
 			}
-			impl crate::endpoint::EndpointResponse for Response {
-				fn to_body(&self) -> crate::json::Value {
-					crate::endpoint::body_object(&mut [
-						("events", crate::endpoint::enc(&self.events)),
-						("next_batch", crate::endpoint::enc(&self.next_batch)),
-					])
-				}
-				fn from_body(body: &crate::json::Value) -> crate::endpoint::Parsed<Self> {
-					let input = crate::endpoint::Input::body_only(body);
-					Ok(Self {
-						events: input.body("events")?,
-						next_batch: input.body("next_batch")?,
-					})
-				}
+			crate::endpoint_response_impl! {
+				body { events => "events", next_batch => "next_batch" }
 			}
 		}
 	}
